@@ -1,4 +1,19 @@
-# APPEKRAF Kabupaten Bangka — Portal V13 (Dashboard Database Fix)
+# APPEKRAF Kabupaten Bangka — Portal V14 (CRUD Data Pariwisata)
+
+## Perubahan V14 — CRUD data pariwisata pada akun Pengguna
+
+Akun **Pengguna** sekarang memiliki halaman list + CRUD untuk:
+
+- `/dashboard/wisata/tempat-wisata` — Tempat Wisata
+- `/dashboard/wisata/hotel` — Hotel
+- `/dashboard/wisata/kuliner` — Kuliner
+- `/dashboard/wisata/satwa-endemik` — Satwa Endemik
+
+Fitur yang ditambahkan mencakup pencarian daftar, tambah, edit, hapus, upload foto utama ke Cloudflare R2, lookup kategori/jenis/lokasi/status konservasi, koordinat untuk data wisata/hotel/kuliner, serta pengaturan unggulan, aktif, dan publikasi. Struktur tabel database yang sudah ada tetap digunakan dan **tidak membutuhkan migration baru**.
+
+---
+
+## Riwayat V13 — Dashboard Database Fix
 
 ## Perubahan V13 — perbaikan ringkasan dashboard
 

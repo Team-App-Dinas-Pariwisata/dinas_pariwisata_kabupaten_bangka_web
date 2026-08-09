@@ -34,6 +34,10 @@ const userMenu: MenuItem[] = [
   },
   { key: "berita", href: "/dashboard/berita", label: "Berita", icon: "news" },
   { key: "acara", href: "/dashboard/acara", label: "Acara", icon: "calendar" },
+  { key: "tempat-wisata", href: "/dashboard/wisata/tempat-wisata", label: "Tempat Wisata", icon: "database" },
+  { key: "hotel", href: "/dashboard/wisata/hotel", label: "Hotel", icon: "box" },
+  { key: "kuliner", href: "/dashboard/wisata/kuliner", label: "Kuliner", icon: "tag" },
+  { key: "satwa-endemik", href: "/dashboard/wisata/satwa-endemik", label: "Satwa Endemik", icon: "eye" },
   { key: "laporan", href: "/dashboard/laporan", label: "Laporan", icon: "report" },
   { key: "pengaturan", href: "/dashboard/pengaturan", label: "Pengaturan", icon: "settings" },
 ];

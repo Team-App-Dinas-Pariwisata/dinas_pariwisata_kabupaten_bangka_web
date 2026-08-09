@@ -32,7 +32,14 @@ function normalizeData(config: ResourceConfig, raw: Record<string, unknown>) {
     const field = config.fields.find((item) => item.key === key);
     let value = raw[key];
     if (field?.type === "checkbox") value = value ? 1 : 0;
-    else if (field?.type === "number") value = value === "" || value === null ? null : Number(value);
+    else if (field?.type === "number") {
+      if (value === "" || value === null || value === undefined) value = null;
+      else {
+        const numberValue = Number(value);
+        if (!Number.isFinite(numberValue)) throw new Error(`Nilai ${field.label} harus berupa angka yang valid.`);
+        value = numberValue;
+      }
+    }
     else if (field?.type === "datetime-local") value = toMysqlDate(value);
     else if (typeof value === "string") value = value.trim() || null;
     out[key] = value;
@@ -50,6 +57,7 @@ function errorMessage(error: unknown) {
   if (code === "ER_NO_REFERENCED_ROW_2") return "Data referensi tidak ditemukan. Periksa kategori yang dipilih.";
   if (code === "ER_ROW_IS_REFERENCED_2") return "Data masih digunakan oleh data lain dan tidak dapat dihapus.";
   if (code === "ER_CHECK_CONSTRAINT_VIOLATED") return "Data tidak memenuhi aturan validasi database.";
+  if (error instanceof Error && error.message.startsWith("Nilai ")) return error.message;
   return "Operasi database gagal diproses.";
 }
 
@@ -66,7 +74,7 @@ export async function GET(request: NextRequest) {
     `SELECT ${config.select.join(", ")} FROM ${config.table} ORDER BY ${config.orderBy}`,
   );
   const data = rows.map((row) => {
-    if ((config.table === "berita" || config.table === "acara") && "foto_utama" in row) {
+    if ("foto_utama" in row) {
       return { ...row, foto_utama: browserSafeR2ImageUrl(row.foto_utama as string | null) };
     }
     return row;
@@ -85,13 +93,16 @@ export async function POST(request: NextRequest) {
     const missing = validateRequired(config, data);
     if (missing) return NextResponse.json({ message: `Field ${missing} wajib diisi.` }, { status: 400 });
 
-    if (config.table === "berita") {
-      data.slug = `${slugify(String(data.judul))}-${Date.now().toString().slice(-7)}`;
-      if (Number(data.dipublikasikan) === 1 && !data.tanggal_publikasi) data.tanggal_publikasi = nowMysql();
-    }
-    if (config.table === "acara") {
-      data.slug = `${slugify(String(data.nama_acara))}-${Date.now().toString().slice(-7)}`;
-      if (Number(data.dipublikasikan) === 1 && !data.tanggal_publikasi) data.tanggal_publikasi = nowMysql();
+    const slugSource =
+      config.table === "berita" ? data.judul :
+      config.table === "acara" ? data.nama_acara :
+      config.table === "tempat_wisata" ? data.nama_tempat :
+      config.table === "hotel" ? data.nama_hotel :
+      config.table === "kuliner" ? data.nama_usaha :
+      config.table === "satwa_endemik" ? data.nama_umum : null;
+    if (slugSource) data.slug = `${slugify(String(slugSource))}-${Date.now().toString().slice(-7)}`;
+    if ("dipublikasikan" in data && Number(data.dipublikasikan) === 1 && !data.tanggal_publikasi) {
+      data.tanggal_publikasi = nowMysql();
     }
     data.created_by = user.id;
     data.updated_by = user.id;

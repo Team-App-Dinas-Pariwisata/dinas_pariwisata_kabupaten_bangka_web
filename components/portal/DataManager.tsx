@@ -5,6 +5,7 @@ import type { ResourceField } from "@/lib/resources";
 import { PortalIcon } from "./PortalIcon";
 
 type Row = Record<string, unknown> & { id: number };
+type LookupOption = { label: string; value: string | number; parentValue?: string | number };
 type Props = {
   resource: string;
   title: string;
@@ -16,8 +17,8 @@ type Props = {
 
 function formatValue(key: string, value: unknown) {
   if (value === null || value === undefined || value === "") return "—";
-  if (["aktif", "headline", "dipublikasikan", "unggulan", "sepanjang_hari", "memerlukan_pendaftaran", "gratis"].includes(key)) return Number(value) === 1 ? "Ya" : "Tidak";
-  if (key === "harga") return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(Number(value));
+  if (["aktif", "headline", "dipublikasikan", "unggulan", "sepanjang_hari", "memerlukan_pendaftaran", "gratis", "cocok_anak", "cocok_keluarga", "ramah_lansia", "tersedia_dine_in", "tersedia_takeaway", "tersedia_delivery", "menerima_reservasi"].includes(key)) return Number(value) === 1 ? "Ya" : "Tidak";
+  if (key === "harga" || key.startsWith("harga_")) return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(Number(value));
   if (key.includes("tanggal") || key.endsWith("_at")) {
     const date = new Date(String(value).replace(" ", "T"));
     if (!Number.isNaN(date.getTime())) return new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: key.includes("tanggal_") ? "short" : undefined }).format(date);
@@ -100,7 +101,7 @@ function ImageField({ value, onChange, disabled }: { value: unknown; onChange: (
           <div className="portal-image-empty">
             <PortalIcon name="plus" />
             <strong>{value ? "Ganti gambar" : "Pilih gambar"}</strong>
-            <span>JPG, PNG, WebP, GIF, atau AVIF. Gambar berita/acara disimpan di Cloudflare R2.</span>
+            <span>JPG, PNG, WebP, GIF, atau AVIF. Gambar disimpan di Cloudflare R2.</span>
           </div>
         )}
         {preview && <span className="portal-image-change">Klik untuk ganti gambar</span>}
@@ -137,7 +138,7 @@ export function DataManager({ resource, title, description, label, fields, colum
   const [form, setForm] = useState<Record<string, unknown>>({});
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
-  const [lookups, setLookups] = useState<Record<string, { label: string; value: string | number }[]>>({});
+  const [lookups, setLookups] = useState<Record<string, LookupOption[]>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -163,13 +164,19 @@ export function DataManager({ resource, title, description, label, fields, colum
       .then(async (response) => {
         const result = await response.json();
         if (!response.ok) throw new Error(result.message || "Gagal memuat pilihan data.");
-        return result.data as Record<string, { label: string; value: string | number }[]>;
+        return result.data as Record<string, LookupOption[]>;
       })
       .then(setLookups)
       .catch((err) => setError(err instanceof Error ? err.message : "Gagal memuat pilihan data."));
   }, [fields]);
 
-  const optionsFor = useCallback((field: ResourceField) => field.lookup ? (lookups[field.lookup] ?? []) : (field.options ?? []), [lookups]);
+  const optionsFor = useCallback((field: ResourceField) => {
+    const options: LookupOption[] = field.lookup ? (lookups[field.lookup] ?? []) : (field.options ?? []);
+    if (!field.dependsOn) return options;
+    const parentValue = form[field.dependsOn];
+    if (parentValue === "" || parentValue === null || parentValue === undefined) return [];
+    return options.filter((option) => String(option.parentValue ?? "") === String(parentValue));
+  }, [lookups, form]);
 
   const filtered = useMemo(() => {
     const keyword = query.trim().toLowerCase();
@@ -180,8 +187,9 @@ export function DataManager({ resource, title, description, label, fields, colum
   function openCreate() {
     const initial: Record<string, unknown> = {};
     fields.forEach((field) => {
-      if (field.type === "checkbox") initial[field.key] = ["aktif", "gratis"].includes(field.key);
-      else if (field.type === "select" && optionsFor(field).length) initial[field.key] = optionsFor(field)[0].value;
+      if (field.defaultValue !== undefined) initial[field.key] = field.defaultValue;
+      else if (field.type === "checkbox") initial[field.key] = false;
+      else if (field.type === "select" && field.required && optionsFor(field).length) initial[field.key] = optionsFor(field)[0].value;
       else initial[field.key] = "";
     });
     setEditing(null);
@@ -281,12 +289,16 @@ export function DataManager({ resource, title, description, label, fields, colum
       {error && !modalOpen && <div className="portal-alert error">{error}</div>}
       <div className="dm-table-wrap">
         <table className="dm-table"><thead><tr>{columns.map((col) => <th key={col.key}>{col.label}</th>)}<th>Aksi</th></tr></thead><tbody>
-          {loading ? <tr><td colSpan={columns.length + 1} className="dm-empty">Memuat data...</td></tr> : filtered.length === 0 ? <tr><td colSpan={columns.length + 1} className="dm-empty">Belum ada data.</td></tr> : filtered.map((row) => <tr key={row.id}>{columns.map((col) => <td key={col.key} data-label={col.label}>{col.key === "foto_utama" ? <ImageThumbnail value={row[col.key]} alt={String(row.judul ?? row.nama_acara ?? label)} /> : col.key === "status" || col.key === "status_acara" ? <span className={`portal-status ${String(row[col.key] ?? "").toLowerCase().replaceAll(" ", "-")}`}>{formatValue(col.key, row[col.key])}</span> : formatValue(col.key, row[col.key])}</td>)}<td className="dm-actions" data-label="Aksi"><button type="button" onClick={() => openEdit(row)} aria-label="Edit"><PortalIcon name="edit" /></button><button className="danger" type="button" onClick={() => void remove(row)} aria-label="Hapus"><PortalIcon name="trash" /></button></td></tr>)}
+          {loading ? <tr><td colSpan={columns.length + 1} className="dm-empty">Memuat data...</td></tr> : filtered.length === 0 ? <tr><td colSpan={columns.length + 1} className="dm-empty">Belum ada data.</td></tr> : filtered.map((row) => <tr key={row.id}>{columns.map((col) => <td key={col.key} data-label={col.label}>{col.key === "foto_utama" ? <ImageThumbnail value={row[col.key]} alt={String(row.judul ?? row.nama_acara ?? row.nama_tempat ?? row.nama_hotel ?? row.nama_usaha ?? row.nama_umum ?? label)} /> : col.key === "status" || col.key === "status_acara" ? <span className={`portal-status ${String(row[col.key] ?? "").toLowerCase().replaceAll(" ", "-")}`}>{formatValue(col.key, row[col.key])}</span> : formatValue(col.key, row[col.key])}</td>)}<td className="dm-actions" data-label="Aksi"><button type="button" onClick={() => openEdit(row)} aria-label="Edit"><PortalIcon name="edit" /></button><button className="danger" type="button" onClick={() => void remove(row)} aria-label="Hapus"><PortalIcon name="trash" /></button></td></tr>)}
         </tbody></table>
       </div>
 
       {modalOpen && <div className="portal-modal-layer" role="dialog" aria-modal="true"><button className="portal-modal-backdrop" type="button" onClick={() => setModalOpen(false)} aria-label="Tutup" /><form className="portal-modal" onSubmit={save}><div className="portal-modal-head"><div><p>{editing ? "Edit data" : "Data baru"}</p><h2>{editing ? `Ubah ${label}` : `Tambah ${label}`}</h2></div><button type="button" onClick={() => setModalOpen(false)}><PortalIcon name="x" /></button></div><div className="portal-form-grid">
-        {fields.map((field) => <div className={`portal-field ${field.type === "textarea" || field.type === "image" ? "full" : ""}`} key={field.key}><span>{field.label}{field.required ? " *" : ""}</span>{field.type === "textarea" ? <textarea value={String(form[field.key] ?? "")} onChange={(e) => setForm((old) => ({ ...old, [field.key]: e.target.value }))} required={field.required} rows={4} /> : field.type === "select" ? <select value={String(form[field.key] ?? "")} onChange={(e) => setForm((old) => ({ ...old, [field.key]: e.target.value }))} required={field.required}><option value="" disabled>Pilih {field.label.toLowerCase()}</option>{optionsFor(field).map((option) => <option key={String(option.value)} value={option.value}>{option.label}</option>)}</select> : field.type === "checkbox" ? <input className="portal-checkbox" type="checkbox" checked={Boolean(form[field.key])} onChange={(e) => setForm((old) => ({ ...old, [field.key]: e.target.checked }))} /> : field.type === "image" ? <ImageField value={form[field.key]} onChange={(value) => setForm((old) => ({ ...old, [field.key]: value }))} disabled={saving} /> : <input type={field.type ?? "text"} value={String(form[field.key] ?? "")} onChange={(e) => setForm((old) => ({ ...old, [field.key]: e.target.value }))} required={field.required} placeholder={field.placeholder} />}</div>)}
+        {fields.map((field) => <div className={`portal-field ${field.type === "textarea" || field.type === "image" ? "full" : ""}`} key={field.key}><span>{field.label}{field.required ? " *" : ""}</span>{field.type === "textarea" ? <textarea value={String(form[field.key] ?? "")} onChange={(e) => setForm((old) => ({ ...old, [field.key]: e.target.value }))} required={field.required} rows={4} placeholder={field.placeholder} /> : field.type === "select" ? <select value={String(form[field.key] ?? "")} onChange={(e) => setForm((old) => {
+          const next = { ...old, [field.key]: e.target.value };
+          fields.filter((candidate) => candidate.dependsOn === field.key).forEach((candidate) => { next[candidate.key] = ""; });
+          return next;
+        })} required={field.required}><option value="">{field.required ? `Pilih ${field.label.toLowerCase()}` : `Tidak dipilih`}</option>{optionsFor(field).map((option) => <option key={String(option.value)} value={option.value}>{option.label}</option>)}</select> : field.type === "checkbox" ? <input className="portal-checkbox" type="checkbox" checked={Boolean(form[field.key])} onChange={(e) => setForm((old) => ({ ...old, [field.key]: e.target.checked }))} /> : field.type === "image" ? <ImageField value={form[field.key]} onChange={(value) => setForm((old) => ({ ...old, [field.key]: value }))} disabled={saving} /> : <input type={field.type ?? "text"} value={String(form[field.key] ?? "")} onChange={(e) => setForm((old) => ({ ...old, [field.key]: e.target.value }))} required={field.required} placeholder={field.placeholder} min={field.min} max={field.max} step={field.type === "number" ? (field.step ?? "any") : undefined} />}</div>)}
       </div>{error && <div className="portal-alert error">{error}</div>}<div className="portal-modal-actions"><button type="button" className="portal-secondary" onClick={() => setModalOpen(false)}>Batal</button><button type="submit" className="portal-primary" disabled={saving}>{saving ? "Mengunggah & Menyimpan..." : "Simpan Data"}</button></div></form></div>}
     </section>
   );

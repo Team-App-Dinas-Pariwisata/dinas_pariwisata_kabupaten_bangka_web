@@ -148,7 +148,23 @@ function configFor(kind: TourismKind): TourismConfig {
           t.status_perlindungan_indonesia AS badge,
           NULL AS price_from, NULL AS price_to,
           t.habitat AS detail_primary, t.persebaran AS detail_secondary,
-          t.fakta_unik AS detail_tertiary, t.latitude_publik AS latitude, t.longitude_publik AS longitude,
+          t.fakta_unik AS detail_tertiary,
+          (
+            SELECT ROUND(AVG(sel.latitude_publik), 7)
+            FROM satwa_endemik_lokasi sel
+            WHERE sel.satwa_endemik_id = t.id
+              AND sel.aktif = 1
+              AND sel.tingkat_sensitivitas <> 'Rahasia'
+              AND sel.latitude_publik IS NOT NULL
+          ) AS latitude,
+          (
+            SELECT ROUND(AVG(sel.longitude_publik), 7)
+            FROM satwa_endemik_lokasi sel
+            WHERE sel.satwa_endemik_id = t.id
+              AND sel.aktif = 1
+              AND sel.tingkat_sensitivitas <> 'Rahasia'
+              AND sel.longitude_publik IS NOT NULL
+          ) AS longitude,
           t.tanggal_publikasi AS published_at
         `,
         publicWhere: "t.aktif = 1 AND t.dipublikasikan = 1 AND t.tanggal_publikasi IS NOT NULL AND t.tanggal_publikasi <= NOW()",

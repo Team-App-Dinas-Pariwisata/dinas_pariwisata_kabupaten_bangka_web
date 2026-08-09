@@ -18,7 +18,7 @@ const IMAGE_EXTENSIONS: Record<string, string> = {
   "image/avif": "avif",
 };
 
-type R2Resource = "berita" | "acara";
+type R2Resource = "berita" | "acara" | "tempat-wisata" | "hotel" | "kuliner" | "satwa-endemik";
 
 type R2Config = {
   accountId: string;
@@ -200,7 +200,8 @@ export function isManagedR2ImageKey(key: string) {
   }
 
   const prefix = configuredPrefix();
-  return key.startsWith(`${prefix}/berita/`) || key.startsWith(`${prefix}/acara/`);
+  return ["berita", "acara", "tempat-wisata", "hotel", "kuliner", "satwa-endemik"]
+    .some((resource) => key.startsWith(`${prefix}/${resource}/`));
 }
 
 export function keyFromR2StorageReference(value: string | undefined | null) {
@@ -312,7 +313,8 @@ function cloudflareS3Error(error: unknown, action: string) {
 }
 
 export async function uploadImageToR2(file: File, resource: string): Promise<R2UploadResult> {
-  if (resource !== "berita" && resource !== "acara") {
+  const allowedResources: R2Resource[] = ["berita", "acara", "tempat-wisata", "hotel", "kuliner", "satwa-endemik"];
+  if (!allowedResources.includes(resource as R2Resource)) {
     throw new Error("Resource upload R2 tidak valid.");
   }
   if (!file.size) throw new Error("File gambar kosong.");
@@ -327,7 +329,7 @@ export async function uploadImageToR2(file: File, resource: string): Promise<R2U
     throw new Error(`Ukuran gambar maksimal ${Math.round(maxBytes / 1024 / 1024)} MB.`);
   }
 
-  const key = makeObjectKey(resource, contentType);
+  const key = makeObjectKey(resource as R2Resource, contentType);
   const body = Buffer.from(await file.arrayBuffer());
   const { client, config } = r2Client();
 
