@@ -249,6 +249,24 @@ export function privateSubmissionUrlForR2Key(key: string) {
   return submissionProxyUrlForKey(key);
 }
 
+export function keyFromR2SubmissionStorageReference(value: string | undefined | null) {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  try {
+    const parsed = new URL(trimmed, "http://local.invalid");
+    if (trimmed.startsWith("/") && parsed.pathname === SUBMISSION_PROXY_PATH) {
+      const key = parsed.searchParams.get("key");
+      return key && isManagedR2SubmissionKey(key) ? key : null;
+    }
+  } catch {
+    return null;
+  }
+
+  return isManagedR2SubmissionKey(trimmed) ? trimmed : null;
+}
+
 export function keyFromR2StorageReference(value: string | undefined | null) {
   if (!value) return null;
   const trimmed = value.trim();
@@ -303,6 +321,21 @@ function sanitizeKeySegment(value: string) {
     .replace(/[^a-z0-9_-]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 80) || "file";
+}
+
+function normalizedSubmissionContentType(file: File) {
+  const raw = file.type.toLowerCase().split(";", 1)[0].trim();
+  if (raw === "image/jpg") return "image/jpeg";
+  if (raw in SUBMISSION_EXTENSIONS) return raw;
+
+  const extension = file.name.toLowerCase().split(".").pop();
+  if (extension === "jpg" || extension === "jpeg") return "image/jpeg";
+  if (extension === "png") return "image/png";
+  if (extension === "webp") return "image/webp";
+  if (extension === "gif") return "image/gif";
+  if (extension === "avif") return "image/avif";
+  if (extension === "pdf") return "application/pdf";
+  return "";
 }
 
 function makeSubmissionObjectKey(
@@ -492,9 +525,9 @@ export async function uploadSubmissionFileToR2(
   }
   if (!file.size) throw new Error("File pengajuan kosong.");
 
-  const contentType = file.type.toLowerCase();
-  if (!(contentType in SUBMISSION_EXTENSIONS)) {
-    throw new Error("Format file pengajuan harus JPG/JPEG, PNG, WebP, GIF, AVIF, atau PDF.");
+  const contentType = normalizedSubmissionContentType(file);
+  if (!contentType || !(contentType in SUBMISSION_EXTENSIONS)) {
+    throw new Error("Format file pengajuan tidak didukung. Gunakan PDF, JPG/JPEG, atau PNG untuk dokumen pengajuan.");
   }
 
   const maxBytes = configuredMaxSubmissionBytes();

@@ -12,6 +12,7 @@ export type SubmissionField = {
   dependsOn?: string;
   options?: { label: string; value: string }[];
   accept?: string;
+  fileKind?: "image" | "document";
   help?: string;
 };
 
@@ -35,6 +36,10 @@ const genderOptions = [
   { label: "Laki-laki", value: "Laki-laki" },
   { label: "Perempuan", value: "Perempuan" },
 ];
+
+export const SUBMISSION_IMAGE_ACCEPT = "image/jpeg,image/png,.jpg,.jpeg,.png";
+export const SUBMISSION_DOCUMENT_ACCEPT = "application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png";
+
 
 export const submissionConfigs: Record<SubmissionType, SubmissionConfig> = {
   ekraf: {
@@ -105,11 +110,11 @@ export const submissionConfigs: Record<SubmissionType, SubmissionConfig> = {
         shortTitle: "Dokumen",
         description: "Unggah dokumen pendukung. Dokumen yang tidak wajib dapat dikosongkan.",
         fields: [
-          { key: "file_foto_diri", label: "Foto Diri", type: "file", accept: "image/*,.pdf" },
-          { key: "file_logo_usaha", label: "Logo Usaha", type: "file", accept: "image/*,.pdf" },
-          { key: "file_foto_dokumentasi", label: "Foto Dokumentasi", type: "file", accept: "image/*,.pdf" },
-          { key: "file_sertifikat", label: "Sertifikat (Halal / PIRT / NIB / lainnya)", type: "file", accept: "image/*,.pdf" },
-          { key: "file_sertifikat_pelatihan", label: "Sertifikat Pelatihan", type: "file", accept: "image/*,.pdf" },
+          { key: "file_foto_diri", label: "Foto Diri", type: "file", fileKind: "image", accept: SUBMISSION_IMAGE_ACCEPT },
+          { key: "file_logo_usaha", label: "Logo Usaha", type: "file", fileKind: "image", accept: SUBMISSION_IMAGE_ACCEPT },
+          { key: "file_foto_dokumentasi", label: "Foto Dokumentasi", type: "file", fileKind: "image", accept: SUBMISSION_IMAGE_ACCEPT },
+          { key: "file_sertifikat", label: "Sertifikat (Halal / PIRT / NIB / lainnya)", type: "file", fileKind: "document", accept: SUBMISSION_DOCUMENT_ACCEPT, help: "Dokumen dapat berupa PDF, JPG/JPEG, atau PNG." },
+          { key: "file_sertifikat_pelatihan", label: "Sertifikat Pelatihan", type: "file", fileKind: "document", accept: SUBMISSION_DOCUMENT_ACCEPT, help: "Dokumen dapat berupa PDF, JPG/JPEG, atau PNG." },
           { key: "konfirmasi_kebenaran", label: "Saya menyatakan data yang diisi benar dan dapat diverifikasi oleh Dinas Pariwisata Kabupaten Bangka.", type: "checkbox", required: true },
         ],
       },
@@ -157,8 +162,8 @@ export const submissionConfigs: Record<SubmissionType, SubmissionConfig> = {
         shortTitle: "Dokumen",
         description: "Tambahkan foto diri dan sertifikat pelatihan bila tersedia.",
         fields: [
-          { key: "file_foto_diri", label: "Foto Diri", type: "file", accept: "image/*,.pdf" },
-          { key: "file_sertifikat_pelatihan", label: "Sertifikat Pelatihan", type: "file", accept: "image/*,.pdf" },
+          { key: "file_foto_diri", label: "Foto Diri", type: "file", fileKind: "image", accept: SUBMISSION_IMAGE_ACCEPT },
+          { key: "file_sertifikat_pelatihan", label: "Sertifikat Pelatihan", type: "file", fileKind: "document", accept: SUBMISSION_DOCUMENT_ACCEPT, help: "Dokumen dapat berupa PDF, JPG/JPEG, atau PNG." },
         ],
       },
       {
@@ -219,9 +224,9 @@ export const submissionConfigs: Record<SubmissionType, SubmissionConfig> = {
         fields: [
           { key: "latitude", label: "Latitude", type: "number" },
           { key: "longitude", label: "Longitude", type: "number" },
-          { key: "file_logo_organisasi", label: "Logo Organisasi", type: "file", accept: "image/*,.pdf" },
-          { key: "file_foto_dokumentasi", label: "Foto Dokumentasi", type: "file", accept: "image/*,.pdf" },
-          { key: "file_akta_badan_hukum", label: "Akta Badan Hukum", type: "file", accept: "image/*,.pdf" },
+          { key: "file_logo_organisasi", label: "Logo Organisasi", type: "file", fileKind: "image", accept: SUBMISSION_IMAGE_ACCEPT },
+          { key: "file_foto_dokumentasi", label: "Foto Dokumentasi", type: "file", fileKind: "image", accept: SUBMISSION_IMAGE_ACCEPT },
+          { key: "file_akta_badan_hukum", label: "Akta Badan Hukum", type: "file", fileKind: "document", accept: SUBMISSION_DOCUMENT_ACCEPT, help: "Dokumen dapat berupa PDF, JPG/JPEG, atau PNG." },
         ],
       },
       {

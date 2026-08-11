@@ -173,7 +173,7 @@ export function PublicSubmissionForm({ type }: Props) {
             ))}
             <div className="submission-help-card">
               <strong>Dokumen pendukung</strong>
-              <p>Seluruh gambar dan PDF diunggah ke Cloudflare R2. Maksimal 5 MB per file.</p>
+              <p>Foto menerima JPG/JPEG atau PNG. Dokumen menerima PDF, JPG/JPEG, atau PNG. Maksimal 5 MB per file dan tersimpan di Cloudflare R2.</p>
             </div>
           </aside>
 
@@ -204,10 +204,10 @@ export function PublicSubmissionForm({ type }: Props) {
                     ) : field.type === "checkbox" ? (
                       <span className="submission-checkline"><input type="checkbox" checked={Boolean(value)} onChange={(e) => setValue(field.key, e.target.checked)} /><span>{field.label}{field.required ? <b> *</b> : null}</span></span>
                     ) : field.type === "file" ? (
-                      <span className="submission-filebox">
+                      <span className={`submission-filebox ${field.fileKind === "document" ? "document-file" : "image-file"}`}>
                         <input type="file" accept={field.accept} onChange={(e: ChangeEvent<HTMLInputElement>) => setValue(field.key, e.target.files?.[0] ?? null)} />
-                        <span>{value instanceof File ? value.name : "Pilih file atau seret dokumen ke area ini"}</span>
-                        <small>Maksimal 5 MB · Gambar/PDF → Cloudflare R2</small>
+                        <span>{value instanceof File ? value.name : field.fileKind === "document" ? "Pilih dokumen PDF/JPG/PNG" : "Pilih gambar JPG/PNG"}</span>
+                        <small>Maksimal 5 MB · {field.fileKind === "document" ? "PDF, JPG/JPEG, PNG" : "JPG/JPEG, PNG"} → Cloudflare R2</small>
                       </span>
                     ) : (
                       <input

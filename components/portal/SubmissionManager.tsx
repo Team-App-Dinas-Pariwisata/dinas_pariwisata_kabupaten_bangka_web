@@ -200,7 +200,8 @@ export function SubmissionManager({ type }: Props) {
                 {config.steps[detailStep].fields.filter((field) => field.key !== "konfirmasi_kebenaran").map((field) => {
                   const value = fieldValue(selected, field);
                   const isFile = field.type === "file" && value !== "—";
-                  return <div className={field.type === "textarea" || field.type === "file" || field.type === "checkbox" ? "wide" : ""} key={field.key}><span>{field.label}</span>{isFile ? <a href={value} target="_blank" rel="noreferrer">Buka dokumen ↗</a> : <strong>{value}</strong>}</div>;
+                  const fileLinkLabel = field.fileKind === "document" ? "Buka dokumen ↗" : "Buka gambar ↗";
+                  return <div className={field.type === "textarea" || field.type === "file" || field.type === "checkbox" ? "wide" : ""} key={field.key}><span>{field.label}</span>{isFile ? <a href={value} target="_blank" rel="noreferrer">{fileLinkLabel}</a> : <strong>{value}</strong>}</div>;
                 })}
               </div>
             </div>

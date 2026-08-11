@@ -11,6 +11,7 @@ type SubmissionItem = {
   noRegistrasi: string;
   status: string;
   createdAt: string;
+  canEdit: boolean;
 };
 
 type Row = RowDataPacket & {
@@ -35,6 +36,15 @@ function statusClass(status: string) {
   return "pending";
 }
 
+function canEditStatus(status: string) {
+  return ["Menunggu", "Perlu Perbaikan", "Ditolak"].includes(status);
+}
+
+function editHref(type: SubmissionItem["type"], id: number) {
+  const segment = type === "ekraf" ? "pelaku-ekraf" : type === "sdm" ? "sdm-pariwisata" : "komunitas";
+  return `/akun/pengajuan/${segment}/${id}/edit`;
+}
+
 export async function ApplicantOverview({ userId, userName }: { userId: number; userName: string }) {
   const [ekrafResult, sdmResult, komunitasResult] = await Promise.all([
     db().execute<Row[]>(`SELECT id, no_registrasi, COALESCE(status, 'Menunggu') status_label, nama_usaha title_label, created_at FROM pengajuan_ekraf WHERE created_by = ? ORDER BY created_at DESC`, [userId]),
@@ -43,9 +53,9 @@ export async function ApplicantOverview({ userId, userName }: { userId: number; 
   ]);
 
   const items: SubmissionItem[] = [
-    ...ekrafResult[0].map((row) => ({ id: row.id, type: "ekraf" as const, typeLabel: "Pelaku Ekraf", title: row.title_label || "Pengajuan Ekraf", noRegistrasi: row.no_registrasi || "—", status: row.status_label || "Menunggu", createdAt: row.created_at })),
-    ...sdmResult[0].map((row) => ({ id: row.id, type: "sdm" as const, typeLabel: "SDM Pariwisata", title: row.title_label || "Pengajuan SDM", noRegistrasi: row.no_registrasi || "—", status: row.status_label || "Menunggu", createdAt: row.created_at })),
-    ...komunitasResult[0].map((row) => ({ id: row.id, type: "komunitas" as const, typeLabel: "Komunitas", title: row.title_label || "Pengajuan Komunitas", noRegistrasi: row.no_registrasi || "—", status: row.status_label || "Menunggu", createdAt: row.created_at })),
+    ...ekrafResult[0].map((row) => { const status = row.status_label || "Menunggu"; return { id: row.id, type: "ekraf" as const, typeLabel: "Pelaku Ekraf", title: row.title_label || "Pengajuan Ekraf", noRegistrasi: row.no_registrasi || "—", status, createdAt: row.created_at, canEdit: canEditStatus(status) }; }),
+    ...sdmResult[0].map((row) => { const status = row.status_label || "Menunggu"; return { id: row.id, type: "sdm" as const, typeLabel: "SDM Pariwisata", title: row.title_label || "Pengajuan SDM", noRegistrasi: row.no_registrasi || "—", status, createdAt: row.created_at, canEdit: canEditStatus(status) }; }),
+    ...komunitasResult[0].map((row) => { const status = row.status_label || "Menunggu"; return { id: row.id, type: "komunitas" as const, typeLabel: "Komunitas", title: row.title_label || "Pengajuan Komunitas", noRegistrasi: row.no_registrasi || "—", status, createdAt: row.created_at, canEdit: canEditStatus(status) }; }),
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const approved = items.filter((item) => item.status === "Disetujui").length;
@@ -84,7 +94,14 @@ export async function ApplicantOverview({ userId, userName }: { userId: number; 
             {items.slice(0, 10).map((item) => (
               <article key={`${item.type}-${item.id}`}>
                 <div className="history-type"><span>{item.typeLabel}</span><strong>{item.title}</strong><small>{item.noRegistrasi} · {formatDate(item.createdAt)}</small></div>
-                <span className={`applicant-status ${statusClass(item.status)}`}>{item.status}</span>
+                <div className="applicant-history-actions">
+                  <span className={`applicant-status ${statusClass(item.status)}`}>{item.status}</span>
+                  {item.canEdit ? (
+                    <Link href={editHref(item.type, item.id)} className="applicant-edit-button"><PortalIcon name="edit" /> Edit Pengajuan</Link>
+                  ) : (
+                    <span className="applicant-locked-label">Terkunci setelah disetujui</span>
+                  )}
+                </div>
               </article>
             ))}
           </div>

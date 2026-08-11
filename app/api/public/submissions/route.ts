@@ -26,6 +26,26 @@ async function saveFile(file: File, type: SubmissionType, key: string, ownerId?:
   return uploaded.storageUrl;
 }
 
+
+function validateFileForField(file: File, field: SubmissionField) {
+  const mime = file.type.toLowerCase().split(";", 1)[0].trim();
+  const ext = file.name.toLowerCase().split(".").pop() ?? "";
+  const isJpeg = mime === "image/jpeg" || mime === "image/jpg" || ext === "jpg" || ext === "jpeg";
+  const isPng = mime === "image/png" || ext === "png";
+  const isPdf = mime === "application/pdf" || ext === "pdf";
+
+  if (field.fileKind === "document") {
+    if (!(isPdf || isJpeg || isPng)) {
+      throw new Error(`${field.label}: format dokumen harus PDF, JPG/JPEG, atau PNG.`);
+    }
+    return;
+  }
+
+  if (!(isJpeg || isPng)) {
+    throw new Error(`${field.label}: format gambar harus JPG/JPEG atau PNG.`);
+  }
+}
+
 function requiredMissing(form: FormData, field: SubmissionField) {
   if (!field.required) return false;
   if (field.type === "checkbox") return !checked(form, field.key);
@@ -41,7 +61,7 @@ function dbErrorMessage(error: unknown) {
   if (code === "ER_DUP_ENTRY") return "Nomor registrasi atau data unik sudah tercatat. Silakan kirim ulang.";
   if (code === "ER_NO_REFERENCED_ROW_2") return "Kecamatan, kelurahan, subsektor, atau komunitas yang dipilih tidak valid.";
   if (code === "ER_DATA_TOO_LONG") return "Ada data yang terlalu panjang untuk disimpan.";
-  if (error instanceof Error && (error.message.includes("maksimal") || error.message.includes("Format") || error.message.includes("Cloudflare R2") || error.message.includes("R2") || error.message.includes("Upload"))) return error.message;
+  if (error instanceof Error && /(maksimal|format|cloudflare r2|r2|upload)/i.test(error.message)) return error.message;
   return "Pengajuan belum dapat disimpan. Periksa data dan koneksi database.";
 }
 
@@ -67,7 +87,10 @@ export async function POST(request: Request) {
       if (field.key === "konfirmasi_kebenaran") continue;
       if (field.type === "file") {
         const entry = form.get(field.key);
-        if (entry instanceof File && entry.size > 0) data[field.key] = await saveFile(entry, type, field.key, null);
+        if (entry instanceof File && entry.size > 0) {
+          validateFileForField(entry, field);
+          data[field.key] = await saveFile(entry, type, field.key, null);
+        }
         continue;
       }
       if (field.type === "checkbox") {

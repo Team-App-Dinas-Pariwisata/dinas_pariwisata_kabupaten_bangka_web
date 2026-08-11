@@ -2154,7 +2154,17 @@ a {
 .review-button svg { width: 16px; height: 16px; }
 
 /* Modal verifikasi pengajuan */
-.verification-modal { width: min(1080px, 100%); padding: 0; overflow: hidden; }
+.verification-modal {
+  width: min(1080px, 100%);
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
+}
 .verification-modal .portal-modal-head { padding: 21px 23px 17px; }
 .verification-status-row {
   display: flex;
@@ -2226,6 +2236,22 @@ a {
 .verification-decision { padding: 20px 23px 23px; border-top: 1px solid #e6ecee; background: #f8fafb; }
 .verification-decision .portal-field { display: flex; flex-direction: column; gap: 7px; }
 .verification-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 14px; }
+.verification-modal .portal-modal-head {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: #fff;
+}
+
+@media (max-width: 620px) {
+  .portal-modal-layer { padding: 10px; }
+  .verification-modal { max-height: calc(100dvh - 20px); }
+  .verification-status-row { flex-wrap: wrap; }
+  .verification-status-row small { width: 100%; margin-left: 0; }
+  .verification-steps { padding: 0 10px; overflow-x: auto; grid-template-columns: repeat(4, minmax(130px, 1fr)); }
+  .verification-grid { grid-template-columns: 1fr; }
+  .verification-grid > div.wide { grid-column: span 1; }
+}
 .verify-reject,
 .verify-approve {
   display: inline-flex;
@@ -8331,4 +8357,123 @@ body {
   .applicant-fields input:not([type="checkbox"]),
   .applicant-fields select,
   .applicant-fields textarea { font-size: 13px; }
+}
+
+/* ========================================================================== 
+   V36 — Applicant submission editing
+   ========================================================================== */
+.applicant-history-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.applicant-edit-button {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 11px;
+  border: 1px solid var(--applicant-line, #d9e3ec);
+  border-radius: 9px;
+  color: var(--applicant-blue, #536d8c);
+  background: #fff;
+  font-size: 11.5px;
+  font-weight: 750;
+  transition: background .18s ease, border-color .18s ease, transform .18s ease;
+}
+.applicant-edit-button:hover {
+  transform: translateY(-1px);
+  border-color: #b9cadd;
+  background: var(--applicant-blue-pale, #f2f6fa);
+}
+.applicant-edit-button svg { width: 15px; height: 15px; }
+.applicant-locked-label {
+  color: #8494a3;
+  font-size: 10.5px;
+  font-weight: 650;
+}
+
+.applicant-edit-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: -4px 0 18px;
+  padding: 14px 16px;
+  border: 1px solid #cbd9e6;
+  border-radius: 12px;
+  background: #edf3f8;
+}
+.applicant-edit-notice > div { min-width: 0; }
+.applicant-edit-notice strong {
+  display: block;
+  color: var(--applicant-text, #314256);
+  font-size: 12.5px;
+}
+.applicant-edit-notice span {
+  display: block;
+  margin-top: 4px;
+  color: #667c91;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+.applicant-edit-notice span b { color: var(--applicant-blue, #536d8c); }
+.applicant-edit-notice > a {
+  flex: 0 0 auto;
+  color: var(--applicant-blue, #536d8c);
+  font-size: 11.5px;
+  font-weight: 750;
+}
+
+.applicant-edit-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.applicant-edit-fieldset:disabled { opacity: .72; }
+
+.applicant-existing-file {
+  position: relative;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 3px;
+  padding: 7px 10px;
+  border: 1px solid #cfdbe6;
+  border-radius: 8px;
+  color: var(--applicant-blue, #536d8c);
+  background: #fff;
+  font-size: 11px;
+  font-weight: 750;
+}
+.applicant-existing-file:hover { background: #edf3f8; }
+.applicant-existing-file svg { width: 14px; height: 14px; }
+
+@media (max-width: 760px) {
+  .applicant-history-list article {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .applicant-history-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .applicant-edit-notice {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+.applicant-edit-notice .applicant-verification-note {
+  margin-top: 7px;
+  padding-top: 7px;
+  border-top: 1px solid #d5e1ec;
+  color: #52687d;
 }
