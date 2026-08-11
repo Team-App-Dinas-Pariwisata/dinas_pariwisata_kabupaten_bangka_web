@@ -173,7 +173,7 @@ export function PublicSubmissionForm({ type }: Props) {
             ))}
             <div className="submission-help-card">
               <strong>Dokumen pendukung</strong>
-              <p>Gambar diunggah ke ImgBB. PDF tetap disimpan sebagai dokumen lokal. Maksimal 5 MB per file.</p>
+              <p>Seluruh gambar dan PDF diunggah ke Cloudflare R2. Maksimal 5 MB per file.</p>
             </div>
           </aside>
 
@@ -207,7 +207,7 @@ export function PublicSubmissionForm({ type }: Props) {
                       <span className="submission-filebox">
                         <input type="file" accept={field.accept} onChange={(e: ChangeEvent<HTMLInputElement>) => setValue(field.key, e.target.files?.[0] ?? null)} />
                         <span>{value instanceof File ? value.name : "Pilih file atau seret dokumen ke area ini"}</span>
-                        <small>Maksimal 5 MB · Gambar → ImgBB · PDF → penyimpanan dokumen</small>
+                        <small>Maksimal 5 MB · Gambar/PDF → Cloudflare R2</small>
                       </span>
                     ) : (
                       <input

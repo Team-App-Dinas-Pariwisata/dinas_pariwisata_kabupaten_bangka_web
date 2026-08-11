@@ -1,5 +1,6 @@
 import type { ResultSetHeader } from "mysql2/promise";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { requireRequestRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { allSubmissionFields, submissionConfigs, type SubmissionField, type SubmissionType } from "@/lib/submission-config";
 import { uploadSubmissionFileToR2 } from "@/lib/r2";
@@ -38,14 +39,18 @@ function requiredMissing(form: FormData, field: SubmissionField) {
 
 function dbErrorMessage(error: unknown) {
   const code = (error as { code?: string })?.code;
-  if (code === "ER_DUP_ENTRY") return "Nomor registrasi atau data unik sudah tercatat. Silakan kirim ulang.";
+  if (code === "ER_DUP_ENTRY") return "Data unik sudah tercatat. Periksa kembali pengajuan Anda.";
   if (code === "ER_NO_REFERENCED_ROW_2") return "Kecamatan, kelurahan, subsektor, atau komunitas yang dipilih tidak valid.";
+  if (code === "ER_BAD_FIELD_ERROR") return "Database belum menjalankan migration akun pengaju. Jalankan file database/migrations/2026-08-11_google_pengaju.sql.";
   if (code === "ER_DATA_TOO_LONG") return "Ada data yang terlalu panjang untuk disimpan.";
   if (error instanceof Error && (error.message.includes("maksimal") || error.message.includes("Format") || error.message.includes("Cloudflare R2") || error.message.includes("R2") || error.message.includes("Upload"))) return error.message;
   return "Pengajuan belum dapat disimpan. Periksa data dan koneksi database.";
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const user = await requireRequestRole(request, "pengaju");
+  if (!user) return NextResponse.json({ message: "Sesi akun pengaju tidak valid. Silakan masuk kembali dengan Google." }, { status: 401 });
+
   try {
     const form = await request.formData();
     const type = text(form, "type") as SubmissionType;
@@ -61,13 +66,17 @@ export async function POST(request: Request) {
       if (nik.length !== 16) return NextResponse.json({ message: "NIK wajib terdiri dari 16 digit." }, { status: 400 });
     }
 
-    const data: Record<string, unknown> = { no_registrasi: registration(config.registrationPrefix) };
+    const data: Record<string, unknown> = {
+      no_registrasi: registration(config.registrationPrefix),
+      created_by: user.id,
+      updated_by: user.id,
+    };
 
     for (const field of fields) {
       if (field.key === "konfirmasi_kebenaran") continue;
       if (field.type === "file") {
         const entry = form.get(field.key);
-        if (entry instanceof File && entry.size > 0) data[field.key] = await saveFile(entry, type, field.key, null);
+        if (entry instanceof File && entry.size > 0) data[field.key] = await saveFile(entry, type, field.key, user.id);
         continue;
       }
       if (field.type === "checkbox") {
@@ -84,6 +93,7 @@ export async function POST(request: Request) {
     }
 
     if (type === "sdm" || type === "komunitas") data.status_pengajuan = "Menunggu";
+    if (type === "ekraf") data.status = "Menunggu";
 
     const keys = Object.keys(data);
     const [result] = await db().execute<ResultSetHeader>(
@@ -92,11 +102,11 @@ export async function POST(request: Request) {
     );
 
     return NextResponse.json({
-      message: "Pengajuan berhasil dikirim dan menunggu verifikasi petugas.",
+      message: "Pengajuan berhasil dikirim dan terhubung ke akun Google Anda.",
       data: { id: result.insertId, no_registrasi: data.no_registrasi },
     }, { status: 201 });
   } catch (error) {
-    console.error("Public submission error:", error);
+    console.error("Applicant submission error:", error);
     return NextResponse.json({ message: dbErrorMessage(error) }, { status: 400 });
   }
 }

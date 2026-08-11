@@ -11,6 +11,7 @@ export type AuthUser = {
   name: string;
   email: string;
   phone: string | null;
+  avatarUrl: string | null;
 };
 
 type UserRow = RowDataPacket & {
@@ -19,30 +20,33 @@ type UserRow = RowDataPacket & {
   name: string;
   email: string;
   phone: string | null;
+  avatar_url: string | null;
   status: "active" | "inactive";
 };
 
 /**
  * Menormalkan role database lama maupun role portal versi sebelumnya.
  * - super_admin/admin => admin
- * - operator/verifikator/pengguna => pengguna
+ * - operator/verifikator/pengguna => pengguna (petugas)
+ * - pengaju => akun masyarakat/pemohon berbasis Google
  */
 export function normalizeDbRole(role: string): AppRole | null {
   if (["super_admin", "admin"].includes(role)) return "admin";
   if (["operator", "verifikator", "pengguna"].includes(role)) return "pengguna";
+  if (role === "pengaju") return "pengaju";
   return null;
 }
 
 async function readUser(uid: number): Promise<AuthUser | null> {
   const [rows] = await db().execute<UserRow[]>(
-    "SELECT id, role, name, email, phone, status FROM pengguna WHERE id = ? LIMIT 1",
+    "SELECT id, role, name, email, phone, avatar_url, status FROM pengguna WHERE id = ? LIMIT 1",
     [uid],
   );
   const row = rows[0];
   if (!row || row.status !== "active") return null;
   const role = normalizeDbRole(row.role);
   if (!role) return null;
-  return { id: row.id, role, name: row.name, email: row.email, phone: row.phone };
+  return { id: row.id, role, name: row.name, email: row.email, phone: row.phone, avatarUrl: row.avatar_url };
 }
 
 export async function getRequestUser(request: NextRequest): Promise<AuthUser | null> {
@@ -68,9 +72,21 @@ export async function getPageUser(): Promise<AuthUser | null> {
   return user;
 }
 
-export async function requirePageRole(role: AppRole) {
+export async function requirePageRole(role: AppRole): Promise<AuthUser> {
   const user = await getPageUser();
-  if (!user) redirect("/login");
-  if (user.role !== role) redirect(user.role === "admin" ? "/admin/pengguna" : "/dashboard");
+  if (!user) {
+    redirect(role === "pengaju" ? "/akun/masuk" : "/login");
+    throw new Error("Redirecting unauthenticated user");
+  }
+  if (user.role !== role) {
+    if (user.role === "admin") redirect("/admin/pengguna");
+    if (user.role === "pengguna") redirect("/dashboard");
+    redirect("/akun");
+    throw new Error("Redirecting unauthorized user");
+  }
   return user;
+}
+
+export async function requireApplicantPage() {
+  return requirePageRole("pengaju");
 }

@@ -1,9 +1,9 @@
 import Link from "next/link";
 
 const pelakuItems = [
-  { label: "Pelaku Ekraf", href: "/pengajuan/pelaku-ekraf" },
-  { label: "Pelaku SDM Pariwisata", href: "/pengajuan/sdm-pariwisata" },
-  { label: "Komunitas/Lembaga/Asosiasi", href: "/pengajuan/komunitas" },
+  { label: "Pelaku Ekraf", href: "/akun/pengajuan/pelaku-ekraf" },
+  { label: "Pelaku SDM Pariwisata", href: "/akun/pengajuan/sdm-pariwisata" },
+  { label: "Komunitas/Lembaga/Asosiasi", href: "/akun/pengajuan/komunitas" },
 ];
 
 const wisataItems = [
@@ -95,7 +95,7 @@ export default function PublicSiteHeader({ overlay = false }: { overlay?: boolea
           <Link href="/#tentang"><NavIcon name="info"/><span>Tentang Kami</span></Link>
         </nav>
 
-        <Link href="/login" className="public-header-login"><NavIcon name="login"/><span>Masuk</span></Link>
+        <Link href="/akun/masuk" className="public-header-login"><NavIcon name="login"/><span>Masuk / Daftar</span></Link>
 
         <details className="public-mobile-menu">
           <summary aria-label="Buka navigasi"><span></span><span></span><span></span></summary>
@@ -107,7 +107,8 @@ export default function PublicSiteHeader({ overlay = false }: { overlay?: boolea
             <MobileDropdown label="Pelaku Ekraf" icon="users" items={pelakuItems} />
             <MobileDropdown label="Wisata" icon="map" items={wisataItems} />
             <Link href="/#tentang"><NavIcon name="info"/><span>Tentang Kami</span></Link>
-            <Link href="/login"><NavIcon name="login"/><span>Portal Admin & Pengguna</span></Link>
+            <Link href="/akun/masuk"><NavIcon name="login"/><span>Masuk / Daftar Pengaju</span></Link>
+            <Link href="/login"><NavIcon name="login"/><span>Portal Petugas</span></Link>
           </div>
         </details>
       </div>

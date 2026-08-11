@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 export const SESSION_COOKIE = "appekraf_session";
-export type AppRole = "admin" | "pengguna";
+export type AppRole = "admin" | "pengguna" | "pengaju";
 
 export type SessionPayload = {
   uid: number;
@@ -40,7 +40,7 @@ export function verifySessionToken(token?: string | null): SessionPayload | null
 
   try {
     const payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8")) as SessionPayload;
-    if (!payload.uid || !["admin", "pengguna"].includes(payload.role)) return null;
+    if (!payload.uid || !["admin", "pengguna", "pengaju"].includes(payload.role)) return null;
     if (payload.exp <= Math.floor(Date.now() / 1000)) return null;
     return payload;
   } catch {

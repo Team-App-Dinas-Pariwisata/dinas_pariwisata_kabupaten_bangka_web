@@ -1,4 +1,17 @@
-# SI PARIK BANGKA Kabupaten Bangka — Portal V14 (CRUD Data Pariwisata)
+# SI PARIK BANGKA Kabupaten Bangka — Portal V16 (Cloudflare R2 untuk seluruh upload)
+
+## Perubahan V16 — seluruh upload menggunakan Cloudflare R2
+
+Semua file yang diunggah aplikasi sekarang diarahkan ke **Cloudflare R2**. ImgBB dan penyimpanan file pengajuan di filesystem lokal tidak lagi digunakan.
+
+- Media publik (Berita, Acara, Tempat Wisata, Hotel, Kuliner, Satwa Endemik) tetap menggunakan endpoint R2 yang sudah ada.
+- Dokumen Pengajuan Pelaku Ekraf, SDM Pariwisata, dan Komunitas/Asosiasi/Lembaga — gambar maupun PDF — diunggah langsung ke bucket R2.
+- File pengajuan disimpan di prefix `appekraf/pengajuan/...` dan database menyimpan URL proxy private aplikasi.
+- File milik akun pengaju hanya dapat dibaca oleh pemilik akun tersebut atau petugas/admin yang sudah login. File pengajuan anonim lama/endpoint publik hanya dapat dibaca petugas/admin.
+- Batas default file pengajuan 5 MB dapat diubah melalui `R2_MAX_SUBMISSION_FILE_MB`.
+- `R2_PUBLIC_BASE_URL` hanya digunakan untuk media publik; dokumen pengajuan tetap melalui endpoint private `/api/uploads/r2/submission`.
+
+---
 
 ## Perubahan V14 — CRUD data pariwisata pada akun Pengguna
 
@@ -30,23 +43,9 @@ Website publik dan portal pengelolaan SI PARIK BANGKA Kabupaten Bangka berbasis 
 
 
 
-## Perubahan V12 — database menyimpan URL halaman ImgBB
+## Riwayat V12 — penyimpanan ImgBB (sudah tidak digunakan)
 
-Sesuai kebutuhan terbaru, setiap upload gambar sekarang menyimpan **URL viewer akun ImgBB** ke database menggunakan ID dari response API, dengan format:
-
-```text
-https://ibb.co.com/0p828D7Z
-```
-
-API ImgBB sendiri mengembalikan `url_viewer` seperti `https://ibb.co/{id}`. Project V12 mengambil `id` tersebut lalu menyimpan format akun `https://ibb.co.com/{id}` seperti link yang terlihat pada akun ImgBB. Direct CDN URL `https://i.ibb.co/.../nama-file.jpg` tidak lagi disimpan ke kolom gambar.
-
-- Parameter custom `name` tidak lagi dikirim ke API ImgBB, sehingga aplikasi tidak membuat nama `berita-foto-utama-...`.
-- Berita dan Acara menyimpan `https://ibb.co.com/{id}` pada `foto_utama`.
-- File gambar pada tiga formulir pengajuan publik juga menyimpan format `https://ibb.co.com/{id}`.
-- Direct URL tetap dibaca dari response API hanya sebagai metadata internal, tidak digunakan sebagai nilai database.
-- Karena URL viewer adalah halaman HTML, portal menampilkannya sebagai link **Buka gambar di ImgBB**, bukan sebagai `<img src>`. Untuk file baru yang belum disimpan, preview lokal tetap tampil.
-- PDF pengajuan tetap disimpan lokal seperti versi sebelumnya.
-- Tidak ada perubahan struktur database / migration.
+Versi lama pernah menggunakan ImgBB. Mulai V16 seluruh upload telah dipindahkan ke Cloudflare R2 dan kode/runtime ImgBB dihapus dari project.
 
 ## Perubahan V8
 
@@ -85,15 +84,15 @@ Pengguna/petugas dapat:
 
 Pemeriksaan role dilakukan kembali di API/server, bukan hanya melalui penyembunyian menu.
 
-## Alur pengajuan publik 4 tahap
+## Alur pengajuan 4 tahap
 
-Pengajuan baru dilakukan dari website publik, bukan dari akun pengguna internal.
+Mulai V15, pengajuan masyarakat dilakukan melalui **akun pengaju Google**, bukan secara anonim. URL publik lama tetap tersedia sebagai redirect ke halaman akun.
 
-- `/pengajuan/pelaku-ekraf`
-- `/pengajuan/sdm-pariwisata`
-- `/pengajuan/komunitas`
+- `/akun/pengajuan/pelaku-ekraf`
+- `/akun/pengajuan/sdm-pariwisata`
+- `/akun/pengajuan/komunitas`
 
-Masing-masing menggunakan form wizard **4 tahap** yang dipetakan langsung ke kolom tabel pada `dinpar.sql`:
+Masing-masing menggunakan form wizard **4 tahap** dan menyimpan `created_by` sesuai akun pengaju yang dipetakan langsung ke kolom tabel pada `dinpar.sql`:
 
 - `pengajuan_ekraf`
 - `pengajuan_sdm_pariwisata`
@@ -101,7 +100,7 @@ Masing-masing menggunakan form wizard **4 tahap** yang dipetakan langsung ke kol
 
 Setelah dikirim, data masuk sebagai pengajuan menunggu verifikasi. Untuk `pengajuan_ekraf`, struktur SQL asli hanya memiliki status `Disetujui`/`Ditolak`, sehingga nilai `NULL` diperlakukan oleh aplikasi sebagai **Menunggu**. Untuk SDM dan Komunitas, aplikasi memakai `status_pengajuan = 'Menunggu'` yang memang sudah tersedia di tabel asli.
 
-Dokumen pengajuan menerima **gambar atau PDF**, maksimal **5 MB per file**. Semua gambar diunggah ke ImgBB dan database menyimpan URL viewer `https://ibb.co.com/{id}`; PDF tetap disimpan ke `public/uploads/pengajuan/...`.
+Dokumen pengajuan menerima **gambar atau PDF**. Seluruh file diunggah ke **Cloudflare R2**. Batas default adalah **5 MB per file** dan dapat diubah melalui `R2_MAX_SUBMISSION_FILE_MB`. Database menyimpan URL endpoint private aplikasi yang memerlukan sesi login untuk membuka file.
 
 ## Berita dan Acara dipisah
 
@@ -173,7 +172,16 @@ DB_USER=root
 DB_PASSWORD=PASSWORD_MYSQL_ANDA
 DB_CONNECTION_LIMIT=10
 SESSION_SECRET=ganti-dengan-random-secret-panjang
-IMGBB_API_KEY=API_KEY_IMGBB_ANDA
+
+CLOUDFLARE_ACCOUNT_ID=
+CLOUDFLARE_ACCESS_KEY_ID=
+CLOUDFLARE_SECRET_ACCESS_KEY=
+R2_BUCKET_NAME=
+R2_PUBLIC_BASE_URL=
+R2_OBJECT_PREFIX=appekraf
+R2_JURISDICTION=default
+R2_MAX_IMAGE_MB=10
+R2_MAX_SUBMISSION_FILE_MB=5
 ```
 
 ## Menjalankan project
@@ -241,7 +249,7 @@ database/
 - Kartu “Portal Digital” dinaikkan pada desktop agar komposisi hero lebih rapi.
 - Tab Berita pada homepage mengambil maksimal 6 berita aktif dan sudah dipublikasikan langsung dari tabel `berita` + `master_kategori_berita`, lalu menampilkan 2 berita per tampilan dan dapat digeser dengan tombol panah.
 - Endpoint publik baru: `GET /api/public/berita`.
-- Karena database saat ini menyimpan URL viewer ImgBB (`ibb.co.com/...`), viewer URL tidak dipakai sebagai `<img>`/background. Homepage memakai fallback visual lokal untuk record yang tidak memiliki direct image URL, sementara judul, kategori, tanggal, dan ringkasan tetap berasal dari database.
+- Media baru disimpan di Cloudflare R2. Record lama yang masih berisi URL eksternal tetap dapat dibaca sebagai data legacy, sedangkan upload baru tidak lagi menggunakan ImgBB.
 
 
 ## Pencarian Rekomendasi Wisata (SPK SAW)
@@ -269,3 +277,17 @@ Default URL NLP adalah `http://127.0.0.1:8000`. Jika berbeda, set `NLP_API_URL` 
 
 ### Perbaikan kompatibilitas chatbot NLP (v13)
 Jika backend Python yang aktif masih versi awal dan belum memiliki endpoint `/web-intent`, proxy `/api/ai/chat` sekarang otomatis fallback ke `/kriteria`. Pesan mentah `Not Found` tidak lagi ditampilkan kepada pengguna.
+
+---
+
+## Update V15 — Akun Pengaju + Sign Up Google
+
+Versi ini menambahkan alur akun masyarakat/pengaju tanpa mengubah hak akses admin dan petugas yang sudah berjalan.
+
+- Halaman sign up/login Google: `/akun/masuk`
+- Dashboard pengaju: `/akun`
+- Form akun: `/akun/pengajuan/pelaku-ekraf`, `/akun/pengajuan/sdm-pariwisata`, `/akun/pengajuan/komunitas`
+- Pengajuan dari akun otomatis menyimpan `created_by` agar riwayat dapat dipisahkan per pemilik akun.
+- Login password `/login` tetap khusus admin/petugas.
+- Panduan Google OAuth lokal lengkap: `README_GOOGLE_SIGNUP_LOCAL.md`
+- Migration database lama: `database/migrations/2026-08-11_google_pengaju.sql`

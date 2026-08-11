@@ -1,0 +1,471 @@
+--- /tmp/globals-original.css	2026-08-11 03:20:50.174902122 +0000
++++ /mnt/data/work_app14/app/globals.css	2026-08-11 03:19:37.610904179 +0000
+@@ -6428,3 +6428,468 @@
+   .public-footer-official-logo img,
+   .footer-official-brand img { width: 195px; }
+ }
++
++/* ========================================================================== 
++   V34 — FIGMA THEME ADAPTATION
++   Visual-only override. Existing homepage cards, grids, containers and markup
++   are intentionally preserved; this block changes palette, surface treatment,
++   hero atmosphere and navigation styling to match the supplied Figma direction.
++   ========================================================================== */
++:root {
++  --ink: #314256;
++  --ink-soft: #667c91;
++  --paper: #f8fafc;
++  --paper-blue: #e6eef6;
++  --line: rgba(49, 66, 86, .12);
++  --teal: #718dac;
++  --teal-dark: #536d8c;
++  --aqua: #a9bfd5;
++  --sand: #d7dfc4;
++}
++
++html,
++body {
++  background: var(--paper);
++}
++
++.site-shell {
++  background:
++    radial-gradient(circle at 10% 24%, rgba(136, 160, 189, .10), transparent 24rem),
++    var(--paper);
++}
++
++/* Header — frosted light-blue glass over the hero, navy family elsewhere. */
++.public-site-header {
++  background: linear-gradient(90deg, #2d4055 0%, #465e79 58%, #607b99 100%);
++}
++
++.public-site-header.is-overlay .public-site-header-inner {
++  border-color: rgba(255,255,255,.42);
++  background: linear-gradient(90deg, rgba(210, 226, 238, .30), rgba(235, 242, 248, .22));
++  box-shadow: 0 14px 38px rgba(19, 34, 51, .18);
++  backdrop-filter: blur(18px) saturate(118%);
++  -webkit-backdrop-filter: blur(18px) saturate(118%);
++}
++
++.public-site-header:not(.is-overlay) .public-site-header-inner {
++  border-color: rgba(255,255,255,.24);
++  background: rgba(255,255,255,.08);
++}
++
++.public-nav,
++.public-nav > a,
++.public-nav-dropdown > summary {
++  color: rgba(255,255,255,.90);
++}
++
++.public-nav > a:hover,
++.public-nav-dropdown > summary:hover,
++.public-nav-dropdown[open] > summary {
++  color: #ffffff;
++}
++
++.public-header-login {
++  color: #314256;
++  background: rgba(255,255,255,.94);
++  box-shadow: 0 8px 22px rgba(25, 42, 61, .16);
++}
++
++.public-header-login:hover {
++  background: #ffffff;
++}
++
++.public-nav-dropdown-menu {
++  border-color: rgba(49, 66, 86, .12);
++  box-shadow: 0 18px 38px rgba(31, 49, 68, .20);
++}
++
++.public-nav-dropdown-menu a {
++  color: #314256;
++}
++
++.public-nav-dropdown-menu a:hover {
++  color: #24364b;
++  background: #eef4f9;
++}
++
++/* Hero — brighter coastal Figma atmosphere while preserving content geometry. */
++.hero-media {
++  background-image: url("/hero-bangka.jpg");
++  background-position: center 48%;
++  filter: saturate(.90) contrast(.96) brightness(1.03);
++}
++
++.hero-overlay {
++  background:
++    linear-gradient(90deg,
++      rgba(35, 51, 70, .84) 0%,
++      rgba(49, 66, 86, .64) 38%,
++      rgba(65, 85, 106, .28) 69%,
++      rgba(65, 85, 106, .08) 100%),
++    linear-gradient(180deg,
++      rgba(32, 48, 66, .18) 0%,
++      rgba(32, 48, 66, .04) 56%,
++      rgba(32, 48, 66, .24) 100%);
++}
++
++.hero-grid,
++.hero-orb {
++  display: none;
++}
++
++.hero-copy h1 {
++  color: #ffffff;
++  text-shadow: 0 5px 24px rgba(18, 32, 49, .26);
++}
++
++.hero-lead {
++  color: rgba(255,255,255,.92);
++  text-shadow: 0 2px 12px rgba(23, 39, 57, .18);
++}
++
++.button-primary {
++  color: #314256;
++  background: #ffffff;
++  box-shadow: 0 12px 28px rgba(27, 43, 61, .20);
++}
++
++.button-primary:hover {
++  background: #f5f8fb;
++}
++
++.hero .button-glass {
++  color: #ffffff;
++  border-color: rgba(49, 66, 86, .58);
++  background: rgba(49, 66, 86, .86);
++  box-shadow: 0 10px 26px rgba(25, 40, 58, .17);
++}
++
++.hero .button-glass:hover {
++  background: rgba(43, 59, 78, .96);
++}
++
++.hero-metrics span {
++  color: rgba(255,255,255,.80);
++}
++
++.hero-spotlight {
++  border-color: rgba(255,255,255,.31);
++  background:
++    radial-gradient(circle at 88% 12%, rgba(213, 226, 236, .22), transparent 34%),
++    linear-gradient(145deg, rgba(95, 122, 151, .66), rgba(49, 66, 86, .52));
++  box-shadow: 0 24px 58px rgba(24, 40, 58, .20);
++}
++
++.hero-spotlight::after {
++  background: rgba(194, 216, 233, .16);
++}
++
++.spotlight-kicker,
++.visual-label {
++  color: rgba(255,255,255,.72);
++}
++
++.spotlight-icon {
++  color: #e6eef6;
++  background: rgba(255,255,255,.13);
++}
++
++.ring-one {
++  border-color: rgba(255,255,255,.24);
++  background: radial-gradient(circle, rgba(180, 202, 220, .18), transparent 62%);
++}
++
++.ring-two {
++  border-color: rgba(255,255,255,.34);
++}
++
++.hero-spotlight p {
++  color: rgba(255,255,255,.82);
++}
++
++/* Existing hero feature container/cards: color treatment only. */
++.hero-feature-card {
++  border-color: rgba(49, 66, 86, .14);
++  background: rgba(255,255,255,.98);
++  box-shadow: 0 24px 64px rgba(35, 52, 72, .16);
++}
++
++.feature-tabs {
++  background: #d5e2ec;
++}
++
++.feature-tabs button {
++  color: #5c738e;
++}
++
++.feature-tabs button:hover {
++  color: #314256;
++  background: rgba(255,255,255,.42);
++}
++
++.feature-tabs button.active,
++.feature-tabs button.active:hover,
++.feature-tabs button.active::after {
++  color: #ffffff;
++  background: #314256;
++}
++
++.feature-tabs button:focus-visible {
++  outline-color: #88a0bd;
++}
++
++.mini-feature {
++  border-color: rgba(49, 66, 86, .12);
++}
++
++.mini-feature-copy span,
++.mini-feature-summary {
++  color: #718398;
++}
++
++.feature-next {
++  background: linear-gradient(145deg, #405875, #2f4158);
++}
++
++/* Headings and section accents. */
++.section-kicker {
++  color: #5c738e;
++}
++
++.section-subsector {
++  background:
++    radial-gradient(circle at 4% 20%, rgba(213, 226, 236, .82), transparent 23rem),
++    radial-gradient(circle at 96% 84%, rgba(213, 226, 236, .56), transparent 25rem),
++    linear-gradient(180deg, #f3f7fb 0%, #e6eef6 100%);
++}
++
++/* Existing subsector cards keep dimensions/radius/grid; Figma slate palette only. */
++.subsector-card {
++  border-color: rgba(255,255,255,.18);
++  background:
++    radial-gradient(circle at 82% 18%, rgba(213, 226, 236, .18), transparent 38%),
++    linear-gradient(145deg, #7896b8 0%, #5c7696 100%);
++  box-shadow: 0 14px 32px rgba(49, 66, 86, .16);
++}
++
++.subsector-card::before {
++  background: radial-gradient(circle, rgba(221, 232, 241, .18), transparent 68%);
++}
++
++.subsector-card:hover {
++  border-color: rgba(255,255,255,.28);
++  background: linear-gradient(145deg, #6684a6 0%, #4f6887 100%);
++  box-shadow: 0 22px 48px rgba(49, 66, 86, .23);
++}
++
++.subsector-index,
++.subsector-card div span,
++.subsector-arrow {
++  color: #d5e2ec;
++}
++
++.subsector-icon,
++.subsector-card:hover .subsector-icon {
++  color: #4f6887;
++  background: #ffffff;
++  box-shadow: 0 12px 28px rgba(37, 54, 75, .18);
++}
++
++/* Ecosystem section. */
++.ecosystem {
++  background: #ffffff;
++}
++
++.ecosystem-photo {
++  box-shadow: 0 24px 66px rgba(49, 66, 86, .14);
++}
++
++.ecosystem-badge {
++  box-shadow: 0 14px 36px rgba(49, 66, 86, .12);
++}
++
++.ecosystem-badge > span,
++.ecosystem-points > div > span {
++  color: #536d8c;
++  background: #e6eef6;
++}
++
++.ecosystem-points small,
++.ecosystem-badge small {
++  color: #728398;
++}
++
++/* Berita & acara: retain all existing editorial cards/columns. */
++.editorial-section {
++  background:
++    radial-gradient(circle at 92% 10%, rgba(136, 160, 189, .17), transparent 28rem),
++    linear-gradient(180deg, #f3f7fb 0%, #e8f0f7 100%);
++}
++
++.editorial-section::before {
++  border-color: rgba(92, 115, 142, .13);
++  box-shadow: 0 0 0 70px rgba(92, 115, 142, .025), 0 0 0 140px rgba(92, 115, 142, .018);
++}
++
++.news-column,
++.events-column {
++  border-color: rgba(49, 66, 86, .10);
++  background: rgba(255,255,255,.88);
++  box-shadow: 0 18px 52px rgba(49, 66, 86, .07);
++}
++
++.editorial-column-head {
++  border-bottom-color: rgba(49, 66, 86, .10);
++}
++
++.editorial-column-head > div > span,
++.editorial-heading > p {
++  color: #718398;
++}
++
++.editorial-count,
++.event-date {
++  color: #4f6887;
++  background: #e3edf6;
++}
++
++.event-date span {
++  color: #536d8c;
++}
++
++.event-arrow {
++  color: #314256;
++  background: #eef4f9;
++}
++
++.event-arrow:hover {
++  background: #dce8f2;
++}
++
++/* Existing document CTA container, Figma navy/slate treatment only. */
++.documents {
++  background: #ffffff;
++}
++
++.documents-card {
++  background: linear-gradient(135deg, #2b3e54 0%, #3f5974 58%, #5c7895 100%);
++  box-shadow: 0 30px 70px rgba(35, 53, 73, .17);
++}
++
++.light-kicker {
++  color: #c8d9e8;
++}
++
++.document-step > span {
++  color: #d7e4ef;
++}
++
++/* About and contact. */
++.about,
++.home-contact-section {
++  background: #ffffff;
++}
++
++.home-contact-card {
++  border-color: rgba(92, 115, 142, .13);
++  background:
++    radial-gradient(circle at 96% 82%, rgba(136, 160, 189, .18), transparent 18rem),
++    linear-gradient(135deg, #e6eef6 0%, #f3f7fb 100%);
++  box-shadow: 0 22px 58px rgba(49, 66, 86, .08);
++}
++
++.home-contact-card::after {
++  background: rgba(136, 160, 189, .13);
++}
++
++.home-contact-map {
++  background: #dce7f1;
++  box-shadow: 0 12px 34px rgba(49, 66, 86, .10);
++}
++
++.home-contact-copy .section-kicker {
++  color: #5c738e;
++}
++
++.home-contact-copy h2,
++.home-contact-item,
++.home-contact-item strong {
++  color: #314256;
++}
++
++.home-contact-copy > p,
++.home-contact-item small {
++  color: #667c91;
++}
++
++.home-contact-icon {
++  color: #ffffff;
++  background: linear-gradient(135deg, #536d8c, #718dac);
++  box-shadow: inset 0 0 0 1px rgba(49, 66, 86, .28);
++}
++
++.home-contact-item[href]:hover {
++  background: rgba(92, 115, 142, .08);
++}
++
++/* Footer keeps the same structure; only theme changes. */
++.footer {
++  color: #d4dfeb;
++  background: #26394e;
++}
++
++.footer-brand p,
++.footer-column a,
++.footer-column span {
++  color: #aebdcb;
++}
++
++.footer-bottom {
++  color: #95a9bb;
++  border-top-color: rgba(255,255,255,.10);
++}
++
++/* Floating tourism recommendation remains functional but joins the palette. */
++.ai-launcher-label {
++  background: linear-gradient(135deg, #4d6682, #7894b1);
++  box-shadow: 0 10px 26px rgba(49, 66, 86, .24);
++}
++
++.ai-launcher-label::after {
++  background: #6c87a4;
++}
++
++.ai-launcher-label::before {
++  border-color: rgba(136, 160, 189, .26);
++}
++
++/* Re-theme dropdown used by hero submission CTA without changing behavior. */
++.submission-menu {
++  border-color: rgba(255,255,255,.68);
++  background: rgba(250,252,255,.98);
++  box-shadow: 0 22px 55px rgba(35, 52, 72, .22);
++}
++
++.submission-option:hover,
++.submission-option:focus-visible {
++  background: #eef4f9;
++}
++
++.submission-option-icon {
++  color: #536d8c;
++  background: linear-gradient(145deg, #edf4fa, #dce8f2);
++}
++
++@media (max-width: 760px) {
++  .public-site-header.is-overlay .public-site-header-inner {
++    background: rgba(203, 220, 233, .34);
++  }
++
++  .hero-overlay {
++    background:
++      linear-gradient(180deg,
++        rgba(35, 51, 70, .72) 0%,
++        rgba(49, 66, 86, .54) 48%,
++        rgba(49, 66, 86, .46) 100%);
++  }
++}

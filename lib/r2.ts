@@ -18,7 +18,16 @@ const IMAGE_EXTENSIONS: Record<string, string> = {
   "image/avif": "avif",
 };
 
+const SUBMISSION_EXTENSIONS: Record<string, string> = {
+  ...IMAGE_EXTENSIONS,
+  "application/pdf": "pdf",
+};
+
+const DEFAULT_MAX_SUBMISSION_BYTES = 5 * 1024 * 1024;
+const SUBMISSION_PROXY_PATH = "/api/uploads/r2/submission";
+
 type R2Resource = "berita" | "acara" | "tempat-wisata" | "hotel" | "kuliner" | "satwa-endemik";
+export type R2SubmissionType = "ekraf" | "sdm" | "komunitas";
 
 type R2Config = {
   accountId: string;
@@ -45,6 +54,8 @@ export type R2ImageResult = {
   contentLength: number | null;
 };
 
+export type R2StoredObject = R2ImageResult;
+
 let cachedClient: S3Client | null = null;
 let cachedClientKey = "";
 
@@ -56,6 +67,12 @@ function configuredPrefix() {
 function configuredMaxBytes() {
   const raw = Number(process.env.R2_MAX_IMAGE_MB);
   if (!Number.isFinite(raw) || raw <= 0) return DEFAULT_MAX_IMAGE_BYTES;
+  return Math.floor(raw * 1024 * 1024);
+}
+
+function configuredMaxSubmissionBytes() {
+  const raw = Number(process.env.R2_MAX_SUBMISSION_FILE_MB);
+  if (!Number.isFinite(raw) || raw <= 0) return DEFAULT_MAX_SUBMISSION_BYTES;
   return Math.floor(raw * 1024 * 1024);
 }
 
@@ -144,6 +161,10 @@ function proxyUrlForKey(key: string) {
   return `${PROXY_PATH}?key=${encodeURIComponent(key)}`;
 }
 
+function submissionProxyUrlForKey(key: string) {
+  return `${SUBMISSION_PROXY_PATH}?key=${encodeURIComponent(key)}`;
+}
+
 function decodedKeyFromPathname(pathname: string) {
   const encodedKey = pathname.replace(/^\/+/, "");
   if (!encodedKey) return null;
@@ -204,6 +225,30 @@ export function isManagedR2ImageKey(key: string) {
     .some((resource) => key.startsWith(`${prefix}/${resource}/`));
 }
 
+export function isManagedR2SubmissionKey(key: string) {
+  if (!key || key.includes("\\") || key.split("/").some((part) => !part || part === "." || part === "..")) {
+    return false;
+  }
+
+  const prefix = configuredPrefix();
+  return (["ekraf", "sdm", "komunitas"] as const).some((type) =>
+    key.startsWith(`${prefix}/pengajuan/${type}/`),
+  );
+}
+
+export function applicantOwnsR2SubmissionKey(key: string, userId: number) {
+  if (!isManagedR2SubmissionKey(key) || !Number.isInteger(userId) || userId <= 0) return false;
+  const prefix = configuredPrefix();
+  return (["ekraf", "sdm", "komunitas"] as const).some((type) =>
+    key.startsWith(`${prefix}/pengajuan/${type}/user-${userId}/`),
+  );
+}
+
+export function privateSubmissionUrlForR2Key(key: string) {
+  if (!isManagedR2SubmissionKey(key)) throw new Error("Object pengajuan R2 tidak valid.");
+  return submissionProxyUrlForKey(key);
+}
+
 export function keyFromR2StorageReference(value: string | undefined | null) {
   if (!value) return null;
   const trimmed = value.trim();
@@ -251,6 +296,29 @@ function makeObjectKey(resource: R2Resource, contentType: string) {
   return `${configuredPrefix()}/${resource}/${year}/${month}/${randomUUID()}.${extension}`;
 }
 
+function sanitizeKeySegment(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || "file";
+}
+
+function makeSubmissionObjectKey(
+  type: R2SubmissionType,
+  fieldKey: string,
+  contentType: string,
+  ownerId?: number | null,
+) {
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const month = String(now.getUTCMonth() + 1).padStart(2, "0");
+  const extension = SUBMISSION_EXTENSIONS[contentType];
+  const scope = ownerId && Number.isInteger(ownerId) && ownerId > 0 ? `user-${ownerId}` : "public";
+  return `${configuredPrefix()}/pengajuan/${type}/${scope}/${year}/${month}/${sanitizeKeySegment(fieldKey)}-${randomUUID()}.${extension}`;
+}
+
 export function r2ImageMimeFromKey(key: string) {
   const extension = key.split(".").pop()?.toLowerCase();
   if (extension === "jpg" || extension === "jpeg") return "image/jpeg";
@@ -259,6 +327,12 @@ export function r2ImageMimeFromKey(key: string) {
   if (extension === "gif") return "image/gif";
   if (extension === "avif") return "image/avif";
   return "application/octet-stream";
+}
+
+export function r2MimeFromKey(key: string) {
+  const extension = key.split(".").pop()?.toLowerCase();
+  if (extension === "pdf") return "application/pdf";
+  return r2ImageMimeFromKey(key);
 }
 
 function statusCodeFromError(error: unknown) {
@@ -401,5 +475,110 @@ export async function deleteImageFromR2(key: string) {
   } catch (error) {
     if (isNotFoundError(error)) return true;
     throw cloudflareS3Error(error, "Hapus object Cloudflare R2");
+  }
+}
+
+
+export async function uploadSubmissionFileToR2(
+  file: File,
+  type: R2SubmissionType,
+  fieldKey: string,
+  ownerId?: number | null,
+): Promise<R2UploadResult> {
+  if (!(
+    ["ekraf", "sdm", "komunitas"] as const
+  ).includes(type)) {
+    throw new Error("Jenis pengajuan untuk upload R2 tidak valid.");
+  }
+  if (!file.size) throw new Error("File pengajuan kosong.");
+
+  const contentType = file.type.toLowerCase();
+  if (!(contentType in SUBMISSION_EXTENSIONS)) {
+    throw new Error("Format file pengajuan harus JPG/JPEG, PNG, WebP, GIF, AVIF, atau PDF.");
+  }
+
+  const maxBytes = configuredMaxSubmissionBytes();
+  if (file.size > maxBytes) {
+    throw new Error(`Ukuran file pengajuan maksimal ${Math.round(maxBytes / 1024 / 1024)} MB.`);
+  }
+
+  const key = makeSubmissionObjectKey(type, fieldKey, contentType, ownerId);
+  const body = Buffer.from(await file.arrayBuffer());
+  const { client, config } = r2Client();
+
+  try {
+    const result = await client.send(
+      new PutObjectCommand({
+        Bucket: config.bucketName,
+        Key: key,
+        Body: body,
+        ContentType: contentType,
+        ContentLength: body.byteLength,
+        ContentDisposition: contentType === "application/pdf" ? "inline" : undefined,
+        Metadata: {
+          source: "si-parik-pengajuan",
+          submission_type: type,
+          field_key: sanitizeKeySegment(fieldKey),
+          owner_scope: ownerId && ownerId > 0 ? `user-${ownerId}` : "public",
+        },
+      }),
+    );
+
+    const storageUrl = privateSubmissionUrlForR2Key(key);
+    return {
+      key,
+      url: storageUrl,
+      storageUrl,
+      contentType,
+      size: file.size,
+      etag: result.ETag?.replace(/^\"|\"$/g, "") || null,
+    };
+  } catch (error) {
+    throw cloudflareS3Error(error, "Upload file pengajuan ke Cloudflare R2");
+  }
+}
+
+export async function getSubmissionFileFromR2(key: string): Promise<R2StoredObject | null> {
+  if (!isManagedR2SubmissionKey(key)) throw new Error("Object pengajuan R2 tidak diizinkan.");
+
+  const { client, config } = r2Client();
+  try {
+    const result = await client.send(
+      new GetObjectCommand({
+        Bucket: config.bucketName,
+        Key: key,
+      }),
+    );
+
+    if (!result.Body) return null;
+    const body = await result.Body.transformToByteArray();
+    return {
+      body,
+      contentType: result.ContentType || null,
+      etag: result.ETag?.replace(/^\"|\"$/g, "") || null,
+      lastModified: result.LastModified || null,
+      contentLength: typeof result.ContentLength === "number" ? result.ContentLength : body.byteLength,
+    };
+  } catch (error) {
+    if (isNotFoundError(error)) return null;
+    throw cloudflareS3Error(error, "Ambil file pengajuan Cloudflare R2");
+  }
+}
+
+export async function deleteSubmissionFileFromR2(key: string) {
+  if (!isManagedR2SubmissionKey(key)) return false;
+
+  const { client, config } = r2Client();
+  try {
+    await client.send(
+      new DeleteObjectCommand({
+        Bucket: config.bucketName,
+        Key: key,
+      }),
+    );
+    return true;
+  } catch (error) {
+    if (isNotFoundError(error)) return true;
+    throw cloudflareS3Error(error, "Hapus file pengajuan Cloudflare R2");
   }
 }

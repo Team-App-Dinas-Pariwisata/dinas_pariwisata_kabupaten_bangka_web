@@ -1,15 +1,3 @@
-import PublicSiteFooter from "@/components/public/PublicSiteFooter";
-import PublicSiteHeader from "@/components/public/PublicSiteHeader";
-import { PublicSubmissionForm } from "@/components/public/PublicSubmissionForm";
-
-export const metadata = { title: "Pengajuan SDM Pariwisata | SI PARIK BANGKA Bangka" };
-
-export default function Page() {
-  return (
-    <div className="public-page-shell">
-      <PublicSiteHeader />
-      <PublicSubmissionForm type="sdm" />
-      <PublicSiteFooter />
-    </div>
-  );
-}
+import { redirect } from "next/navigation";
+export const metadata = { title: "Pengajuan SDM Pariwisata | SI PARIK BANGKA" };
+export default function Page() { redirect("/akun/pengajuan/sdm-pariwisata"); }

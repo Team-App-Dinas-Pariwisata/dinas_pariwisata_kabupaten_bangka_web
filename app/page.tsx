@@ -153,19 +153,19 @@ const submissionOptions = [
     title: "Pelaku Ekraf",
     description: "Pendataan usaha dan pelaku ekonomi kreatif.",
     icon: "briefcase" as IconName,
-    href: "/pengajuan/pelaku-ekraf",
+    href: "/akun/pengajuan/pelaku-ekraf",
   },
   {
     title: "SDM Pariwisata",
     description: "Pendataan SDM dan tenaga pendukung pariwisata.",
     icon: "spark" as IconName,
-    href: "/pengajuan/sdm-pariwisata",
+    href: "/akun/pengajuan/sdm-pariwisata",
   },
   {
     title: "Komunitas",
     description: "Pendataan komunitas, asosiasi, dan lembaga.",
     icon: "users" as IconName,
-    href: "/pengajuan/komunitas",
+    href: "/akun/pengajuan/komunitas",
   },
 ];
 
@@ -780,6 +780,7 @@ export default function Home() {
             <a href="/berita">Berita</a>
             <a href="/acara">Acara</a>
             <a href="#tentang">Tentang Kami</a>
+            <a href="/akun/masuk">Akun Pengaju</a>
             <a href="/login">Portal Admin & Pengguna</a>
           </div>
 
