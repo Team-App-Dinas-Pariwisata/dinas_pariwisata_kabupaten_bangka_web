@@ -146,7 +146,7 @@ export function PublicSubmissionForm({ type }: Props) {
       <div className="submission-shell">
         <header className="submission-header">
           <Link className="submission-back" href="/">← Beranda</Link>
-          <div className="submission-brand"><span>B</span><div><strong>APPEKRAF</strong><small>Kabupaten Bangka</small></div></div>
+          <div className="submission-brand"><span>B</span><div><strong>SI PARIK BANGKA</strong><small>Kabupaten Bangka</small></div></div>
           <Link className="submission-login-link" href="/login">Portal Petugas</Link>
         </header>
 

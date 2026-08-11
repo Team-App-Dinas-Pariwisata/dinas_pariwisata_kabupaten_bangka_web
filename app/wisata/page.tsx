@@ -4,7 +4,7 @@ import PublicSiteFooter from "@/components/public/PublicSiteFooter";
 import PublicSiteHeader from "@/components/public/PublicSiteHeader";
 
 export const metadata: Metadata = {
-  title: "Wisata | APPEKRAF Kabupaten Bangka",
+  title: "Wisata | SI PARIK BANGKA Kabupaten Bangka",
   description: "Jelajahi tempat wisata, kuliner, hotel, dan satwa endemik di Kabupaten Bangka.",
 };
 

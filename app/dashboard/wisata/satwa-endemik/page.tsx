@@ -1,7 +1,7 @@
 import { DataManager } from "@/components/portal/DataManager";
 import { resourceConfigs } from "@/lib/resources";
 
-export const metadata = { title: "Satwa Endemik | Portal APPEKRAF" };
+export const metadata = { title: "Satwa Endemik | Portal SI PARIK BANGKA" };
 
 export default function Page() {
   const config = resourceConfigs["satwa-endemik"];

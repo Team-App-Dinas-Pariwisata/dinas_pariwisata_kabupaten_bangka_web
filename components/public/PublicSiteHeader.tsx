@@ -79,8 +79,8 @@ export default function PublicSiteHeader({ overlay = false }: { overlay?: boolea
           <span className="public-brand-logo-shell">
             <img
               className="public-brand-logo"
-              src="/branding/logo-bangka-header.png"
-              alt="Kabupaten Bangka, Exotic Bangka, dan Wonderful Indonesia"
+              src="/branding/logo-si-parik-navbar.png"
+              alt="SI PARIK BANGKA — Portal Ekonomi Kreatif Kabupaten Bangka"
             />
           </span>
         </Link>

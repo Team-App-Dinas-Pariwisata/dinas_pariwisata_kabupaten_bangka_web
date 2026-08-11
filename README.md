@@ -1,4 +1,4 @@
-# APPEKRAF Kabupaten Bangka — Portal V14 (CRUD Data Pariwisata)
+# SI PARIK BANGKA Kabupaten Bangka — Portal V14 (CRUD Data Pariwisata)
 
 ## Perubahan V14 — CRUD data pariwisata pada akun Pengguna
 
@@ -25,7 +25,7 @@ Fitur yang ditambahkan mencakup pencarian daftar, tambah, edit, hapus, upload fo
 - Tidak membutuhkan migration database.
 
 
-Website publik dan portal pengelolaan APPEKRAF Kabupaten Bangka berbasis **Next.js 16 + MySQL**. Versi ini menggunakan struktur tabel yang sudah tersedia pada `dinpar.sql` yang diberikan, tanpa menambah tabel pengajuan baru.
+Website publik dan portal pengelolaan SI PARIK BANGKA Kabupaten Bangka berbasis **Next.js 16 + MySQL**. Versi ini menggunakan struktur tabel yang sudah tersedia pada `dinpar.sql` yang diberikan, tanpa menambah tabel pengajuan baru.
 
 
 

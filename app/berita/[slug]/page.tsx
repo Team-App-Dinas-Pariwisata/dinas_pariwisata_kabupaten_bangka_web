@@ -21,10 +21,10 @@ function formatDate(value: string | null) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const item = await getPublicNewsBySlug(slug);
-  if (!item) return { title: "Berita tidak ditemukan | APPEKRAF" };
+  if (!item) return { title: "Berita tidak ditemukan | SI PARIK BANGKA" };
   return {
-    title: `${item.judul} | APPEKRAF Kabupaten Bangka`,
-    description: item.ringkasan || item.subjudul || "Berita APPEKRAF Kabupaten Bangka",
+    title: `${item.judul} | SI PARIK BANGKA Kabupaten Bangka`,
+    description: item.ringkasan || item.subjudul || "Berita SI PARIK BANGKA Kabupaten Bangka",
   };
 }
 

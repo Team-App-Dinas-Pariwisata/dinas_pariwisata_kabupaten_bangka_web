@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Montserrat } from "next/font/google";
 import "./globals.css";
+import Preloader from "@/components/Preloader";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -9,7 +10,7 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
-  title: "APPEKRAF Kabupaten Bangka",
+  title: "SI PARIK BANGKA Kabupaten Bangka",
   description:
     "Aplikasi Pendataan Pelaku Ekonomi Kreatif dan SDM Pariwisata Kabupaten Bangka.",
 };
@@ -21,7 +22,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" className={montserrat.variable}>
-      <body>{children}</body>
+      <body>
+        <Preloader />
+        {children}
+      </body>
     </html>
   );
 }

@@ -46,7 +46,7 @@ export function DashboardOverview() {
   return (
     <section>
       <div className="portal-page-head">
-        <div><p className="portal-breadcrumb">Dashboard</p><h1>Dashboard Pengelolaan Data</h1><p>Pantau pengajuan yang masuk, berita, dan acara APPEKRAF Kabupaten Bangka.</p></div>
+        <div><p className="portal-breadcrumb">Dashboard</p><h1>Dashboard Pengelolaan Data</h1><p>Pantau pengajuan yang masuk, berita, dan acara SI PARIK BANGKA Kabupaten Bangka.</p></div>
       </div>
       {error && <div className="portal-alert error">{error}</div>}
       <div className="portal-stat-row">

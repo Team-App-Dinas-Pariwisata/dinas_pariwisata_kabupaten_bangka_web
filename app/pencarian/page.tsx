@@ -4,7 +4,7 @@ import PublicSiteHeader from "@/components/public/PublicSiteHeader";
 import TourismRecommendationSearch from "@/components/public/TourismRecommendationSearch";
 
 export const metadata: Metadata = {
-  title: "Pencarian Rekomendasi | APPEKRAF Kabupaten Bangka",
+  title: "Pencarian Rekomendasi | SI PARIK BANGKA Kabupaten Bangka",
   description: "Pencarian rekomendasi tempat wisata, kuliner, hotel, dan satwa endemik menggunakan metode SPK Simple Additive Weighting (SAW).",
 };
 

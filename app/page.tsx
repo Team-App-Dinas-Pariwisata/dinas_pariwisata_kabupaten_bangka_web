@@ -263,7 +263,7 @@ export default function Home() {
             setBeritaPanels(beritaPayload.data.map((item, index): HeroPanelItem => ({
               title: item.judul,
               meta: `${item.nama_kategori || "Berita"} · ${formatNewsDate(item.tanggal_publikasi)}`,
-              sub: item.ringkasan || item.subjudul || item.penulis_tampil || "Informasi terbaru APPEKRAF Kabupaten Bangka",
+              sub: item.ringkasan || item.subjudul || item.penulis_tampil || "Informasi terbaru SI PARIK BANGKA Kabupaten Bangka",
               image: embeddableImage(item.foto_utama, newsFallbackImages[index % newsFallbackImages.length]),
             })));
           }
@@ -275,7 +275,7 @@ export default function Home() {
             setEventPanels(acaraPayload.data.map((item, index): HeroPanelItem => ({
               title: item.nama_acara,
               meta: `${item.nama_kategori || "Acara"} · ${formatEventRange(item.tanggal_mulai, item.tanggal_selesai)}`,
-              sub: item.nama_lokasi || item.ringkasan || item.penyelenggara || "Agenda APPEKRAF Kabupaten Bangka",
+              sub: item.nama_lokasi || item.ringkasan || item.penyelenggara || "Agenda SI PARIK BANGKA Kabupaten Bangka",
               image: embeddableImage(item.foto_utama, newsFallbackImages[index % newsFallbackImages.length]),
             })));
           }
@@ -354,7 +354,7 @@ export default function Home() {
         <div className="hero-content page-container">
           <div className="hero-copy">
             <h1>
-              APPEKRAF
+              SI PARIK BANGKA
             </h1>
             <p className="hero-lead">
               Platform pendataan pelaku ekonomi kreatif, SDM pariwisata, komunitas,
@@ -385,7 +385,8 @@ export default function Home() {
             </div>
           </div>
 
-          <aside className="hero-spotlight" aria-label="Tentang APPEKRAF">
+
+          <aside className="hero-spotlight" aria-label="Tentang SI PARIK BANGKA">
             <div className="spotlight-head">
               <div>
                 <span className="spotlight-kicker">Portal Digital</span>
@@ -410,7 +411,7 @@ export default function Home() {
         </div>
 
         <div className="hero-feature-wrap page-container">
-          <section className="hero-feature-card" aria-label="Sorotan APPEKRAF">
+          <section className="hero-feature-card" aria-label="Sorotan SI PARIK BANGKA">
             <div className="feature-tabs" role="tablist" aria-label="Kategori sorotan">
               {featureTabs.map((tab) => (
                 <button
@@ -517,7 +518,7 @@ export default function Home() {
             <span className="section-kicker">Pelaku Ekraf Kabupaten Bangka</span>
             <h2>Data yang terkoneksi, kolaborasi yang lebih mudah.</h2>
             <p>
-              APPEKRAF dirancang sebagai pintu masuk untuk mengenal pelaku kreatif,
+              SI PARIK BANGKA dirancang sebagai pintu masuk untuk mengenal pelaku kreatif,
               komunitas, asosiasi, dan SDM pariwisata. Profil yang terverifikasi dapat
               membantu publik menemukan produk, layanan, dan jejaring kreatif lokal.
             </p>
@@ -582,7 +583,7 @@ export default function Home() {
                       <div className="news-featured-copy">
                         <span className="content-meta">{formatNewsDate(featuredNews.tanggal_publikasi)}</span>
                         <h3>{featuredNews.judul}</h3>
-                        <p>{featuredNews.ringkasan || featuredNews.subjudul || "Informasi terbaru dari APPEKRAF Kabupaten Bangka."}</p>
+                        <p>{featuredNews.ringkasan || featuredNews.subjudul || "Informasi terbaru dari SI PARIK BANGKA Kabupaten Bangka."}</p>
                         <a href={`/berita/${featuredNews.slug}`} className="content-link">
                           Baca selengkapnya <Icon name="arrow" size={16} />
                         </a>
@@ -602,7 +603,7 @@ export default function Home() {
                             <div>
                               <span className="content-meta">{news.nama_kategori || "Berita"} · {formatNewsDate(news.tanggal_publikasi)}</span>
                               <h3>{news.judul}</h3>
-                              <p>{news.ringkasan || news.subjudul || "Informasi terbaru APPEKRAF Kabupaten Bangka."}</p>
+                              <p>{news.ringkasan || news.subjudul || "Informasi terbaru SI PARIK BANGKA Kabupaten Bangka."}</p>
                             </div>
                             <a href={`/berita/${news.slug}`} className="round-link" aria-label={`Baca ${news.judul}`}>
                               <Icon name="arrow" size={17} />
@@ -705,7 +706,7 @@ export default function Home() {
             <h2>Digitalisasi data kreatif untuk Bangka yang lebih terhubung.</h2>
           </div>
           <p>
-            APPEKRAF Kabupaten Bangka dihadirkan untuk mendukung pendataan, promosi,
+            SI PARIK BANGKA Kabupaten Bangka dihadirkan untuk mendukung pendataan, promosi,
             pembinaan, dan akses informasi ekonomi kreatif serta SDM pariwisata dalam
             satu layanan digital yang modern dan ramah pengguna.
           </p>
@@ -756,8 +757,8 @@ export default function Home() {
       <footer className="footer">
         <div className="page-container footer-main">
           <div className="footer-brand">
-            <a className="footer-official-brand" href="#beranda" aria-label="Dinas Pariwisata dan Kebudayaan Kabupaten Bangka">
-              <img src="/branding/logo-bangka-header.png" alt="Kabupaten Bangka, Exotic Bangka, dan Wonderful Indonesia" />
+            <a className="footer-si-parik-brand" href="#beranda" aria-label="SI PARIK BANGKA">
+              <img src="/logo-si-parik-preloader.png" alt="SI PARIK BANGKA" />
             </a>
             <p>
               Aplikasi Pendataan Pelaku Ekonomi Kreatif dan SDM Pariwisata Kabupaten Bangka.
@@ -791,7 +792,7 @@ export default function Home() {
         </div>
 
         <div className="page-container footer-bottom">
-          <span>© 2026 APPEKRAF Kabupaten Bangka</span>
+          <span>© 2026 SI PARIK BANGKA Kabupaten Bangka</span>
           <span>Dirancang untuk layanan publik yang lebih sederhana.</span>
         </div>
       </footer>

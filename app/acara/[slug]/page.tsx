@@ -28,10 +28,10 @@ function formatPrice(gratis: number, start: number | null, end: number | null) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const item = await getPublicEventBySlug(slug);
-  if (!item) return { title: "Acara tidak ditemukan | APPEKRAF" };
+  if (!item) return { title: "Acara tidak ditemukan | SI PARIK BANGKA" };
   return {
-    title: `${item.nama_acara} | APPEKRAF Kabupaten Bangka`,
-    description: item.ringkasan || "Agenda APPEKRAF Kabupaten Bangka",
+    title: `${item.nama_acara} | SI PARIK BANGKA Kabupaten Bangka`,
+    description: item.ringkasan || "Agenda SI PARIK BANGKA Kabupaten Bangka",
   };
 }
 
@@ -64,7 +64,7 @@ export default async function DetailAcaraPage({ params }: Props) {
               <div><small>Tanggal mulai</small><strong>{formatDateTime(item.tanggal_mulai)}</strong></div>
               <div><small>Tanggal selesai</small><strong>{formatDateTime(item.tanggal_selesai)}</strong></div>
               <div><small>Lokasi</small><strong>{item.nama_lokasi || item.alamat || item.jenis_pelaksanaan}</strong></div>
-              <div><small>Penyelenggara</small><strong>{item.penyelenggara || "APPEKRAF Kabupaten Bangka"}</strong></div>
+              <div><small>Penyelenggara</small><strong>{item.penyelenggara || "SI PARIK BANGKA Kabupaten Bangka"}</strong></div>
               <div><small>Biaya</small><strong>{formatPrice(item.gratis, item.harga_mulai, item.harga_sampai)}</strong></div>
               {actionHref && <a href={actionHref} target="_blank" rel="noreferrer" className="public-primary-button">{item.memerlukan_pendaftaran ? "Daftar acara" : "Buka informasi"} →</a>}
             </aside>

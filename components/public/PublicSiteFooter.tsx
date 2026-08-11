@@ -5,8 +5,8 @@ export default function PublicSiteFooter() {
     <footer className="public-site-footer">
       <div className="public-container public-footer-inner">
         <div className="public-footer-brand-block">
-          <Link href="/" className="public-footer-official-logo" aria-label="Dinas Pariwisata dan Kebudayaan Kabupaten Bangka">
-            <img src="/branding/logo-bangka-header.png" alt="Kabupaten Bangka, Exotic Bangka, dan Wonderful Indonesia" />
+          <Link href="/" className="public-footer-si-parik" aria-label="SI PARIK BANGKA">
+            <img src="/logo-si-parik-preloader.png" alt="SI PARIK BANGKA" />
           </Link>
           <p>Informasi ekonomi kreatif, berita, agenda, pelaku, dan katalog wisata Kabupaten Bangka.</p>
         </div>

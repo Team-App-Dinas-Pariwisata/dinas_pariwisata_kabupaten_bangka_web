@@ -166,7 +166,7 @@ export const submissionConfigs: Record<SubmissionType, SubmissionConfig> = {
         shortTitle: "Konfirmasi",
         description: "Tentukan persetujuan publikasi dan konfirmasi kebenaran data.",
         fields: [
-          { key: "persetujuan_publikasi", label: "Saya menyetujui data yang telah diverifikasi untuk dipublikasikan pada portal APPEKRAF Kabupaten Bangka.", type: "checkbox" },
+          { key: "persetujuan_publikasi", label: "Saya menyetujui data yang telah diverifikasi untuk dipublikasikan pada portal SI PARIK BANGKA Kabupaten Bangka.", type: "checkbox" },
           { key: "konfirmasi_kebenaran", label: "Saya menyatakan seluruh data yang saya kirim benar dan dapat diverifikasi.", type: "checkbox", required: true },
         ],
       },
