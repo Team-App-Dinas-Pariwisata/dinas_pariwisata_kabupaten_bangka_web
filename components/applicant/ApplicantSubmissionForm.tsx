@@ -123,9 +123,6 @@ export function ApplicantSubmissionForm({ type, userName, userEmail, submissionI
         setCurrentStatus(String(data.status_label ?? "Menunggu"));
         setVerificationNote(String(data.catatan_verifikasi ?? "").trim());
         setEditable(data.can_edit !== false);
-        if (data.can_edit === false) {
-          setError("Pengajuan ini sudah disetujui dan dikunci dari perubahan. Hubungi petugas bila diperlukan koreksi data.");
-        }
       })
       .catch((err) => {
         if (active) {
@@ -140,6 +137,7 @@ export function ApplicantSubmissionForm({ type, userName, userEmail, submissionI
 
   const currentStep = config.steps[stepIndex];
   const progress = ((stepIndex + 1) / config.steps.length) * 100;
+  const viewOnly = editMode && !loadingSubmission && !editable && currentStatus.trim().toLowerCase() === "disetujui";
   const currentMissing = useMemo(
     () => currentStep.fields.filter((field) => {
       if (!field.required) return false;
@@ -166,7 +164,7 @@ export function ApplicantSubmissionForm({ type, userName, userEmail, submissionI
   }
 
   function nextStep() {
-    if (currentMissing.length) {
+    if (!viewOnly && currentMissing.length) {
       setError(`Lengkapi field wajib: ${currentMissing.map((field) => field.label).join(", ")}.`);
       return;
     }
@@ -236,12 +234,14 @@ export function ApplicantSubmissionForm({ type, userName, userEmail, submissionI
       <div className="applicant-form-head">
         <div>
           <Link href="/akun">← Ringkasan Akun</Link>
-          <p>{editMode ? "EDIT PENGAJUAN" : "FORM PENGAJUAN"}</p>
-          <h1>{editMode ? `Edit ${config.title.replace("Pengajuan ", "")}` : config.title}</h1>
+          <p>{viewOnly ? "DETAIL PENGAJUAN" : editMode ? "EDIT PENGAJUAN" : "FORM PENGAJUAN"}</p>
+          <h1>{viewOnly ? `Lihat ${config.title.replace("Pengajuan ", "")}` : editMode ? `Edit ${config.title.replace("Pengajuan ", "")}` : config.title}</h1>
           <span>
-            {editMode
-              ? <>Perbarui data yang diperlukan. Nomor registrasi <strong>{currentRegistration || "—"}</strong> tetap digunakan.</>
-              : <>{config.subtitle} Data tersimpan atas akun Google <strong>{userEmail}</strong>.</>}
+            {viewOnly
+              ? <>Pengajuan ini tetap dapat dilihat dari akun Anda. Nomor registrasi <strong>{currentRegistration || "—"}</strong>.</>
+              : editMode
+                ? <>Perbarui data yang diperlukan. Nomor registrasi <strong>{currentRegistration || "—"}</strong> tetap digunakan.</>
+                : <>{config.subtitle} Data tersimpan atas akun Google <strong>{userEmail}</strong>.</>}
           </span>
         </div>
         <div className="applicant-form-progress"><span>Tahap {stepIndex + 1} dari {config.steps.length}</span><strong>{Math.round(progress)}%</strong></div>
@@ -251,10 +251,14 @@ export function ApplicantSubmissionForm({ type, userName, userEmail, submissionI
         <div className="applicant-edit-notice">
           <div>
             <strong>Status saat ini: {currentStatus || "Memuat…"}</strong>
-            <span>Setelah perubahan disimpan, pengajuan akan kembali berstatus <b>Menunggu</b> untuk diverifikasi ulang.</span>
+            {viewOnly ? (
+              <span>Pengajuan yang sudah disetujui tetap dapat Anda lihat. Data tidak dapat diubah setelah verifikasi final.</span>
+            ) : (
+              <span>Setelah perubahan disimpan, pengajuan akan kembali berstatus <b>Menunggu</b> untuk diverifikasi ulang.</span>
+            )}
             {verificationNote && <span className="applicant-verification-note"><b>Catatan petugas:</b> {verificationNote}</span>}
           </div>
-          <Link href="/akun">Batal edit</Link>
+          <Link href="/akun">{viewOnly ? "Kembali" : "Batal edit"}</Link>
         </div>
       )}
 
@@ -333,7 +337,9 @@ export function ApplicantSubmissionForm({ type, userName, userEmail, submissionI
           <div className="applicant-form-actions">
             <button type="button" className="applicant-secondary" onClick={previousStep} disabled={stepIndex === 0 || loadingSubmission}>Kembali</button>
             {stepIndex < config.steps.length - 1 ? (
-              <button type="button" className="applicant-primary" onClick={nextStep} disabled={loadingSubmission || !editable}>Lanjut ke Tahap {stepIndex + 2} →</button>
+              <button type="button" className="applicant-primary" onClick={nextStep} disabled={loadingSubmission}>Lanjut ke Tahap {stepIndex + 2} →</button>
+            ) : viewOnly ? (
+              <Link href="/akun" className="applicant-primary">Selesai · Kembali ke Ringkasan</Link>
             ) : (
               <button type="submit" className="applicant-primary" disabled={submitting || loadingSubmission || !editable}>{submitting ? (editMode ? "Menyimpan…" : "Mengirim…") : (editMode ? "Simpan Perubahan" : "Kirim Pengajuan")}</button>
             )}

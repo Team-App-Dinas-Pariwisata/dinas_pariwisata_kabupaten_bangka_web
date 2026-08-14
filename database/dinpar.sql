@@ -956,6 +956,7 @@ CREATE TABLE IF NOT EXISTS `pengajuan_ekraf` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `no_registrasi` varchar(30) DEFAULT NULL,
   `status` enum('Menunggu','Perlu Perbaikan','Disetujui','Ditolak') NOT NULL DEFAULT 'Menunggu',
+  `unggulan` tinyint(1) NOT NULL DEFAULT '0',
   `nama_lengkap` varchar(150) NOT NULL,
   `nik` char(16) NOT NULL,
   `nama_usaha` varchar(150) NOT NULL,
@@ -1011,7 +1012,8 @@ CREATE TABLE IF NOT EXISTS `pengajuan_ekraf` (
   KEY `fk_kelurahan` (`kelurahan_id`),
   KEY `fk_kecamatan_usaha` (`kecamatan_usaha_id`),
   KEY `fk_kelurahan_usaha` (`kelurahan_usaha_id`),
-  KEY `idx_pengajuan_ekraf_created_by` (`created_by`)
+  KEY `idx_pengajuan_ekraf_created_by` (`created_by`),
+  KEY `idx_pengajuan_ekraf_unggulan` (`unggulan`,`status`,`tanggal_verifikasi`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Dumping data for table dinas_pariwisata.pengajuan_ekraf: ~0 rows (approximately)

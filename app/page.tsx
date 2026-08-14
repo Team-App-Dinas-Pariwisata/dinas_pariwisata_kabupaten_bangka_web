@@ -1,16 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import PublicSiteHeader from "@/components/public/PublicSiteHeader";
-
-type FeatureTab = "event" | "berita" | "unggulan";
-
-type HeroPanelItem = {
-  title: string;
-  meta: string;
-  sub: string;
-  image: string;
-};
+import VerifiedDirectory from "@/components/public/VerifiedDirectory";
+import EkrafStatistics from "@/components/public/EkrafStatistics";
 
 type PublicBerita = {
   id: number;
@@ -91,83 +84,6 @@ const subsectors = [
   { name: "Arsitektur", icon: "architecture" as IconName, count: "16 pelaku" },
 ];
 
-const heroPanels: Record<FeatureTab, HeroPanelItem[]> = {
-  event: [
-    {
-      title: "Festival Semarak Ekraf Bangka",
-      meta: "12–14 September 2026",
-      sub: "Taman Sari, Sungailiat",
-      image:
-        "/hero-bangka.jpg",
-    },
-    {
-      title: "Bangka Creative Market",
-      meta: "05 Oktober 2026",
-      sub: "Kawasan Kota Sungailiat",
-      image:
-        "/kriya-bangka.jpg",
-    },
-  ],
-  berita: [
-    {
-      title: "Kolaborasi Ekraf & Pariwisata Bahari",
-      meta: "Sorotan Minggu Ini",
-      sub: "Cerita pelaku kreatif pesisir Bangka",
-      image:
-        "/hero-bangka.jpg",
-    },
-    {
-      title: "Produk Kriya Lokal Naik Kelas",
-      meta: "Berita Ekraf",
-      sub: "Dari bahan alam menjadi produk bernilai",
-      image:
-        "/kriya-bangka.jpg",
-    },
-  ],
-  unggulan: [
-    {
-      title: "Kriya Lidi Nipah Bangka",
-      meta: "Kriya",
-      sub: "Produk lokal dengan identitas pesisir",
-      image:
-        "/kriya-bangka.jpg",
-    },
-    {
-      title: "Kuliner Laut & Olahan Lokal",
-      meta: "Kuliner",
-      sub: "Cita rasa Bangka dalam kemasan modern",
-      image:
-        "/kuliner-bangka.png",
-    },
-  ],
-};
-
-const featureTabs: { id: FeatureTab; label: string }[] = [
-  { id: "event", label: "Event" },
-  { id: "berita", label: "Berita" },
-  { id: "unggulan", label: "Pelaku Unggulan" },
-];
-
-const submissionOptions = [
-  {
-    title: "Pelaku Ekraf",
-    description: "Pendataan usaha dan pelaku ekonomi kreatif.",
-    icon: "briefcase" as IconName,
-    href: "/akun/pengajuan/pelaku-ekraf",
-  },
-  {
-    title: "SDM Pariwisata",
-    description: "Pendataan SDM dan tenaga pendukung pariwisata.",
-    icon: "spark" as IconName,
-    href: "/akun/pengajuan/sdm-pariwisata",
-  },
-  {
-    title: "Komunitas",
-    description: "Pendataan komunitas, asosiasi, dan lembaga.",
-    icon: "users" as IconName,
-    href: "/akun/pengajuan/komunitas",
-  },
-];
 
 const newsFallbackImages = ["/kriya-bangka.jpg", "/kuliner-bangka.png", "/hero-home-v15.jpg"];
 
@@ -223,26 +139,10 @@ function embeddableImage(url: string | null, fallback: string) {
 
 export default function Home() {
   const heroRef = useRef<HTMLElement>(null);
-  const [activeTab, setActiveTab] = useState<FeatureTab>("event");
-  const [panelOffset, setPanelOffset] = useState(0);
-  const [beritaPanels, setBeritaPanels] = useState<HeroPanelItem[]>(heroPanels.berita);
-  const [eventPanels, setEventPanels] = useState<HeroPanelItem[]>(heroPanels.event);
   const [beritaItems, setBeritaItems] = useState<PublicBerita[]>([]);
   const [acaraItems, setAcaraItems] = useState<PublicAcara[]>([]);
   const [contentLoading, setContentLoading] = useState(true);
 
-  const panelItems = useMemo(() => {
-    const items = activeTab === "berita"
-      ? beritaPanels
-      : activeTab === "event"
-        ? eventPanels
-        : heroPanels.unggulan;
-    if (items.length === 0) return [];
-    const visibleCount = Math.min(2, items.length);
-    return Array.from({ length: visibleCount }, (_, index) =>
-      items[(index + panelOffset) % items.length],
-    );
-  }, [activeTab, beritaPanels, eventPanels, panelOffset]);
 
   useEffect(() => {
     let cancelled = false;
@@ -259,26 +159,10 @@ export default function Home() {
 
         if (!cancelled && beritaResponse.ok && Array.isArray(beritaPayload.data)) {
           setBeritaItems(beritaPayload.data);
-          if (beritaPayload.data.length > 0) {
-            setBeritaPanels(beritaPayload.data.map((item, index): HeroPanelItem => ({
-              title: item.judul,
-              meta: `${item.nama_kategori || "Berita"} · ${formatNewsDate(item.tanggal_publikasi)}`,
-              sub: item.ringkasan || item.subjudul || item.penulis_tampil || "Informasi terbaru SI PARIK BANGKA Kabupaten Bangka",
-              image: embeddableImage(item.foto_utama, newsFallbackImages[index % newsFallbackImages.length]),
-            })));
-          }
         }
 
         if (!cancelled && acaraResponse.ok && Array.isArray(acaraPayload.data)) {
           setAcaraItems(acaraPayload.data);
-          if (acaraPayload.data.length > 0) {
-            setEventPanels(acaraPayload.data.map((item, index): HeroPanelItem => ({
-              title: item.nama_acara,
-              meta: `${item.nama_kategori || "Acara"} · ${formatEventRange(item.tanggal_mulai, item.tanggal_selesai)}`,
-              sub: item.nama_lokasi || item.ringkasan || item.penyelenggara || "Agenda SI PARIK BANGKA Kabupaten Bangka",
-              image: embeddableImage(item.foto_utama, newsFallbackImages[index % newsFallbackImages.length]),
-            })));
-          }
         }
       } catch (error) {
         console.error("Gagal memuat berita dan acara homepage:", error);
@@ -315,35 +199,13 @@ export default function Home() {
     };
   }, []);
 
-  const selectTab = (tab: FeatureTab) => {
-    setActiveTab(tab);
-    setPanelOffset(0);
-  };
-
-  const handleTabKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, currentTab: FeatureTab) => {
-    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-
-    event.preventDefault();
-    const currentIndex = featureTabs.findIndex((tab) => tab.id === currentTab);
-    let nextIndex = currentIndex;
-
-    if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % featureTabs.length;
-    if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + featureTabs.length) % featureTabs.length;
-    if (event.key === "Home") nextIndex = 0;
-    if (event.key === "End") nextIndex = featureTabs.length - 1;
-
-    const nextTab = featureTabs[nextIndex].id;
-    selectTab(nextTab);
-    window.requestAnimationFrame(() => document.getElementById(`feature-tab-${nextTab}`)?.focus());
-  };
-
   const featuredNews = beritaItems[0];
   const secondaryNews = beritaItems.slice(1, 3);
   const visibleEvents = acaraItems.slice(0, 4);
 
   return (
     <main className="site-shell">
-      <PublicSiteHeader overlay />
+      <PublicSiteHeader overlay hideLogin />
       <section ref={heroRef} className="hero" id="beranda">
         <div className="hero-media" aria-hidden="true" />
         <div className="hero-overlay" aria-hidden="true" />
@@ -363,9 +225,8 @@ export default function Home() {
             </p>
 
             <div className="hero-actions" id="pengajuan">
-              <SubmissionDropdown />
-              <a className="button button-glass" href="#pelaku-ekraf">
-                Komunitas / Asosiasi / Lembaga
+              <a className="button button-primary" href="/akun/masuk">
+                Ajukan Data Sekarang <Icon name="arrow" size={18} />
               </a>
             </div>
 
@@ -410,59 +271,6 @@ export default function Home() {
           </aside>
         </div>
 
-        <div className="hero-feature-wrap page-container">
-          <section className="hero-feature-card" aria-label="Sorotan SI PARIK BANGKA">
-            <div className="feature-tabs" role="tablist" aria-label="Kategori sorotan">
-              {featureTabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  id={`feature-tab-${tab.id}`}
-                  type="button"
-                  className={activeTab === tab.id ? "active" : ""}
-                  onClick={() => selectTab(tab.id)}
-                  onKeyDown={(event) => handleTabKeyDown(event, tab.id)}
-                  role="tab"
-                  aria-selected={activeTab === tab.id}
-                  aria-controls={`feature-panel-${tab.id}`}
-                  tabIndex={activeTab === tab.id ? 0 : -1}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            <div
-              key={activeTab}
-              id={`feature-panel-${activeTab}`}
-              className="feature-list"
-              role="tabpanel"
-              aria-labelledby={`feature-tab-${activeTab}`}
-            >
-              {panelItems.map((item) => (
-                <article className="mini-feature" key={`${activeTab}-${item.title}`}>
-                  <div
-                    className="mini-feature-image"
-                    style={{ backgroundImage: `url(${item.image})` }}
-                    aria-hidden="true"
-                  />
-                  <div className="mini-feature-copy">
-                    <strong>{item.title}</strong>
-                    <span className="mini-feature-meta"><Icon name="calendar" size={14} /> {item.meta}</span>
-                    <p className="mini-feature-summary">{item.sub}</p>
-                  </div>
-                </article>
-              ))}
-              <button
-                type="button"
-                className="feature-next"
-                aria-label="Tampilkan sorotan berikutnya"
-                onClick={() => setPanelOffset((value) => value + 1)}
-              >
-                <Icon name="arrow" size={24} />
-              </button>
-            </div>
-          </section>
-        </div>
       </section>
 
       <section className="section section-subsector" id="subsektor">
@@ -500,50 +308,9 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="section ecosystem" id="pelaku-ekraf">
-        <div className="page-container ecosystem-grid">
-          <div className="ecosystem-visual">
-            <div className="ecosystem-photo ecosystem-photo-main" aria-hidden="true" />
-            <div className="ecosystem-photo ecosystem-photo-small" aria-hidden="true" />
-            <div className="ecosystem-badge">
-              <span><Icon name="users" size={20} /></span>
-              <div>
-                <strong>Ekosistem lokal</strong>
-                <small>pelaku · komunitas · mitra</small>
-              </div>
-            </div>
-          </div>
+      <VerifiedDirectory />
 
-          <div className="ecosystem-copy">
-            <span className="section-kicker">Pelaku Ekraf Kabupaten Bangka</span>
-            <h2>Data yang terkoneksi, kolaborasi yang lebih mudah.</h2>
-            <p>
-              SI PARIK BANGKA dirancang sebagai pintu masuk untuk mengenal pelaku kreatif,
-              komunitas, asosiasi, dan SDM pariwisata. Profil yang terverifikasi dapat
-              membantu publik menemukan produk, layanan, dan jejaring kreatif lokal.
-            </p>
-
-            <div className="ecosystem-points">
-              <div>
-                <span><Icon name="briefcase" size={19} /></span>
-                <div><strong>Profil pelaku lebih terstruktur</strong><small>Informasi inti mudah ditemukan dan diperbarui.</small></div>
-              </div>
-              <div>
-                <span><Icon name="spark" size={19} /></span>
-                <div><strong>Promosi potensi lokal</strong><small>Menampilkan karya dan aktivitas kreatif secara lebih menarik.</small></div>
-              </div>
-              <div>
-                <span><Icon name="users" size={19} /></span>
-                <div><strong>Jaringan kolaborasi</strong><small>Menghubungkan pelaku dengan komunitas dan mitra terkait.</small></div>
-              </div>
-            </div>
-
-            <a href="#dokumen" className="button button-dark">
-              Lihat Pelaku Ekraf <Icon name="arrow" size={18} />
-            </a>
-          </div>
-        </div>
-      </section>
+      <EkrafStatistics />
 
       <section className="section editorial-section" id="berita-acara">
         <div className="page-container">
@@ -674,9 +441,6 @@ export default function Home() {
               Siapkan identitas dasar, foto dokumentasi atau logo, dan dokumen pendukung
               bila tersedia. Alur pengajuan dirancang singkat dan mudah dipahami.
             </p>
-            <a href="#beranda" className="button button-light">
-              Ajukan Data Sekarang <Icon name="arrow" size={18} />
-            </a>
           </div>
 
           <div className="document-steps">
@@ -781,7 +545,7 @@ export default function Home() {
             <a href="/acara">Acara</a>
             <a href="#tentang">Tentang Kami</a>
             <a href="/akun/masuk">Akun Pengaju</a>
-            <a href="/login">Portal Admin & Pengguna</a>
+            <a href="/petugas">Portal Admin & Pengguna</a>
           </div>
 
           <div className="footer-column footer-contact">
@@ -800,72 +564,6 @@ export default function Home() {
 
       <FloatingAiChat />
     </main>
-  );
-}
-
-function SubmissionDropdown({ compact = false }: { compact?: boolean }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!dropdownRef.current?.contains(event.target as Node)) setIsOpen(false);
-    };
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setIsOpen(false);
-    };
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
-
-  return (
-    <div
-      ref={dropdownRef}
-      className={`submission-dropdown ${compact ? "submission-dropdown-topbar" : ""} ${isOpen ? "is-open" : ""}`}
-    >
-      <button
-        type="button"
-        className={compact ? "topbar-cta submission-trigger" : "button button-primary submission-trigger"}
-        onClick={() => setIsOpen((value) => !value)}
-        aria-haspopup="menu"
-        aria-expanded={isOpen}
-      >
-        {compact ? "Pengajuan" : "Mulai Pengajuan"}
-        <span className="submission-chevron"><Icon name="chevron" size={16} /></span>
-      </button>
-
-      {isOpen && (
-        <div className="submission-menu" role="menu" aria-label="Pilih jenis pengajuan">
-          <div className="submission-menu-head">
-            <span>Pilih pengajuan</span>
-            <small>Silakan pilih kategori data yang akan diajukan.</small>
-          </div>
-          {submissionOptions.map((option) => (
-            <a
-              key={option.title}
-              href={option.href}
-              className="submission-option"
-              role="menuitem"
-              onClick={() => setIsOpen(false)}
-            >
-              <span className="submission-option-icon"><Icon name={option.icon} size={18} /></span>
-              <span className="submission-option-copy">
-                <strong>{option.title}</strong>
-                <small>{option.description}</small>
-              </span>
-              <Icon name="arrow" size={16} />
-            </a>
-          ))}
-        </div>
-      )}
-    </div>
   );
 }
 

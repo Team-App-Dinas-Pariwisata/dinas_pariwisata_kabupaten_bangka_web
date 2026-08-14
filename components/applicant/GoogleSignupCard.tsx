@@ -54,10 +54,6 @@ export function GoogleSignupCard({ googleReady, error }: Props) {
         <div><span>3</span><p><strong>Pantau status</strong><small>Nomor registrasi dan status pengajuan tersimpan di akun Anda.</small></p></div>
       </div>
 
-      <div className="applicant-auth-footer">
-        <span>Petugas SI PARIK BANGKA?</span>
-        <a href="/login">Masuk ke Portal Petugas</a>
-      </div>
     </section>
   );
 }

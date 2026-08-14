@@ -1,6 +1,6 @@
 import type { ReactNode, SVGProps } from "react";
 
-export type PortalIconName = "home" | "users" | "clipboard" | "database" | "tag" | "box" | "calendar" | "report" | "settings" | "logout" | "bell" | "plus" | "search" | "edit" | "trash" | "menu" | "x" | "clock" | "check" | "eye" | "news" | "chevron";
+export type PortalIconName = "home" | "users" | "clipboard" | "database" | "tag" | "box" | "calendar" | "report" | "settings" | "logout" | "bell" | "plus" | "search" | "edit" | "trash" | "menu" | "x" | "clock" | "check" | "eye" | "news" | "chevron" | "star";
 
 export function PortalIcon({ name, ...props }: SVGProps<SVGSVGElement> & { name: PortalIconName }) {
   const paths: Record<PortalIconName, ReactNode> = {
@@ -26,6 +26,7 @@ export function PortalIcon({ name, ...props }: SVGProps<SVGSVGElement> & { name:
     eye: <><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></>,
     news: <><path d="M4 4h13v16H4z"/><path d="M17 8h3v10a2 2 0 0 1-2 2h-1M7 8h7M7 12h7M7 16h4"/></>,
     chevron: <path d="m9 6 6 6-6 6"/>,
+    star: <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2-4.5-4.4 6.2-.9z"/>,
   };
 
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>{paths[name]}</svg>;

@@ -75,7 +75,7 @@ export async function getPageUser(): Promise<AuthUser | null> {
 export async function requirePageRole(role: AppRole): Promise<AuthUser> {
   const user = await getPageUser();
   if (!user) {
-    redirect(role === "pengaju" ? "/akun/masuk" : "/login");
+    redirect(role === "pengaju" ? "/akun/masuk" : "/petugas");
     throw new Error("Redirecting unauthenticated user");
   }
   if (user.role !== role) {

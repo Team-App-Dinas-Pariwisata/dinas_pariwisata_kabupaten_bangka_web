@@ -91,15 +91,19 @@ export async function ApplicantOverview({ userId, userName }: { userId: number; 
         <div className="applicant-section-title"><div><p>RIWAYAT</p><h2>Pengajuan saya</h2></div><span>{items.length} data</span></div>
         {items.length ? (
           <div className="applicant-history-list">
-            {items.slice(0, 10).map((item) => (
+            {items.map((item) => (
               <article key={`${item.type}-${item.id}`}>
                 <div className="history-type"><span>{item.typeLabel}</span><strong>{item.title}</strong><small>{item.noRegistrasi} · {formatDate(item.createdAt)}</small></div>
                 <div className="applicant-history-actions">
                   <span className={`applicant-status ${statusClass(item.status)}`}>{item.status}</span>
-                  {item.canEdit ? (
+                  {item.status === "Disetujui" ? (
+                    <Link href={editHref(item.type, item.id)} className="applicant-edit-button"><PortalIcon name="eye" /> Lihat Pengajuan</Link>
+                  ) : item.status === "Ditolak" || item.status === "Perlu Perbaikan" ? (
+                    <Link href={editHref(item.type, item.id)} className="applicant-edit-button"><PortalIcon name="edit" /> Revisi Pengajuan</Link>
+                  ) : item.canEdit ? (
                     <Link href={editHref(item.type, item.id)} className="applicant-edit-button"><PortalIcon name="edit" /> Edit Pengajuan</Link>
                   ) : (
-                    <span className="applicant-locked-label">Terkunci setelah disetujui</span>
+                    <Link href={editHref(item.type, item.id)} className="applicant-edit-button"><PortalIcon name="eye" /> Lihat Pengajuan</Link>
                   )}
                 </div>
               </article>

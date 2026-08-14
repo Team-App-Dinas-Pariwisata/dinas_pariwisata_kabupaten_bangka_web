@@ -62,7 +62,7 @@ export function PortalShell({ children, role, userName }: Props) {
     <div className="portal-app">
       <aside className={`portal-sidebar ${mobileOpen ? "is-open" : ""}`}>
         <div className="portal-brand">
-          <span className="portal-brand-mark">B</span>
+          <img className="portal-brand-logo" src="/logo-si-parik-preloader.png" alt="Logo SI PARIK BANGKA" />
           <span><strong>SI PARIK BANGKA</strong><small>Kabupaten Bangka</small></span>
         </div>
         <div className="portal-menu-title">MENU UTAMA</div>

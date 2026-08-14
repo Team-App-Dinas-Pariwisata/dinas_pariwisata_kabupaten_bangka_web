@@ -71,7 +71,7 @@ function MobileDropdown({ label, icon, items }: { label: string; icon: NavIconNa
   );
 }
 
-export default function PublicSiteHeader({ overlay = false }: { overlay?: boolean }) {
+export default function PublicSiteHeader({ overlay = false, hideLogin = false }: { overlay?: boolean; hideLogin?: boolean }) {
   return (
     <header className={`public-site-header${overlay ? " is-overlay" : ""}`}>
       <div className="public-container public-site-header-inner">
@@ -95,7 +95,7 @@ export default function PublicSiteHeader({ overlay = false }: { overlay?: boolea
           <Link href="/#tentang"><NavIcon name="info"/><span>Tentang Kami</span></Link>
         </nav>
 
-        <Link href="/akun/masuk" className="public-header-login"><NavIcon name="login"/><span>Masuk / Daftar</span></Link>
+        {!hideLogin && <Link href="/akun/masuk" className="public-header-login"><NavIcon name="login"/><span>Masuk / Daftar</span></Link>}
 
         <details className="public-mobile-menu">
           <summary aria-label="Buka navigasi"><span></span><span></span><span></span></summary>
@@ -107,8 +107,8 @@ export default function PublicSiteHeader({ overlay = false }: { overlay?: boolea
             <MobileDropdown label="Pelaku Ekraf" icon="users" items={pelakuItems} />
             <MobileDropdown label="Wisata" icon="map" items={wisataItems} />
             <Link href="/#tentang"><NavIcon name="info"/><span>Tentang Kami</span></Link>
-            <Link href="/akun/masuk"><NavIcon name="login"/><span>Masuk / Daftar Pengaju</span></Link>
-            <Link href="/login"><NavIcon name="login"/><span>Portal Petugas</span></Link>
+            {!hideLogin && <Link href="/akun/masuk"><NavIcon name="login"/><span>Masuk / Daftar Pengaju</span></Link>}
+            <Link href="/petugas"><NavIcon name="login"/><span>Portal Petugas</span></Link>
           </div>
         </details>
       </div>

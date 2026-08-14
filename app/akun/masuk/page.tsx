@@ -8,6 +8,8 @@ export const metadata = { title: "Buat Akun Pengaju | SI PARIK BANGKA" };
 export default async function ApplicantLoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const user = await getPageUser();
   if (user?.role === "pengaju") redirect("/akun");
+  if (user?.role === "admin") redirect("/admin/pengguna");
+  if (user?.role === "pengguna") redirect("/dashboard");
   const params = await searchParams;
 
   return (

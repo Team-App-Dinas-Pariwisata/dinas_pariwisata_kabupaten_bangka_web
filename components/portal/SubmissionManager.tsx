@@ -57,6 +57,7 @@ export function SubmissionManager({ type }: Props) {
   const [detailStep, setDetailStep] = useState(0);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const [featureSavingId, setFeatureSavingId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -97,6 +98,27 @@ export function SubmissionManager({ type }: Props) {
     setDetailStep(0);
     setNote(String(row.catatan_verifikasi ?? row.alasan_penolakan ?? ""));
     setError("");
+  }
+
+  async function toggleFeatured(row: Row) {
+    if (type !== "ekraf" || String(row.status_label ?? "") !== "Disetujui") return;
+    const nextValue = Number(row.unggulan) === 1 ? 0 : 1;
+    setFeatureSavingId(row.id);
+    setError("");
+    try {
+      const response = await fetch("/api/submissions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "ekraf", id: row.id, action: "feature", unggulan: nextValue }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.message || "Status unggulan gagal disimpan.");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Status unggulan gagal disimpan.");
+    } finally {
+      setFeatureSavingId(null);
+    }
   }
 
   async function verify(action: "approve" | "reject") {
@@ -156,9 +178,9 @@ export function SubmissionManager({ type }: Props) {
 
       <div className="dm-table-wrap">
         <table className="dm-table submission-table">
-          <thead><tr><th>No. Registrasi</th><th>Nama / Organisasi</th><th>Usaha / Tempat / Kategori</th><th>Kontak</th><th>Status</th><th>Tanggal</th><th>Aksi</th></tr></thead>
+          <thead><tr><th>No. Registrasi</th><th>Nama / Organisasi</th><th>Usaha / Tempat / Kategori</th><th>Kontak</th><th>Status</th>{type === "ekraf" && <th>Unggulan</th>}<th>Tanggal</th><th>Aksi</th></tr></thead>
           <tbody>
-            {loading ? <tr><td colSpan={7} className="dm-empty">Memuat pengajuan…</td></tr> : filtered.length === 0 ? <tr><td colSpan={7} className="dm-empty">Belum ada pengajuan yang sesuai filter.</td></tr> : filtered.map((row) => {
+            {loading ? <tr><td colSpan={type === "ekraf" ? 8 : 7} className="dm-empty">Memuat pengajuan…</td></tr> : filtered.length === 0 ? <tr><td colSpan={type === "ekraf" ? 8 : 7} className="dm-empty">Belum ada pengajuan yang sesuai filter.</td></tr> : filtered.map((row) => {
               const identity = identityFor(type, row);
               const currentStatus = String(row.status_label ?? "Menunggu");
               return <tr key={row.id}>
@@ -167,6 +189,7 @@ export function SubmissionManager({ type }: Props) {
                 <td data-label="Detail">{identity.subtitle}</td>
                 <td data-label="Kontak">{identity.contact}</td>
                 <td data-label="Status"><span className={`portal-status ${statusClass(currentStatus)}`}>{currentStatus}</span></td>
+                {type === "ekraf" && <td data-label="Unggulan">{currentStatus === "Disetujui" ? <button className={`featured-toggle ${Number(row.unggulan) === 1 ? "active" : ""}`} type="button" disabled={featureSavingId === row.id} onClick={() => void toggleFeatured(row)} title={Number(row.unggulan) === 1 ? "Hapus dari Pelaku Unggulan" : "Jadikan Pelaku Unggulan"}><PortalIcon name="star" />{featureSavingId === row.id ? "Menyimpan" : Number(row.unggulan) === 1 ? "Unggulan" : "Jadikan unggulan"}</button> : <span className="featured-disabled">Setujui dulu</span>}</td>}
                 <td data-label="Tanggal">{formatDate(row.created_at, true)}</td>
                 <td data-label="Aksi"><button className="review-button" type="button" onClick={() => openReview(row)}><PortalIcon name="eye" />Tinjau</button></td>
               </tr>;

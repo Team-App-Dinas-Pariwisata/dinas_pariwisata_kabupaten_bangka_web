@@ -231,7 +231,7 @@ export async function PATCH(request: NextRequest) {
 
     const status = currentStatus(type, existing);
     if (!canApplicantEdit(status)) {
-      return NextResponse.json({ message: "Pengajuan yang sudah disetujui tidak dapat diedit. Hubungi petugas bila diperlukan perubahan data." }, { status: 409 });
+      return NextResponse.json({ message: "Pengajuan yang sudah disetujui tetap dapat dilihat, tetapi tidak dapat diubah setelah verifikasi final." }, { status: 409 });
     }
 
     const fields = allSubmissionFields(type);

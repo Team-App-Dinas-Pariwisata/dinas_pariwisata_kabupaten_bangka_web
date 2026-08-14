@@ -8,7 +8,7 @@ import {
   googleOAuthReady,
   googleRedirectUri,
 } from "@/lib/google-oauth";
-import { createSessionToken, SESSION_COOKIE } from "@/lib/session";
+import { createSessionToken, SESSION_COOKIE, sessionCookieOptions } from "@/lib/session";
 
 export const runtime = "nodejs";
 
@@ -84,15 +84,9 @@ export async function GET(request: NextRequest) {
       connection.release();
     }
 
-    const token = createSessionToken({ uid: userId, role: "pengaju" }, 60 * 60 * 24 * 7);
+    const token = createSessionToken({ uid: userId, role: "pengaju" });
     const response = NextResponse.redirect(new URL("/akun", request.url));
-    response.cookies.set(SESSION_COOKIE, token, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7,
-    });
+    response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions());
     response.cookies.set(GOOGLE_OAUTH_STATE_COOKIE, "", { path: "/", maxAge: 0, httpOnly: true, sameSite: "lax" });
     return response;
   } catch (error) {
