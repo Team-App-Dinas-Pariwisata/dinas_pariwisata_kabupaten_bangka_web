@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Montserrat } from "next/font/google";
 import "./globals.css";
 import Preloader from "@/components/Preloader";
+import GuestSupportChat from "@/components/public/GuestSupportChat";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -25,6 +26,7 @@ export default function RootLayout({
       <body>
         <Preloader />
         {children}
+        <GuestSupportChat />
       </body>
     </html>
   );

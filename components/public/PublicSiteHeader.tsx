@@ -14,7 +14,7 @@ const wisataItems = [
   { label: "Pencarian", href: "/pencarian" },
 ];
 
-type NavIconName = "home" | "news" | "calendar" | "grid" | "users" | "map" | "info" | "login";
+type NavIconName = "home" | "news" | "calendar" | "grid" | "users" | "map" | "info";
 
 function NavIcon({ name }: { name: NavIconName }) {
   const common = {
@@ -44,8 +44,6 @@ function NavIcon({ name }: { name: NavIconName }) {
       return <svg {...common}><path d="M12 21s6.5-5.6 6.5-11.5a6.5 6.5 0 1 0-13 0C5.5 15.4 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.2"/></svg>;
     case "info":
       return <svg {...common}><circle cx="12" cy="12" r="9"/><path d="M12 10.5V16"/><path d="M12 7.5h.01"/></svg>;
-    case "login":
-      return <svg {...common}><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M13 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/></svg>;
   }
 }
 
@@ -71,7 +69,7 @@ function MobileDropdown({ label, icon, items }: { label: string; icon: NavIconNa
   );
 }
 
-export default function PublicSiteHeader({ overlay = false, hideLogin = false }: { overlay?: boolean; hideLogin?: boolean }) {
+export default function PublicSiteHeader({ overlay = false }: { overlay?: boolean }) {
   return (
     <header className={`public-site-header${overlay ? " is-overlay" : ""}`}>
       <div className="public-container public-site-header-inner">
@@ -95,7 +93,6 @@ export default function PublicSiteHeader({ overlay = false, hideLogin = false }:
           <Link href="/#tentang"><NavIcon name="info"/><span>Tentang Kami</span></Link>
         </nav>
 
-        {!hideLogin && <Link href="/akun/masuk" className="public-header-login"><NavIcon name="login"/><span>Masuk / Daftar</span></Link>}
 
         <details className="public-mobile-menu">
           <summary aria-label="Buka navigasi"><span></span><span></span><span></span></summary>
@@ -107,8 +104,6 @@ export default function PublicSiteHeader({ overlay = false, hideLogin = false }:
             <MobileDropdown label="Pelaku Ekraf" icon="users" items={pelakuItems} />
             <MobileDropdown label="Wisata" icon="map" items={wisataItems} />
             <Link href="/#tentang"><NavIcon name="info"/><span>Tentang Kami</span></Link>
-            {!hideLogin && <Link href="/akun/masuk"><NavIcon name="login"/><span>Masuk / Daftar Pengaju</span></Link>}
-            <Link href="/petugas"><NavIcon name="login"/><span>Portal Petugas</span></Link>
           </div>
         </details>
       </div>

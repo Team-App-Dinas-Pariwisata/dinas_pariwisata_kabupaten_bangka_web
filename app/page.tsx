@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import PublicSiteHeader from "@/components/public/PublicSiteHeader";
 import VerifiedDirectory from "@/components/public/VerifiedDirectory";
 import EkrafStatistics from "@/components/public/EkrafStatistics";
@@ -45,10 +45,6 @@ type PublicAcara = {
   nama_kategori: string | null;
 };
 
-type AiChatMessage = {
-  role: "assistant" | "user";
-  text: string;
-};
 
 type IconName =
   | "arrow"
@@ -66,6 +62,13 @@ type IconName =
   | "game"
   | "film"
   | "architecture"
+  | "interior"
+  | "product"
+  | "publishing"
+  | "advertising"
+  | "performance"
+  | "art"
+  | "broadcast"
   | "menu"
   | "close"
   | "chevron"
@@ -73,16 +76,52 @@ type IconName =
   | "mail"
   | "phone";
 
-const subsectors = [
-  { name: "Kuliner", icon: "food" as IconName, count: "128 pelaku" },
-  { name: "Kriya", icon: "palette" as IconName, count: "76 pelaku" },
-  { name: "Fesyen", icon: "fashion" as IconName, count: "54 pelaku" },
-  { name: "Fotografi", icon: "camera" as IconName, count: "38 pelaku" },
-  { name: "Musik", icon: "music" as IconName, count: "32 pelaku" },
-  { name: "Film & Animasi", icon: "film" as IconName, count: "21 pelaku" },
-  { name: "Aplikasi & Gim", icon: "game" as IconName, count: "19 pelaku" },
-  { name: "Arsitektur", icon: "architecture" as IconName, count: "16 pelaku" },
+type PublicSubsector = {
+  id: number;
+  kode: string;
+  nama_subsektor: string;
+  deskripsi: string | null;
+  pelaku_count: number;
+};
+
+const fallbackSubsectors: PublicSubsector[] = [
+  { id: 1, kode: "APL", nama_subsektor: "Aplikasi", deskripsi: null, pelaku_count: 0 },
+  { id: 2, kode: "ARS", nama_subsektor: "Arsitektur", deskripsi: null, pelaku_count: 0 },
+  { id: 3, kode: "DIN", nama_subsektor: "Desain Interior", deskripsi: null, pelaku_count: 0 },
+  { id: 4, kode: "DKV", nama_subsektor: "Desain Komunikasi Visual", deskripsi: null, pelaku_count: 0 },
+  { id: 5, kode: "DPR", nama_subsektor: "Desain Produk", deskripsi: null, pelaku_count: 0 },
+  { id: 6, kode: "FSH", nama_subsektor: "Fashion", deskripsi: null, pelaku_count: 0 },
+  { id: 7, kode: "FAV", nama_subsektor: "Film, Animasi dan Video", deskripsi: null, pelaku_count: 0 },
+  { id: 8, kode: "FOT", nama_subsektor: "Fotografi", deskripsi: null, pelaku_count: 0 },
+  { id: 9, kode: "KRY", nama_subsektor: "Kriya", deskripsi: null, pelaku_count: 0 },
+  { id: 10, kode: "KUL", nama_subsektor: "Kuliner", deskripsi: null, pelaku_count: 0 },
+  { id: 11, kode: "MUS", nama_subsektor: "Musik", deskripsi: null, pelaku_count: 0 },
+  { id: 12, kode: "PEN", nama_subsektor: "Penerbitan", deskripsi: null, pelaku_count: 0 },
+  { id: 13, kode: "IKL", nama_subsektor: "Periklanan", deskripsi: null, pelaku_count: 0 },
+  { id: 14, kode: "SPT", nama_subsektor: "Seni Pertunjukan", deskripsi: null, pelaku_count: 0 },
+  { id: 15, kode: "SRP", nama_subsektor: "Seni Rupa", deskripsi: null, pelaku_count: 0 },
+  { id: 16, kode: "TVR", nama_subsektor: "Televisi dan Radio", deskripsi: null, pelaku_count: 0 },
+  { id: 17, kode: "GME", nama_subsektor: "Pengembangan Permainan", deskripsi: null, pelaku_count: 0 },
 ];
+
+const subsectorDisplayOrder = ["KUL", "KRY", "FSH", "FOT", "MUS", "FAV", "GME", "ARS", "APL", "DIN", "DKV", "DPR", "PEN", "IKL", "SPT", "SRP", "TVR"];
+
+function sortSubsectors(items: PublicSubsector[]) {
+  return [...items].sort((a, b) => {
+    const ai = subsectorDisplayOrder.indexOf(a.kode);
+    const bi = subsectorDisplayOrder.indexOf(b.kode);
+    return (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi);
+  });
+}
+
+function subsectorIcon(kode: string): IconName {
+  const icons: Record<string, IconName> = {
+    APL: "briefcase", ARS: "architecture", DIN: "interior", DKV: "palette", DPR: "product",
+    FSH: "fashion", FAV: "film", FOT: "camera", KRY: "palette", KUL: "food", MUS: "music",
+    PEN: "publishing", IKL: "advertising", SPT: "performance", SRP: "art", TVR: "broadcast", GME: "game",
+  };
+  return icons[kode] || "spark";
+}
 
 
 const newsFallbackImages = ["/kriya-bangka.jpg", "/kuliner-bangka.png", "/hero-home-v15.jpg"];
@@ -141,6 +180,7 @@ export default function Home() {
   const heroRef = useRef<HTMLElement>(null);
   const [beritaItems, setBeritaItems] = useState<PublicBerita[]>([]);
   const [acaraItems, setAcaraItems] = useState<PublicAcara[]>([]);
+  const [subsectorItems, setSubsectorItems] = useState<PublicSubsector[]>(sortSubsectors(fallbackSubsectors));
   const [contentLoading, setContentLoading] = useState(true);
 
 
@@ -149,13 +189,15 @@ export default function Home() {
 
     const loadHomepageContent = async () => {
       try {
-        const [beritaResponse, acaraResponse] = await Promise.all([
+        const [beritaResponse, acaraResponse, subsectorResponse] = await Promise.all([
           fetch("/api/public/berita", { cache: "no-store" }),
           fetch("/api/public/acara", { cache: "no-store" }),
+          fetch("/api/public/subsektor", { cache: "no-store" }),
         ]);
 
         const beritaPayload = (await beritaResponse.json()) as { data?: PublicBerita[] };
         const acaraPayload = (await acaraResponse.json()) as { data?: PublicAcara[] };
+        const subsectorPayload = (await subsectorResponse.json()) as { data?: PublicSubsector[] };
 
         if (!cancelled && beritaResponse.ok && Array.isArray(beritaPayload.data)) {
           setBeritaItems(beritaPayload.data);
@@ -163,6 +205,10 @@ export default function Home() {
 
         if (!cancelled && acaraResponse.ok && Array.isArray(acaraPayload.data)) {
           setAcaraItems(acaraPayload.data);
+        }
+
+        if (!cancelled && subsectorResponse.ok && Array.isArray(subsectorPayload.data) && subsectorPayload.data.length > 0) {
+          setSubsectorItems(sortSubsectors(subsectorPayload.data));
         }
       } catch (error) {
         console.error("Gagal memuat berita dan acara homepage:", error);
@@ -205,7 +251,7 @@ export default function Home() {
 
   return (
     <main className="site-shell">
-      <PublicSiteHeader overlay hideLogin />
+      <PublicSiteHeader overlay />
       <section ref={heroRef} className="hero" id="beranda">
         <div className="hero-media" aria-hidden="true" />
         <div className="hero-overlay" aria-hidden="true" />
@@ -287,23 +333,17 @@ export default function Home() {
           </div>
 
           <div className="subsector-grid">
-            {subsectors.map((item, index) => (
-              <a href="#pelaku-ekraf" className="subsector-card" key={item.name}>
+            {subsectorItems.map((item, index) => (
+              <a href={`/subsektor/${item.id}`} className="subsector-card" key={item.id}>
                 <span className="subsector-index">{String(index + 1).padStart(2, "0")}</span>
-                <span className="subsector-icon"><Icon name={item.icon} size={42} /></span>
+                <span className="subsector-icon"><Icon name={subsectorIcon(item.kode)} size={42} /></span>
                 <div>
-                  <strong>{item.name}</strong>
-                  <span>{item.count}</span>
+                  <strong>{item.nama_subsektor}</strong>
+                  <span>{item.pelaku_count} pelaku</span>
                 </div>
                 <span className="subsector-arrow"><Icon name="arrow" size={17} /></span>
               </a>
             ))}
-          </div>
-
-          <div className="section-bottom-link">
-            <a href="#pelaku-ekraf" className="text-link dark-link">
-              Lihat seluruh 17 subsektor <Icon name="arrow" size={16} />
-            </a>
           </div>
         </div>
       </section>
@@ -463,20 +503,6 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="section about" id="tentang">
-        <div className="page-container about-grid">
-          <div>
-            <span className="section-kicker">Tentang Platform</span>
-            <h2>Digitalisasi data kreatif untuk Bangka yang lebih terhubung.</h2>
-          </div>
-          <p>
-            SI PARIK BANGKA Kabupaten Bangka dihadirkan untuk mendukung pendataan, promosi,
-            pembinaan, dan akses informasi ekonomi kreatif serta SDM pariwisata dalam
-            satu layanan digital yang modern dan ramah pengguna.
-          </p>
-        </div>
-      </section>
-
       <section className="home-contact-section" id="kontak" aria-labelledby="home-contact-title">
         <div className="page-container">
           <div className="home-contact-card">
@@ -562,160 +588,7 @@ export default function Home() {
         </div>
       </footer>
 
-      <FloatingAiChat />
     </main>
-  );
-}
-
-function FloatingAiChat() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [question, setQuestion] = useState("");
-  const [isSending, setIsSending] = useState(false);
-  const [messages, setMessages] = useState<AiChatMessage[]>([
-    {
-      role: "assistant",
-      text: "Halo! Tulis kebutuhan wisata Anda. Contoh pertanyaan di bawah sudah disesuaikan dengan data yang tersedia pada database sehingga dapat langsung menghasilkan alternatif untuk dirangking dengan SAW.",
-    },
-  ]);
-
-  const examples = [
-    "Cari wisata bahari di Bangka dengan tiket maksimal Rp15.000, utamakan akses mudah",
-    "Cari kuliner seafood halal maksimal Rp100.000 yang tersedia delivery",
-    "Cari hotel minimal bintang 3 dengan budget maksimal Rp700.000",
-    "Cari satwa endemik Mentilin dengan lokasi pengamatan",
-  ];
-
-  function getLocationIfNeeded(message: string) {
-    const needsLocation = /\b(dekat|terdekat|jarak|radius|\d+(?:[.,]\d+)?\s*(?:km|kilometer|meter|m))\b/i.test(message);
-    if (!needsLocation || !navigator.geolocation) {
-      return Promise.resolve<{ latitude: number | null; longitude: number | null }>({ latitude: null, longitude: null });
-    }
-
-    return new Promise<{ latitude: number | null; longitude: number | null }>((resolve) => {
-      navigator.geolocation.getCurrentPosition(
-        (position) => resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude }),
-        () => resolve({ latitude: null, longitude: null }),
-        { enableHighAccuracy: true, timeout: 7000, maximumAge: 120000 },
-      );
-    });
-  }
-
-  async function sendQuestion(value?: string) {
-    const message = (value ?? question).trim();
-    if (!message || isSending) return;
-
-    setQuestion("");
-    setIsSending(true);
-    setMessages((current) => [...current, { role: "user", text: message }]);
-
-    try {
-      const location = await getLocationIfNeeded(message);
-      const response = await fetch("/api/ai/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message,
-          latitude: location.latitude,
-          longitude: location.longitude,
-        }),
-      });
-      const payload = await response.json() as {
-        type?: string;
-        response?: string;
-        redirect_url?: string;
-        message?: string;
-      };
-      if (!response.ok) throw new Error(payload.message || "Chatbot belum dapat memproses pertanyaan.");
-
-      const reply = payload.response || "Permintaan sudah diproses.";
-      setMessages((current) => [...current, { role: "assistant", text: reply }]);
-
-      if (payload.type === "search_redirect" && payload.redirect_url) {
-        window.setTimeout(() => window.location.assign(payload.redirect_url as string), 850);
-      }
-    } catch (error) {
-      setMessages((current) => [
-        ...current,
-        {
-          role: "assistant",
-          text: error instanceof Error ? error.message : "Layanan NLP belum dapat dihubungi.",
-        },
-      ]);
-    } finally {
-      setIsSending(false);
-    }
-  }
-
-  function handleChatKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      void sendQuestion();
-    }
-  }
-
-  return (
-    <>
-      {!isOpen && (
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
-          className="ai-launcher"
-          aria-label="Buka Tanya AI Bangka"
-        >
-          <span className="ai-launcher-label" aria-hidden="true">
-            Rekomendasi Wisata
-          </span>
-          <img src="/animasi.gif" alt="Tanya AI Bangka" />
-        </button>
-      )}
-
-      {isOpen && (
-        <div className="ai-panel" role="dialog" aria-label="Tanya AI Bangka">
-          <div className="ai-panel-head">
-            <div>
-              <span className="ai-status"><i /> Online</span>
-              <strong>Tanya AI Bangka</strong>
-              <small>Asisten informasi ekraf & pariwisata</small>
-            </div>
-            <button type="button" onClick={() => setIsOpen(false)} aria-label="Tutup Tanya AI">
-              <Icon name="close" size={18} />
-            </button>
-          </div>
-          <div className="ai-panel-body">
-            <div className="ai-conversation" aria-live="polite">
-              {messages.map((message, index) => (
-                <div className={`ai-bubble ${message.role === "user" ? "is-user" : ""}`} key={`${message.role}-${index}`}>
-                  {message.text}
-                </div>
-              ))}
-              {isSending && <div className="ai-bubble is-loading">Menganalisis kebutuhan dan kriteria SPK...</div>}
-            </div>
-            <div className="ai-example-label">Contoh pertanyaan</div>
-            <div className="ai-chips">
-              {examples.map((example) => (
-                <button type="button" key={example} onClick={() => void sendQuestion(example)} disabled={isSending}>
-                  {example}
-                </button>
-              ))}
-            </div>
-            <div className="ai-input-wrap">
-              <input
-                type="text"
-                value={question}
-                onChange={(event) => setQuestion(event.target.value)}
-                onKeyDown={handleChatKeyDown}
-                placeholder="Contoh: kuliner seafood halal maksimal Rp100.000..."
-                aria-label="Pertanyaan untuk AI"
-                disabled={isSending}
-              />
-              <button type="button" aria-label="Kirim pertanyaan" onClick={() => void sendQuestion()} disabled={isSending || !question.trim()}>
-                <Icon name="arrow" size={17} />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
   );
 }
 
@@ -763,6 +636,20 @@ function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
       return <svg {...common}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M7 5v14M17 5v14M3 10h4M17 10h4M3 14h4M17 14h4" /></svg>;
     case "architecture":
       return <svg {...common}><path d="M4 21V10l8-7 8 7v11M8 21v-7h8v7M3 21h18" /></svg>;
+    case "interior":
+      return <svg {...common}><path d="M4 20V9l8-5 8 5v11" /><path d="M7 20v-6h10v6M9 10h6M12 10v4" /></svg>;
+    case "product":
+      return <svg {...common}><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z" /><path d="m4.5 7.8 7.5 4.3 7.5-4.3M12 12.1V21" /></svg>;
+    case "publishing":
+      return <svg {...common}><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21.5v-16Z" /><path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13v16h4.5a2.5 2.5 0 0 1 2.5 2.5v-16Z" /></svg>;
+    case "advertising":
+      return <svg {...common}><path d="M4 13V9l12-4v12L4 13Z" /><path d="M16 9.5h2.5a2.5 2.5 0 0 1 0 5H16M6 13l1.5 6h3L9 12.5" /></svg>;
+    case "performance":
+      return <svg {...common}><path d="M5 4h14v5c0 6-3 10-7 12-4-2-7-6-7-12V4Z" /><path d="M8 9c.7-.8 1.5-1.2 2.5-1.2S12.3 8.2 13 9M8.5 14c1 .8 2.2 1.2 3.5 1.2s2.5-.4 3.5-1.2" /></svg>;
+    case "art":
+      return <svg {...common}><path d="M4 18c3-6 7-11 14-14l2 2c-3 7-8 11-14 14H4v-2Z" /><path d="m14 7 3 3M6 16l2 2" /></svg>;
+    case "broadcast":
+      return <svg {...common}><rect x="4" y="6" width="16" height="12" rx="2" /><path d="m9 3 3 3 3-3M8 11h5v3H8zM16 11h.01M16 14h.01" /></svg>;
     case "clock":
       return <svg {...common}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></svg>;
     case "mail":

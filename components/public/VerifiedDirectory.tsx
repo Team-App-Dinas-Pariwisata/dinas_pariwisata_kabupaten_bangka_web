@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useRef, useState } from "react";
 
 export type PublicDirectoryItem = {
@@ -151,7 +152,12 @@ export default function VerifiedDirectory() {
         ) : (
           <div className="directory-track" ref={trackRef}>
             {items.map((item) => (
-              <article className={`directory-card ${item.unggulan ? "is-featured" : ""}`} key={`${item.type}-${item.id}`}>
+              <Link
+                href={`/direktori/${item.type}/${item.id}`}
+                className={`directory-card ${item.unggulan ? "is-featured" : ""}`}
+                key={`${item.type}-${item.id}`}
+                aria-label={`Lihat detail ${item.title}`}
+              >
                 <div className="directory-card-media">
                   {item.image ? (
                     <img src={item.image} alt={item.title} loading="lazy" />
@@ -173,8 +179,9 @@ export default function VerifiedDirectory() {
                     {item.location ? <span>⌖ {item.location}</span> : null}
                   </div>
                   <p className="directory-description">{item.description || "Profil telah diverifikasi dan tercatat dalam direktori SI PARIK BANGKA."}</p>
+                  <span className="directory-card-link-label">Lihat profil <span aria-hidden="true">→</span></span>
                 </div>
-              </article>
+              </Link>
             ))}
           </div>
         )}
