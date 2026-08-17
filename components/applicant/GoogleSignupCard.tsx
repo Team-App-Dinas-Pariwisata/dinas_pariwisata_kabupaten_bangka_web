@@ -4,7 +4,7 @@ type Props = {
 };
 
 const errorMessages: Record<string, string> = {
-  config: "Google OAuth belum dikonfigurasi. Isi GOOGLE_CLIENT_ID dan GOOGLE_CLIENT_SECRET di .env.local.",
+  config: "Layanan masuk dengan Google belum tersedia. Hubungi pengelola SI PARIK BANGKA.",
   cancelled: "Proses masuk dengan Google dibatalkan.",
   google: "Google tidak dapat menyelesaikan proses autentikasi. Silakan coba lagi.",
   state: "Sesi autentikasi tidak valid atau sudah kedaluwarsa. Silakan mulai ulang.",
@@ -12,7 +12,7 @@ const errorMessages: Record<string, string> = {
   internal_email: "Email tersebut sudah dipakai oleh akun petugas/admin. Gunakan akun Google lain untuk akun pengaju.",
   inactive: "Akun pengaju ini sedang dinonaktifkan. Hubungi pengelola SI PARIK BANGKA.",
   account_mismatch: "Akun Google tidak cocok dengan akun pengaju yang sudah terdaftar.",
-  server: "Pembuatan akun belum berhasil. Pastikan migration database dan konfigurasi Google OAuth sudah benar.",
+  server: "Pembuatan akun belum berhasil. Silakan coba lagi atau hubungi pengelola SI PARIK BANGKA.",
 };
 
 function GoogleMark() {
@@ -44,7 +44,7 @@ export function GoogleSignupCard({ googleReady, error }: Props) {
       ) : (
         <button className="google-signup-button" type="button" disabled>
           <GoogleMark />
-          <span>Google OAuth belum dikonfigurasi</span>
+          <span>Layanan Google belum tersedia</span>
         </button>
       )}
 

@@ -28,9 +28,17 @@ type GuestPayload = {
   message?: string;
 };
 
+type AiLink = {
+  label: string;
+  url: string;
+};
+
 type AiChatMessage = {
   role: "assistant" | "user";
   text: string;
+  title?: string;
+  links?: AiLink[];
+  suggestions?: string[];
 };
 
 function newGuestIdentifier() {
@@ -52,10 +60,10 @@ function timeLabel(value: string) {
 }
 
 const aiExamples = [
-  "Cari wisata bahari di Bangka dengan tiket maksimal Rp15.000, utamakan akses mudah",
-  "Cari kuliner seafood halal maksimal Rp100.000 yang tersedia delivery",
-  "Cari hotel minimal bintang 3 dengan budget maksimal Rp700.000",
-  "Cari satwa endemik Mentilin dengan lokasi pengamatan",
+  "Bagaimana cara membuat pengajuan?",
+  "Apa syarat pengajuan Pelaku Ekraf?",
+  "Bagaimana cara cek status dan revisi pengajuan?",
+  "Cari wisata bahari di Bangka dengan tiket maksimal Rp15.000",
 ];
 
 export default function GuestSupportChat() {
@@ -80,7 +88,8 @@ export default function GuestSupportChat() {
   const [aiMessages, setAiMessages] = useState<AiChatMessage[]>([
     {
       role: "assistant",
-      text: "Halo! Tulis kebutuhan wisata Anda. Contoh pertanyaan di bawah sudah disesuaikan dengan data yang tersedia pada database sehingga dapat langsung menghasilkan alternatif untuk dirangking dengan SAW.",
+      text: "Halo! Saya dapat membantu penggunaan SI PARIK BANGKA, termasuk cara membuat pengajuan, syarat dokumen, cek status, revisi pengajuan, serta rekomendasi wisata sesuai kebutuhan Anda.",
+      suggestions: aiExamples,
     },
   ]);
 
@@ -220,14 +229,26 @@ export default function GuestSupportChat() {
       });
       const payload = await response.json() as {
         type?: string;
+        title?: string;
         response?: string;
         redirect_url?: string;
+        links?: AiLink[];
+        suggestions?: string[];
         message?: string;
       };
       if (!response.ok) throw new Error(payload.message || "Chatbot belum dapat memproses pertanyaan.");
 
       const reply = payload.response || "Permintaan sudah diproses.";
-      setAiMessages((current) => [...current, { role: "assistant", text: reply }]);
+      setAiMessages((current) => [
+        ...current,
+        {
+          role: "assistant",
+          text: reply,
+          title: payload.title,
+          links: Array.isArray(payload.links) ? payload.links : undefined,
+          suggestions: Array.isArray(payload.suggestions) ? payload.suggestions : undefined,
+        },
+      ]);
 
       if (payload.type === "search_redirect" && payload.redirect_url) {
         window.setTimeout(() => window.location.assign(payload.redirect_url as string), 850);
@@ -237,7 +258,7 @@ export default function GuestSupportChat() {
         ...current,
         {
           role: "assistant",
-          text: aiError instanceof Error ? aiError.message : "Layanan NLP belum dapat dihubungi.",
+          text: aiError instanceof Error ? aiError.message : "Layanan AI belum dapat dihubungi.",
         },
       ]);
     } finally {
@@ -251,6 +272,9 @@ export default function GuestSupportChat() {
       void sendAiQuestion();
     }
   }
+
+  const latestAssistant = [...aiMessages].reverse().find((message) => message.role === "assistant" && message.suggestions?.length);
+  const aiSuggestions = latestAssistant?.suggestions ?? aiExamples;
 
   if (hidden) return null;
 
@@ -278,7 +302,7 @@ export default function GuestSupportChat() {
                   : onlineStaffCount === null ? "MENGECEK PETUGAS" : "AI ONLINE · PETUGAS OFFLINE"}
               </span>
               <strong>POJOK BINCANG</strong>
-              <small>Asisten informasi ekraf &amp; pariwisata</small>
+              <small>Asisten pengajuan, ekraf &amp; pariwisata</small>
             </div>
             <button type="button" onClick={() => setIsOpen(false)} aria-label="Tutup Pojok Bincang">×</button>
           </header>
@@ -314,7 +338,7 @@ export default function GuestSupportChat() {
                 <div className={`support-chat-welcome ${staffOnline ? "" : "is-offline"}`}>
                   {staffOnline
                     ? "Halo. Petugas sedang online. Silakan tulis pesan Anda. Semua petugas dapat melihat percakapan ini dan petugas lain dapat melanjutkan balasan bila diperlukan."
-                    : "Petugas sedang offline. Anda tetap dapat mengirim pesan. Pesan akan tersimpan di MySQL dan dapat dibaca serta dibalas oleh petugas saat mereka login kembali."}
+                    : "Petugas sedang offline. Anda tetap dapat mengirim pesan. Pesan akan disimpan dan dapat dibaca serta dibalas oleh petugas saat mereka aktif kembali."}
                 </div>
                 {messages.map((message) => (
                   <div className={`support-chat-message ${message.sender_type === "guest" ? "is-guest" : "is-staff"}`} key={message.id}>
@@ -350,21 +374,29 @@ export default function GuestSupportChat() {
                   {isSending ? "..." : "Kirim"}
                 </button>
               </div>
-              <div className="support-chat-foot">Percakapan tersimpan di MySQL dan dimuat kembali untuk browser ini saat Anda berkunjung lagi.</div>
+              <div className="support-chat-foot">Percakapan akan disimpan dan dapat dimuat kembali di perangkat ini saat Anda berkunjung lagi.</div>
             </div>
           ) : (
             <div className="ai-panel-body unified-ai-body" role="tabpanel">
               <div className="ai-conversation" aria-live="polite">
                 {aiMessages.map((message, index) => (
                   <div className={`ai-bubble ${message.role === "user" ? "is-user" : ""}`} key={`${message.role}-${index}`}>
-                    {message.text}
+                    {message.title && <strong className="ai-bubble-title">{message.title}</strong>}
+                    <div className="ai-bubble-copy">{message.text}</div>
+                    {message.links?.length ? (
+                      <div className="ai-bubble-links">
+                        {message.links.map((link) => (
+                          <a href={link.url} key={`${link.url}-${link.label}`}>{link.label}</a>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                 ))}
-                {aiSending && <div className="ai-bubble is-loading">Menganalisis kebutuhan dan kriteria SPK...</div>}
+                {aiSending && <div className="ai-bubble is-loading">Memproses pertanyaan Anda...</div>}
               </div>
-              <div className="ai-example-label">Contoh pertanyaan</div>
+              <div className="ai-example-label">Contoh / pertanyaan lanjutan</div>
               <div className="ai-chips">
-                {aiExamples.map((example) => (
+                {aiSuggestions.map((example) => (
                   <button type="button" key={example} onClick={() => void sendAiQuestion(example)} disabled={aiSending}>
                     {example}
                   </button>
@@ -376,7 +408,7 @@ export default function GuestSupportChat() {
                   value={aiQuestion}
                   onChange={(event) => setAiQuestion(event.target.value)}
                   onKeyDown={handleAiKeyDown}
-                  placeholder="Contoh: kuliner seafood halal maksimal Rp100.000..."
+                  placeholder="Tanyakan pengajuan atau rekomendasi wisata..."
                   aria-label="Pertanyaan untuk AI"
                   disabled={aiSending}
                 />

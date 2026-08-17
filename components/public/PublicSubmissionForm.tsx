@@ -153,7 +153,7 @@ export function PublicSubmissionForm({ type }: Props) {
         <section className="submission-intro">
           <p className="submission-kicker">Layanan Pengajuan Online</p>
           <h1>{config.title}</h1>
-          <p>{config.subtitle} Data pengajuan akan masuk langsung ke database dan menunggu verifikasi petugas.</p>
+          <p>{config.subtitle} Data pengajuan akan langsung dikirim dan menunggu verifikasi petugas.</p>
         </section>
 
         <div className="submission-layout">

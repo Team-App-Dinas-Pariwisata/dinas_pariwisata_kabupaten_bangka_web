@@ -56,9 +56,9 @@ function errorMessage(error: unknown) {
   if (code === "ER_DUP_ENTRY") return "Data duplikat terdeteksi. Periksa judul atau data unik lainnya.";
   if (code === "ER_NO_REFERENCED_ROW_2") return "Data referensi tidak ditemukan. Periksa kategori yang dipilih.";
   if (code === "ER_ROW_IS_REFERENCED_2") return "Data masih digunakan oleh data lain dan tidak dapat dihapus.";
-  if (code === "ER_CHECK_CONSTRAINT_VIOLATED") return "Data tidak memenuhi aturan validasi database.";
+  if (code === "ER_CHECK_CONSTRAINT_VIOLATED") return "Data tidak memenuhi aturan yang berlaku.";
   if (error instanceof Error && error.message.startsWith("Nilai ")) return error.message;
-  return "Operasi database gagal diproses.";
+  return "Permintaan belum dapat diproses.";
 }
 
 async function userOnly(request: NextRequest) {

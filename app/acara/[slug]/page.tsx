@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import PublicSiteFooter from "@/components/public/PublicSiteFooter";
 import PublicSiteHeader from "@/components/public/PublicSiteHeader";
+import ShareLinkButton from "@/components/public/ShareLinkButton";
 import { getPublicEventBySlug, getRelatedEvents } from "@/lib/public-content";
 
 export const dynamic = "force-dynamic";
@@ -83,7 +84,14 @@ export default async function DetailAcaraPage({ params }: Props) {
               <p>{item.narahubung_nama || "Panitia kegiatan"}</p>
               {item.narahubung_telepon && <a href={`tel:${item.narahubung_telepon}`}>{item.narahubung_telepon}</a>}
               {item.narahubung_email && <a href={`mailto:${item.narahubung_email}`}>{item.narahubung_email}</a>}
-              <Link href="/acara" className="public-outline-button">← Kembali ke acara</Link>
+              <div className="public-detail-actions">
+                <Link href="/acara" className="public-outline-button">← Kembali ke acara</Link>
+                <ShareLinkButton
+                  title={item.nama_acara}
+                  text={item.ringkasan || "Agenda SI PARIK BANGKA Kabupaten Bangka"}
+                  label="Bagikan link acara"
+                />
+              </div>
             </aside>
           </div>
         </article>

@@ -182,7 +182,7 @@ export default function TourismRecommendationSearch() {
     fetch(`/api/public/rekomendasi?category=${encodeURIComponent(category)}`, { cache: "no-store" })
       .then(async (response) => {
         const payload = await response.json() as { data?: { criteria?: Criterion[] }; message?: string };
-        if (!response.ok) throw new Error(payload.message || "Kriteria SPK gagal dimuat.");
+        if (!response.ok) throw new Error(payload.message || "Kriteria rekomendasi gagal dimuat.");
         return payload.data?.criteria ?? [];
       })
       .then((loaded) => {
@@ -193,7 +193,7 @@ export default function TourismRecommendationSearch() {
         ));
       })
       .catch((loadError: unknown) => {
-        if (!cancelled) setError(loadError instanceof Error ? loadError.message : "Kriteria SPK gagal dimuat.");
+        if (!cancelled) setError(loadError instanceof Error ? loadError.message : "Kriteria rekomendasi gagal dimuat.");
       })
       .finally(() => {
         if (!cancelled) setCriteriaLoading(false);
@@ -270,11 +270,11 @@ export default function TourismRecommendationSearch() {
       let payload = await requestRecommendation(baseRequest);
       const aiDriven = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("source") === "ai";
 
-      // Pesan NLP dapat menghasilkan kombinasi filter yang terlalu sempit.
+      // Pesan dari asisten dapat menghasilkan kombinasi kebutuhan yang terlalu sempit.
       // Jika data kandidat sebenarnya tersedia tetapi tidak ada yang lolos hard filter,
       // pencarian AI otomatis melakukan satu kali fallback: pertahankan kategori dan
-      // prioritas SAW, tetapi lepaskan keyword/budget/jarak/kebutuhan wajib.
-      // Dengan demikian chatbot tetap memberi ranking dari data publik yang tersedia.
+      // pertahankan prioritas, tetapi lepaskan kata kunci, budget, jarak, dan kebutuhan wajib.
+      // Dengan demikian chatbot tetap dapat memberi rekomendasi dari data publik yang tersedia.
       if (aiDriven && payload.data.totalCandidates > 0 && payload.data.totalMatched === 0) {
         payload = await requestRecommendation({
           category,
@@ -287,7 +287,7 @@ export default function TourismRecommendationSearch() {
           requirements: initialRequirements,
           limit: 12,
         });
-        setAiNotice((current) => `${current} Filter wajib dari percakapan tidak menemukan alternatif, sehingga sistem otomatis melonggarkan filter dan tetap memakai prioritas SAW untuk menampilkan data yang tersedia.`.trim());
+        setAiNotice((current) => `${current} Kebutuhan yang terlalu spesifik belum menemukan pilihan. Sistem otomatis menyesuaikan pencarian sambil tetap mempertahankan prioritas Anda agar hasil yang tersedia tetap dapat ditampilkan.`.trim());
       }
 
       setResults(payload.data.items);
@@ -327,13 +327,13 @@ export default function TourismRecommendationSearch() {
           <div className="spk-ai-notice">
             <strong>Kriteria otomatis dari chatbot</strong>
             <p>{aiNotice}</p>
-            <span>Form sudah diisi dan ranking SAW dijalankan otomatis. Anda tetap dapat mengubah kriterianya lalu menghitung ulang.</span>
+            <span>Form sudah diisi otomatis berdasarkan percakapan Anda. Anda tetap dapat mengubah kriterianya lalu mencari ulang.</span>
           </div>
         )}
         <div className="spk-form-heading">
           <span>Form Pencarian</span>
           <h2>Cari rekomendasi yang paling sesuai</h2>
-          <p>Filter kebutuhan Anda, lalu atur tingkat kepentingan setiap kriteria. Sistem akan merangking alternatif menggunakan metode SAW.</p>
+          <p>Pilih kebutuhan Anda, lalu atur tingkat kepentingan setiap kriteria. Sistem akan membandingkan pilihan yang tersedia dan menampilkan rekomendasi yang paling sesuai.</p>
         </div>
 
         <div className="spk-form-section">
@@ -355,7 +355,7 @@ export default function TourismRecommendationSearch() {
         </div>
 
         <div className="spk-form-section">
-          <div className="spk-section-title"><span>02</span><div><strong>Lokasi dan batas pencarian</strong><small>Jarak dihitung dengan koordinat publik pada database.</small></div></div>
+          <div className="spk-section-title"><span>02</span><div><strong>Lokasi dan batas pencarian</strong><small>Jarak dihitung berdasarkan data lokasi yang tersedia.</small></div></div>
           <button className="spk-location-button" type="button" onClick={detectLocation} disabled={locationLoading}>
             <span aria-hidden="true">⌖</span>{locationLoading ? "Mendeteksi lokasi..." : "Gunakan lokasi saya"}
           </button>
@@ -377,7 +377,7 @@ export default function TourismRecommendationSearch() {
         </div>
 
         <div className="spk-form-section">
-          <div className="spk-section-title"><span>03</span><div><strong>Kebutuhan khusus</strong><small>Digunakan sebagai filter sebelum proses perankingan SAW.</small></div></div>
+          <div className="spk-section-title"><span>03</span><div><strong>Kebutuhan khusus</strong><small>Digunakan untuk menyaring hasil agar lebih sesuai dengan kebutuhan Anda.</small></div></div>
           {category !== "satwa-endemik" && (
             <div className="spk-field-grid two">
               <label className="spk-field">
@@ -420,7 +420,7 @@ export default function TourismRecommendationSearch() {
         </div>
 
         <div className="spk-form-section">
-          <div className="spk-section-title"><span>04</span><div><strong>Prioritas kriteria SAW</strong><small>Bobot awal diambil dari tabel SPK. Nilai 3 mempertahankan proporsi bobot database.</small></div></div>
+          <div className="spk-section-title"><span>04</span><div><strong>Prioritas pilihan</strong><small>Atur tingkat kepentingan setiap kriteria. Nilai 3 mempertahankan tingkat kepentingan awal.</small></div></div>
           {criteriaLoading ? (
             <div className="spk-criteria-loading">Memuat konfigurasi kriteria...</div>
           ) : (
@@ -441,7 +441,7 @@ export default function TourismRecommendationSearch() {
                       value={value}
                       onChange={(event) => setPriorities((current) => ({ ...current, [criterion.code]: Number(event.target.value) }))}
                     />
-                    <div className="spk-priority-foot"><small>{criterion.description || "Kriteria aktif pada konfigurasi SPK."}</small><b>Bobot dasar {(criterion.defaultWeight * 100).toFixed(0)}%</b></div>
+                    <div className="spk-priority-foot"><small>{criterion.description || "Kriteria aktif untuk rekomendasi."}</small><b>Prioritas awal {(criterion.defaultWeight * 100).toFixed(0)}%</b></div>
                   </label>
                 );
               })}
@@ -451,7 +451,7 @@ export default function TourismRecommendationSearch() {
 
         {error && <div className="spk-error-box">{error}</div>}
         <button className="spk-submit-button" type="submit" disabled={loading || criteriaLoading || criteria.length === 0}>
-          {loading ? "Menghitung rekomendasi SAW..." : "Cari Rekomendasi Terbaik"}
+          {loading ? "Menyusun rekomendasi..." : "Cari Rekomendasi Terbaik"}
           <span aria-hidden="true">→</span>
         </button>
       </form>
@@ -464,18 +464,18 @@ export default function TourismRecommendationSearch() {
 
         {!hasSearched && (
           <div className="spk-result-placeholder">
-            <div className="spk-placeholder-icon">SAW</div>
-            <h3>Hasil ranking akan muncul di sini</h3>
-            <p>Lengkapi form di atas. Sistem menormalisasi setiap kriteria, menerapkan bobot, lalu menjumlahkan nilai preferensi untuk menentukan ranking.</p>
+            <div className="spk-placeholder-icon">★</div>
+            <h3>Hasil rekomendasi akan muncul di sini</h3>
+            <p>Lengkapi form di atas. Sistem akan membandingkan setiap pilihan berdasarkan kebutuhan dan prioritas yang Anda tentukan.</p>
           </div>
         )}
 
-        {loading && <div className="spk-result-placeholder compact"><div className="spk-loading-dot"/><h3>Sedang menghitung matriks keputusan...</h3></div>}
+        {loading && <div className="spk-result-placeholder compact"><div className="spk-loading-dot"/><h3>Sedang menyiapkan rekomendasi...</h3></div>}
 
         {hasSearched && !loading && !error && results.length === 0 && (
           <div className="spk-result-placeholder compact">
             <h3>Belum ada alternatif yang memenuhi filter</h3>
-            <p>Coba naikkan batas budget/jarak atau kurangi kebutuhan wajib agar lebih banyak alternatif dapat dirangking.</p>
+            <p>Coba naikkan batas budget atau jarak, atau kurangi kebutuhan wajib agar lebih banyak pilihan dapat ditampilkan.</p>
           </div>
         )}
 
@@ -497,12 +497,12 @@ export default function TourismRecommendationSearch() {
                   <div className="spk-result-actions">
                     <Link href={item.href}>Lihat detail <span>→</span></Link>
                     <details>
-                      <summary>Lihat perhitungan</summary>
+                      <summary>Lihat alasan penilaian</summary>
                       <div className="spk-calculation-popover">
                         {item.criteria.map((criterion) => (
                           <div key={criterion.code}>
                             <span>{criterion.label}<small>{criterion.valueLabel}</small></span>
-                            <b>{(criterion.normalizedValue * 100).toFixed(0)} × {(criterion.weight * 100).toFixed(1)}%</b>
+                            <b>Kesesuaian {(criterion.normalizedValue * 100).toFixed(0)}%</b>
                           </div>
                         ))}
                       </div>
@@ -516,9 +516,9 @@ export default function TourismRecommendationSearch() {
 
         {method && results.length > 0 && (
           <div className="spk-method-note">
-            <strong>{method.name}</strong>
-            <p>Benefit: {method.benefitNormalization}. Cost: {method.costNormalization}. {method.preferenceWeighting}.</p>
-            {!resultMeta?.usedLocation && <p><b>Catatan:</b> kriteria jarak otomatis dikeluarkan dari perhitungan karena lokasi pengguna belum diisi.</p>}
+            <strong>Dasar rekomendasi</strong>
+            <p>Hasil disusun berdasarkan kebutuhan, batas pencarian, dan prioritas yang Anda tentukan.</p>
+            {!resultMeta?.usedLocation && <p><b>Catatan:</b> jarak belum digunakan karena lokasi Anda belum diisi.</p>}
           </div>
         )}
       </section>

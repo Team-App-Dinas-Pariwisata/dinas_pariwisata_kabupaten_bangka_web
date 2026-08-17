@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import PublicSiteHeader from "@/components/public/PublicSiteHeader";
 import VerifiedDirectory from "@/components/public/VerifiedDirectory";
 import EkrafStatistics from "@/components/public/EkrafStatistics";
+import PublicContactSection from "@/components/public/PublicContactSection";
 
 type PublicBerita = {
   id: number;
@@ -503,46 +504,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="home-contact-section" id="kontak" aria-labelledby="home-contact-title">
-        <div className="page-container">
-          <div className="home-contact-card">
-            <div className="home-contact-map">
-              <iframe
-                title="Peta Dinas Pariwisata dan Kebudayaan Kabupaten Bangka"
-                src="https://www.google.com/maps?q=Dinas+Pariwisata+dan+Kebudayaan+Kabupaten+Bangka,+Jl.+A.+Yani,+Sungailiat,+Bangka&output=embed"
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                allowFullScreen
-              />
-            </div>
-
-            <div className="home-contact-copy">
-              <span className="section-kicker">Hubungi Kami</span>
-              <h2 id="home-contact-title">Kontak Kami</h2>
-              <p>Kami menyediakan berbagai media yang dapat Anda hubungi untuk informasi layanan pariwisata dan ekonomi kreatif Kabupaten Bangka.</p>
-
-              <div className="home-contact-list">
-                <div className="home-contact-item">
-                  <span className="home-contact-icon"><Icon name="clock" size={22} /></span>
-                  <div><small>Jadwal Kerja</small><strong>Senin–Jumat, 08.00–16.00 WIB</strong></div>
-                </div>
-                <div className="home-contact-item">
-                  <span className="home-contact-icon"><Icon name="pin" size={22} /></span>
-                  <div><small>Alamat</small><strong>Jl. A. Yani (Jalur Dua), Sungailiat, Bangka 33215</strong></div>
-                </div>
-                <a className="home-contact-item" href="mailto:parbudaya2021@bangka.go.id">
-                  <span className="home-contact-icon"><Icon name="mail" size={22} /></span>
-                  <div><small>Email</small><strong>parbudaya2021@bangka.go.id</strong></div>
-                </a>
-                <a className="home-contact-item" href="tel:+6271792496">
-                  <span className="home-contact-icon"><Icon name="phone" size={22} /></span>
-                  <div><small>Telepon</small><strong>(0717) 92496</strong></div>
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <PublicContactSection />
 
       <footer className="footer">
         <div className="page-container footer-main">
@@ -569,7 +531,7 @@ export default function Home() {
             <a href="#pelaku-ekraf">Komunitas & Asosiasi</a>
             <a href="/berita">Berita</a>
             <a href="/acara">Acara</a>
-            <a href="#tentang">Tentang Kami</a>
+            <a href="#kontak">Kontak Kami</a>
             <a href="/akun/masuk">Akun Pengaju</a>
             <a href="/petugas">Portal Admin & Pengguna</a>
           </div>

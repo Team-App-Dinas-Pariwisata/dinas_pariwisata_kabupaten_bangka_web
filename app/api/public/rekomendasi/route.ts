@@ -69,8 +69,8 @@ export async function GET(request: NextRequest) {
       { headers: { "Cache-Control": "no-store, max-age=0" } },
     );
   } catch (error) {
-    console.error("Load SPK criteria error:", error);
-    return NextResponse.json({ message: "Konfigurasi kriteria SPK belum dapat dimuat." }, { status: 500 });
+    console.error("Load recommendation criteria error:", error);
+    return NextResponse.json({ message: "Kriteria rekomendasi belum dapat dimuat." }, { status: 500 });
   }
 }
 
@@ -113,18 +113,18 @@ export async function POST(request: NextRequest) {
       {
         data: result,
         method: {
-          name: "Simple Additive Weighting (SAW)",
-          benefitNormalization: "nilai / nilai maksimum",
-          costNormalization: "nilai minimum / nilai (dengan penanganan khusus jika minimum = 0)",
-          preferenceWeighting: "bobot database dikalikan tingkat kepentingan pengguna, lalu dinormalisasi kembali",
+          name: "Penilaian rekomendasi",
+          benefitNormalization: "penyesuaian nilai sesuai kebutuhan",
+          costNormalization: "penyesuaian batas biaya dan jarak",
+          preferenceWeighting: "prioritas pengguna digunakan untuk menyusun urutan rekomendasi",
         },
       },
       { headers: { "Cache-Control": "no-store, max-age=0" } },
     );
   } catch (error) {
-    console.error("Public SPK recommendation error:", error);
+    console.error("Public recommendation error:", error);
     return NextResponse.json(
-      { message: "Rekomendasi belum dapat dihitung. Periksa koneksi database dan view SPK." },
+      { message: "Rekomendasi belum dapat disiapkan. Silakan coba beberapa saat lagi." },
       { status: 500, headers: { "Cache-Control": "no-store, max-age=0" } },
     );
   }

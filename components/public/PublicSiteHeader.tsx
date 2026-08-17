@@ -87,10 +87,8 @@ export default function PublicSiteHeader({ overlay = false }: { overlay?: boolea
           <Link href="/"><NavIcon name="home"/><span>Beranda</span></Link>
           <Link href="/berita"><NavIcon name="news"/><span>Berita</span></Link>
           <Link href="/acara"><NavIcon name="calendar"/><span>Acara</span></Link>
-          <Link href="/#subsektor"><NavIcon name="grid"/><span>Subsektor</span></Link>
           <DesktopDropdown label="Pelaku Ekraf" icon="users" items={pelakuItems} />
           <DesktopDropdown label="Wisata" icon="map" items={wisataItems} />
-          <Link href="/#tentang"><NavIcon name="info"/><span>Tentang Kami</span></Link>
         </nav>
 
 
@@ -100,10 +98,8 @@ export default function PublicSiteHeader({ overlay = false }: { overlay?: boolea
             <Link href="/"><NavIcon name="home"/><span>Beranda</span></Link>
             <Link href="/berita"><NavIcon name="news"/><span>Berita</span></Link>
             <Link href="/acara"><NavIcon name="calendar"/><span>Acara</span></Link>
-            <Link href="/#subsektor"><NavIcon name="grid"/><span>Subsektor</span></Link>
             <MobileDropdown label="Pelaku Ekraf" icon="users" items={pelakuItems} />
             <MobileDropdown label="Wisata" icon="map" items={wisataItems} />
-            <Link href="/#tentang"><NavIcon name="info"/><span>Tentang Kami</span></Link>
           </div>
         </details>
       </div>

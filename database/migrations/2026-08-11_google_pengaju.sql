@@ -1,6 +1,6 @@
 -- Migration akun pengaju SI PARIK BANGKA berbasis Google OAuth
 -- Jalankan SATU KALI pada database lama yang sudah ada:
--- mysql -u root -p dinas_pariwisata < database/migrations/2026-08-11_google_pengaju.sql
+-- Jalankan file migrasi ini pada penyimpanan data dinas_pariwisata.
 
 ALTER TABLE `pengguna`
   MODIFY COLUMN `role` enum('admin','pengguna','pengaju') NOT NULL DEFAULT 'pengguna'
