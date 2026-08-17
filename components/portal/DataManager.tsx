@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import type { ResourceField } from "@/lib/resources";
 import { PortalIcon } from "./PortalIcon";
+import { compareTableValues, SortableTableHeader, TablePagination, type SortDirection } from "./DataTableControls";
 
 type Row = Record<string, unknown> & { id: number };
 type LookupOption = { label: string; value: string | number; parentValue?: string | number };
@@ -139,6 +140,10 @@ export function DataManager({ resource, title, description, label, fields, colum
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [lookups, setLookups] = useState<Record<string, LookupOption[]>>({});
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -183,6 +188,34 @@ export function DataManager({ resource, title, description, label, fields, colum
     if (!keyword) return rows;
     return rows.filter((row) => columns.some((column) => String(row[column.key] ?? "").toLowerCase().includes(keyword)));
   }, [rows, query, columns]);
+
+  const sortedRows = useMemo(() => {
+    if (!sortKey) return filtered;
+    return [...filtered].sort((left, right) => {
+      const result = compareTableValues(left[sortKey], right[sortKey]);
+      return sortDirection === "asc" ? result : -result;
+    });
+  }, [filtered, sortDirection, sortKey]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedRows.length / pageSize));
+  const pagedRows = useMemo(() => sortedRows.slice((page - 1) * pageSize, page * pageSize), [page, pageSize, sortedRows]);
+
+  useEffect(() => { setPage(1); }, [query, resource]);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+
+  function handleSort(key: string) {
+    if (sortKey === key) setSortDirection((current) => current === "asc" ? "desc" : "asc");
+    else {
+      setSortKey(key);
+      setSortDirection("asc");
+    }
+    setPage(1);
+  }
+
+  function handlePageSize(nextSize: number) {
+    setPageSize(nextSize);
+    setPage(1);
+  }
 
   function openCreate() {
     const initial: Record<string, unknown> = {};
@@ -288,10 +321,11 @@ export function DataManager({ resource, title, description, label, fields, colum
       <div className="dm-toolbar"><label><PortalIcon name="search" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`Cari ${label.toLowerCase()}...`} /></label><span>{filtered.length} data</span></div>
       {error && !modalOpen && <div className="portal-alert error">{error}</div>}
       <div className="dm-table-wrap">
-        <table className="dm-table"><thead><tr>{columns.map((col) => <th key={col.key}>{col.label}</th>)}<th>Aksi</th></tr></thead><tbody>
-          {loading ? <tr><td colSpan={columns.length + 1} className="dm-empty">Memuat data...</td></tr> : filtered.length === 0 ? <tr><td colSpan={columns.length + 1} className="dm-empty">Belum ada data.</td></tr> : filtered.map((row) => <tr key={row.id}>{columns.map((col) => <td key={col.key} data-label={col.label}>{col.key === "foto_utama" ? <ImageThumbnail value={row[col.key]} alt={String(row.judul ?? row.nama_acara ?? row.nama_tempat ?? row.nama_hotel ?? row.nama_usaha ?? row.nama_umum ?? label)} /> : col.key === "status" || col.key === "status_acara" ? <span className={`portal-status ${String(row[col.key] ?? "").toLowerCase().replaceAll(" ", "-")}`}>{formatValue(col.key, row[col.key])}</span> : formatValue(col.key, row[col.key])}</td>)}<td className="dm-actions" data-label="Aksi"><button type="button" onClick={() => openEdit(row)} aria-label="Edit"><PortalIcon name="edit" /></button><button className="danger" type="button" onClick={() => void remove(row)} aria-label="Hapus"><PortalIcon name="trash" /></button></td></tr>)}
+        <table className="dm-table"><thead><tr>{columns.map((col) => <SortableTableHeader key={col.key} label={col.label} sortKey={col.key} activeKey={sortKey} direction={sortDirection} onSort={handleSort} />)}<th>Aksi</th></tr></thead><tbody>
+          {loading ? <tr><td colSpan={columns.length + 1} className="dm-empty">Memuat data...</td></tr> : sortedRows.length === 0 ? <tr><td colSpan={columns.length + 1} className="dm-empty">Belum ada data.</td></tr> : pagedRows.map((row) => <tr key={row.id}>{columns.map((col) => <td key={col.key} data-label={col.label}>{col.key === "foto_utama" ? <ImageThumbnail value={row[col.key]} alt={String(row.judul ?? row.nama_acara ?? row.nama_tempat ?? row.nama_hotel ?? row.nama_usaha ?? row.nama_umum ?? label)} /> : col.key === "status" || col.key === "status_acara" ? <span className={`portal-status ${String(row[col.key] ?? "").toLowerCase().replaceAll(" ", "-")}`}>{formatValue(col.key, row[col.key])}</span> : formatValue(col.key, row[col.key])}</td>)}<td className="dm-actions" data-label="Aksi"><button type="button" onClick={() => openEdit(row)} aria-label="Edit"><PortalIcon name="edit" /></button><button className="danger" type="button" onClick={() => void remove(row)} aria-label="Hapus"><PortalIcon name="trash" /></button></td></tr>)}
         </tbody></table>
       </div>
+      {!loading && sortedRows.length > 0 && <TablePagination totalItems={sortedRows.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={handlePageSize} />}
 
       {modalOpen && <div className="portal-modal-layer" role="dialog" aria-modal="true"><button className="portal-modal-backdrop" type="button" onClick={() => setModalOpen(false)} aria-label="Tutup" /><form className="portal-modal" onSubmit={save}><div className="portal-modal-head"><div><p>{editing ? "Edit data" : "Data baru"}</p><h2>{editing ? `Ubah ${label}` : `Tambah ${label}`}</h2></div><button type="button" onClick={() => setModalOpen(false)}><PortalIcon name="x" /></button></div><div className="portal-form-grid">
         {fields.map((field) => <div className={`portal-field ${field.type === "textarea" || field.type === "image" ? "full" : ""}`} key={field.key}><span>{field.label}{field.required ? " *" : ""}</span>{field.type === "textarea" ? <textarea value={String(form[field.key] ?? "")} onChange={(e) => setForm((old) => ({ ...old, [field.key]: e.target.value }))} required={field.required} rows={4} placeholder={field.placeholder} /> : field.type === "select" ? <select value={String(form[field.key] ?? "")} onChange={(e) => setForm((old) => {
