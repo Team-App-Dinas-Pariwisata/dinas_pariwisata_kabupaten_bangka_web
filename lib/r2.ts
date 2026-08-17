@@ -47,7 +47,7 @@ export type R2UploadResult = {
 };
 
 export type R2ImageResult = {
-  body: Uint8Array;
+  body: ArrayBuffer;
   contentType: string | null;
   etag: string | null;
   lastModified: Date | null;
@@ -55,6 +55,12 @@ export type R2ImageResult = {
 };
 
 export type R2StoredObject = R2ImageResult;
+
+function byteArrayToArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const buffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(buffer).set(bytes);
+  return buffer;
+}
 
 let cachedClient: S3Client | null = null;
 let cachedClientKey = "";
@@ -478,7 +484,8 @@ export async function getImageFromR2(key: string): Promise<R2ImageResult | null>
     );
 
     if (!result.Body) return null;
-    const body = await result.Body.transformToByteArray();
+    const bytes = await result.Body.transformToByteArray();
+    const body = byteArrayToArrayBuffer(bytes);
 
     return {
       body,
@@ -584,7 +591,8 @@ export async function getSubmissionFileFromR2(key: string): Promise<R2StoredObje
     );
 
     if (!result.Body) return null;
-    const body = await result.Body.transformToByteArray();
+    const bytes = await result.Body.transformToByteArray();
+    const body = byteArrayToArrayBuffer(bytes);
     return {
       body,
       contentType: result.ContentType || null,

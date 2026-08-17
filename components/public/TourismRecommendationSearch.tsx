@@ -58,6 +58,10 @@ type SearchResponse = {
   message?: string;
 };
 
+type SuccessfulSearchResponse = Omit<SearchResponse, "data"> & {
+  data: NonNullable<SearchResponse["data"]>;
+};
+
 type Requirements = {
   parking: boolean;
   prayerRoom: boolean;
@@ -251,8 +255,10 @@ export default function TourismRecommendationSearch() {
           body: JSON.stringify(requestBody),
         });
         const payload = await response.json() as SearchResponse;
-        if (!response.ok || !payload.data) throw new Error(payload.message || "Rekomendasi gagal dihitung.");
-        return payload;
+        if (!response.ok || !payload.data) {
+          throw new Error(payload.message || "Rekomendasi gagal dihitung.");
+        }
+        return payload as SuccessfulSearchResponse;
       };
 
       const baseRequest = {
