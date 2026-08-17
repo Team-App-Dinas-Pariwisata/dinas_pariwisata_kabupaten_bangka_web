@@ -25,8 +25,10 @@ function nowMysql() {
   return new Date().toISOString().slice(0, 19).replace("T", " ");
 }
 
-function normalizeData(config: ResourceConfig, raw: Record<string, unknown>) {
-  const out: Record<string, unknown> = {};
+type DatabaseValue = string | number | boolean | null;
+
+function normalizeData(config: ResourceConfig, raw: Record<string, unknown>): Record<string, DatabaseValue> {
+  const out: Record<string, DatabaseValue> = {};
   for (const key of config.writable) {
     if (!(key in raw)) continue;
     const field = config.fields.find((item) => item.key === key);
@@ -42,12 +44,16 @@ function normalizeData(config: ResourceConfig, raw: Record<string, unknown>) {
     }
     else if (field?.type === "datetime-local") value = toMysqlDate(value);
     else if (typeof value === "string") value = value.trim() || null;
-    out[key] = value;
+    else if (value === undefined) value = null;
+    else if (value !== null && typeof value !== "number" && typeof value !== "boolean") {
+      throw new Error(`Nilai ${field?.label ?? key} tidak valid.`);
+    }
+    out[key] = value as DatabaseValue;
   }
   return out;
 }
 
-function validateRequired(config: ResourceConfig, data: Record<string, unknown>) {
+function validateRequired(config: ResourceConfig, data: Record<string, DatabaseValue>) {
   return config.required.find((key) => data[key] === null || data[key] === undefined || data[key] === "");
 }
 

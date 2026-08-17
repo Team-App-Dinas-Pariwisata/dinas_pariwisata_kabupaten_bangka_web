@@ -97,7 +97,7 @@ function dbErrorMessage(error: unknown) {
   return "Pengajuan belum dapat disimpan. Periksa data dan koneksi database.";
 }
 
-function normalizeFieldValue(form: FormData, field: SubmissionField) {
+function normalizeFieldValue(form: FormData, field: SubmissionField): string | number | null {
   if (field.type === "checkbox") return checked(form, field.key) ? 1 : 0;
   const value = text(form, field.key);
   if (!value) return null;
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
       if (nik.length !== 16) return NextResponse.json({ message: "NIK wajib terdiri dari 16 digit." }, { status: 400 });
     }
 
-    const data: Record<string, unknown> = {
+    const data: Record<string, string | number | null> = {
       no_registrasi: registration(config.registrationPrefix),
       created_by: user.id,
       updated_by: user.id,
@@ -243,7 +243,7 @@ export async function PATCH(request: NextRequest) {
       if (nik.length !== 16) return NextResponse.json({ message: "NIK wajib terdiri dari 16 digit." }, { status: 400 });
     }
 
-    const data: Record<string, unknown> = { updated_by: user.id };
+    const data: Record<string, string | number | null> = { updated_by: user.id };
 
     for (const field of fields) {
       if (field.key === "konfirmasi_kebenaran") continue;

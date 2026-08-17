@@ -81,7 +81,7 @@ export async function POST(request: Request) {
       if (nik.length !== 16) return NextResponse.json({ message: "NIK wajib terdiri dari 16 digit." }, { status: 400 });
     }
 
-    const data: Record<string, unknown> = { no_registrasi: registration(config.registrationPrefix) };
+    const data: Record<string, string | number | null> = { no_registrasi: registration(config.registrationPrefix) };
 
     for (const field of fields) {
       if (field.key === "konfirmasi_kebenaran") continue;
