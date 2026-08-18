@@ -151,7 +151,7 @@ function buildFallbackWebIntent(criteria: Criteria, originalMessage: string) {
 
   return {
     type: "search_redirect",
-    response: `Kriteria ${category.replace(/-/g, " ")} sudah saya pahami. Saya arahkan ke halaman pencarian untuk menghitung ranking SAW.`,
+    response: `Kriteria ${category.replace(/-/g, " ")} sudah saya pahami. Saya arahkan ke halaman pencarian untuk menampilkan rekomendasi yang paling sesuai.`,
     criteria,
     redirect_url: `/pencarian?${query.toString()}`,
     compatibility_mode: "kriteria_fallback",
@@ -202,8 +202,8 @@ export async function POST(request: NextRequest) {
         if (!fallback.ok) {
           return NextResponse.json(
             {
-              message: String(fallbackPayload.detail || fallbackPayload.message || "Endpoint NLP Python tidak ditemukan."),
-              hint: "Pastikan service Python yang aktif adalah chatbot_pariwisata_spk.py dari project ini.",
+              message: "Layanan AI belum dapat memproses pertanyaan saat ini.",
+              hint: "Silakan coba lagi beberapa saat lagi.",
             },
             { status: 502 },
           );
@@ -216,12 +216,9 @@ export async function POST(request: NextRequest) {
 
       const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
       if (!response.ok) {
-        const detail = String(payload.detail || payload.message || "");
         return NextResponse.json(
           {
-            message: detail === "Not Found"
-              ? "Endpoint NLP tidak ditemukan. Pastikan Python backend yang dijalankan adalah versi terbaru dari project."
-              : detail || "Layanan NLP Python gagal memproses pertanyaan.",
+            message: "Layanan AI belum dapat memproses pertanyaan saat ini.",
           },
           { status: 502 },
         );
@@ -231,10 +228,10 @@ export async function POST(request: NextRequest) {
       clearTimeout(timer);
     }
   } catch (error) {
-    console.error("NLP chatbot proxy error:", error);
+    console.error("AI chat service error:", error);
     return NextResponse.json(
       {
-        message: "Layanan NLP Python belum aktif atau tidak dapat dijangkau. Jalankan chatbot_pariwisata_spk.py pada port 8000 atau atur NLP_API_URL.",
+        message: "Layanan AI sedang tidak tersedia. Silakan coba lagi beberapa saat lagi.",
       },
       { status: 503 },
     );

@@ -61,7 +61,7 @@ export async function GET() {
   } catch (error) {
     console.error("Public berita error:", error);
     return NextResponse.json(
-      { message: "Berita belum dapat dimuat dari database.", data: [] },
+      { message: "Berita belum dapat dimuat saat ini.", data: [] },
       { status: 500, headers: { "Cache-Control": "no-store, max-age=0" } },
     );
   }

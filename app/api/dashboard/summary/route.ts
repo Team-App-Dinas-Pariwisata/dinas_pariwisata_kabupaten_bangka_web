@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     ] = await Promise.all([
       db().execute<SubmissionCountRow[]>(`
         SELECT COUNT(*) AS total,
-          COALESCE(SUM(CASE WHEN status IS NULL THEN 1 ELSE 0 END), 0) AS menunggu,
+          COALESCE(SUM(CASE WHEN status IN ('Menunggu','Perlu Perbaikan') THEN 1 ELSE 0 END), 0) AS menunggu,
           COALESCE(SUM(CASE WHEN status = 'Disetujui' THEN 1 ELSE 0 END), 0) AS disetujui,
           COALESCE(SUM(CASE WHEN status = 'Ditolak' THEN 1 ELSE 0 END), 0) AS ditolak
         FROM pengajuan_ekraf`),
@@ -90,6 +90,7 @@ export async function GET(request: NextRequest) {
           COALESCE(status, 'Menunggu') AS status,
           created_at
         FROM pengajuan_ekraf
+        WHERE status IN ('Menunggu','Perlu Perbaikan')
         ORDER BY created_at DESC
         LIMIT 8`),
       db().execute<RecentDbRow[]>(`
@@ -98,6 +99,7 @@ export async function GET(request: NextRequest) {
           status_pengajuan AS status,
           created_at
         FROM pengajuan_sdm_pariwisata
+        WHERE status_pengajuan IN ('Menunggu','Perlu Perbaikan')
         ORDER BY created_at DESC
         LIMIT 8`),
       db().execute<RecentDbRow[]>(`
@@ -106,6 +108,7 @@ export async function GET(request: NextRequest) {
           status_pengajuan AS status,
           created_at
         FROM pengajuan_komunitas_asosiasi
+        WHERE status_pengajuan IN ('Menunggu','Perlu Perbaikan')
         ORDER BY created_at DESC
         LIMIT 8`),
     ]);

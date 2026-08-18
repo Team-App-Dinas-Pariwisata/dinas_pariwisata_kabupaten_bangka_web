@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 
 
 export const metadata: Metadata = {
-  title: "Acara | APPEKRAF Kabupaten Bangka",
+  title: "Acara | SI PARIK BANGKA Kabupaten Bangka",
   description: "Agenda dan acara ekonomi kreatif serta pariwisata Kabupaten Bangka.",
 };
 

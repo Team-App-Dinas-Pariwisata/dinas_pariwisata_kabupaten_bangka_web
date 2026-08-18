@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { submissionConfigs, type SubmissionField, type SubmissionType } from "@/lib/submission-config";
 import { PortalIcon } from "./PortalIcon";
+import { compareTableValues, SortableTableHeader, TablePagination, type SortDirection } from "./DataTableControls";
 
 type Row = Record<string, unknown> & { id: number; status_label?: string; created_at?: string; no_registrasi?: string };
 
@@ -57,6 +58,11 @@ export function SubmissionManager({ type }: Props) {
   const [detailStep, setDetailStep] = useState(0);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const [featureSavingId, setFeatureSavingId] = useState<number | null>(null);
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -92,11 +98,71 @@ export function SubmissionManager({ type }: Props) {
     });
   }, [query, rows, status, type]);
 
+  const sortedRows = useMemo(() => {
+    if (!sortKey) return filtered;
+    return [...filtered].sort((left, right) => {
+      const leftIdentity = identityFor(type, left);
+      const rightIdentity = identityFor(type, right);
+      const valueFor = (row: Row, identity: ReturnType<typeof identityFor>) => {
+        if (sortKey === "nama") return identity.title;
+        if (sortKey === "detail") return identity.subtitle;
+        if (sortKey === "kontak") return identity.contact;
+        if (sortKey === "status") return row.status_label ?? "Menunggu";
+        if (sortKey === "unggulan") return Number(row.unggulan ?? 0);
+        if (sortKey === "tanggal") return row.created_at ?? "";
+        return row[sortKey];
+      };
+      const result = compareTableValues(valueFor(left, leftIdentity), valueFor(right, rightIdentity));
+      return sortDirection === "asc" ? result : -result;
+    });
+  }, [filtered, sortDirection, sortKey, type]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedRows.length / pageSize));
+  const pagedRows = useMemo(() => sortedRows.slice((page - 1) * pageSize, page * pageSize), [page, pageSize, sortedRows]);
+
+  useEffect(() => { setPage(1); }, [query, status, type]);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+
+  function handleSort(key: string) {
+    if (sortKey === key) setSortDirection((current) => current === "asc" ? "desc" : "asc");
+    else {
+      setSortKey(key);
+      setSortDirection("asc");
+    }
+    setPage(1);
+  }
+
+  function handlePageSize(nextSize: number) {
+    setPageSize(nextSize);
+    setPage(1);
+  }
+
   function openReview(row: Row) {
     setSelected(row);
     setDetailStep(0);
     setNote(String(row.catatan_verifikasi ?? row.alasan_penolakan ?? ""));
     setError("");
+  }
+
+  async function toggleFeatured(row: Row) {
+    if (type !== "ekraf" || String(row.status_label ?? "") !== "Disetujui") return;
+    const nextValue = Number(row.unggulan) === 1 ? 0 : 1;
+    setFeatureSavingId(row.id);
+    setError("");
+    try {
+      const response = await fetch("/api/submissions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "ekraf", id: row.id, action: "feature", unggulan: nextValue }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.message || "Status unggulan gagal disimpan.");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Status unggulan gagal disimpan.");
+    } finally {
+      setFeatureSavingId(null);
+    }
   }
 
   async function verify(action: "approve" | "reject") {
@@ -156,9 +222,9 @@ export function SubmissionManager({ type }: Props) {
 
       <div className="dm-table-wrap">
         <table className="dm-table submission-table">
-          <thead><tr><th>No. Registrasi</th><th>Nama / Organisasi</th><th>Usaha / Tempat / Kategori</th><th>Kontak</th><th>Status</th><th>Tanggal</th><th>Aksi</th></tr></thead>
+          <thead><tr><SortableTableHeader label="No. Registrasi" sortKey="no_registrasi" activeKey={sortKey} direction={sortDirection} onSort={handleSort} /><SortableTableHeader label="Nama / Organisasi" sortKey="nama" activeKey={sortKey} direction={sortDirection} onSort={handleSort} /><SortableTableHeader label="Usaha / Tempat / Kategori" sortKey="detail" activeKey={sortKey} direction={sortDirection} onSort={handleSort} /><SortableTableHeader label="Kontak" sortKey="kontak" activeKey={sortKey} direction={sortDirection} onSort={handleSort} /><SortableTableHeader label="Status" sortKey="status" activeKey={sortKey} direction={sortDirection} onSort={handleSort} />{type === "ekraf" && <SortableTableHeader label="Unggulan" sortKey="unggulan" activeKey={sortKey} direction={sortDirection} onSort={handleSort} />}<SortableTableHeader label="Tanggal" sortKey="tanggal" activeKey={sortKey} direction={sortDirection} onSort={handleSort} /><th>Aksi</th></tr></thead>
           <tbody>
-            {loading ? <tr><td colSpan={7} className="dm-empty">Memuat pengajuan…</td></tr> : filtered.length === 0 ? <tr><td colSpan={7} className="dm-empty">Belum ada pengajuan yang sesuai filter.</td></tr> : filtered.map((row) => {
+            {loading ? <tr><td colSpan={type === "ekraf" ? 8 : 7} className="dm-empty">Memuat pengajuan…</td></tr> : sortedRows.length === 0 ? <tr><td colSpan={type === "ekraf" ? 8 : 7} className="dm-empty">Belum ada pengajuan yang sesuai filter.</td></tr> : pagedRows.map((row) => {
               const identity = identityFor(type, row);
               const currentStatus = String(row.status_label ?? "Menunggu");
               return <tr key={row.id}>
@@ -167,6 +233,7 @@ export function SubmissionManager({ type }: Props) {
                 <td data-label="Detail">{identity.subtitle}</td>
                 <td data-label="Kontak">{identity.contact}</td>
                 <td data-label="Status"><span className={`portal-status ${statusClass(currentStatus)}`}>{currentStatus}</span></td>
+                {type === "ekraf" && <td data-label="Unggulan">{currentStatus === "Disetujui" ? <button className={`featured-toggle ${Number(row.unggulan) === 1 ? "active" : ""}`} type="button" disabled={featureSavingId === row.id} onClick={() => void toggleFeatured(row)} title={Number(row.unggulan) === 1 ? "Hapus dari Pelaku Unggulan" : "Jadikan Pelaku Unggulan"}><PortalIcon name="star" />{featureSavingId === row.id ? "Menyimpan" : Number(row.unggulan) === 1 ? "Unggulan" : "Jadikan unggulan"}</button> : <span className="featured-disabled">Setujui dulu</span>}</td>}
                 <td data-label="Tanggal">{formatDate(row.created_at, true)}</td>
                 <td data-label="Aksi"><button className="review-button" type="button" onClick={() => openReview(row)}><PortalIcon name="eye" />Tinjau</button></td>
               </tr>;
@@ -174,6 +241,7 @@ export function SubmissionManager({ type }: Props) {
           </tbody>
         </table>
       </div>
+      {!loading && sortedRows.length > 0 && <TablePagination totalItems={sortedRows.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={handlePageSize} />}
 
       {selected && (
         <div className="portal-modal-layer" role="dialog" aria-modal="true">
@@ -200,7 +268,8 @@ export function SubmissionManager({ type }: Props) {
                 {config.steps[detailStep].fields.filter((field) => field.key !== "konfirmasi_kebenaran").map((field) => {
                   const value = fieldValue(selected, field);
                   const isFile = field.type === "file" && value !== "—";
-                  return <div className={field.type === "textarea" || field.type === "file" || field.type === "checkbox" ? "wide" : ""} key={field.key}><span>{field.label}</span>{isFile ? <a href={value} target="_blank" rel="noreferrer">Buka dokumen ↗</a> : <strong>{value}</strong>}</div>;
+                  const fileLinkLabel = field.fileKind === "document" ? "Buka dokumen ↗" : "Buka gambar ↗";
+                  return <div className={field.type === "textarea" || field.type === "file" || field.type === "checkbox" ? "wide" : ""} key={field.key}><span>{field.label}</span>{isFile ? <a href={value} target="_blank" rel="noreferrer">{fileLinkLabel}</a> : <strong>{value}</strong>}</div>;
                 })}
               </div>
             </div>

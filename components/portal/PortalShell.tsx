@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { PortalIcon, type PortalIconName } from "./PortalIcon";
+import StaffFloatingChat from "./StaffFloatingChat";
 
 type Props = {
   children: ReactNode;
@@ -56,14 +57,46 @@ export function PortalShell({ children, role, userName }: Props) {
     if (pathname.startsWith("/dashboard/pengajuan")) setSubmissionOpen(true);
   }, [pathname]);
 
+  useEffect(() => {
+    let stopped = false;
+
+    const heartbeat = async () => {
+      if (stopped || document.visibilityState === "hidden") return;
+      try {
+        await fetch("/api/chat/presence", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+          cache: "no-store",
+        });
+      } catch {
+        // Presence hanya membantu pemilihan tab chat guest dan tidak boleh mengganggu portal.
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") void heartbeat();
+    };
+
+    void heartbeat();
+    const timer = window.setInterval(() => void heartbeat(), 20000);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      stopped = true;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, []);
+
   const isActive = (href: string) => href === "/dashboard" ? pathname === href : pathname.startsWith(href);
 
   return (
     <div className="portal-app">
       <aside className={`portal-sidebar ${mobileOpen ? "is-open" : ""}`}>
         <div className="portal-brand">
-          <span className="portal-brand-mark">B</span>
-          <span><strong>APPEKRAF</strong><small>Kabupaten Bangka</small></span>
+          <img className="portal-brand-logo" src="/logo-si-parik-preloader.png" alt="Logo SI PARIK BANGKA" />
+          <span><strong>SI PARIK BANGKA</strong><small>Kabupaten Bangka</small></span>
         </div>
         <div className="portal-menu-title">MENU UTAMA</div>
         <nav className="portal-menu">
@@ -127,6 +160,7 @@ export function PortalShell({ children, role, userName }: Props) {
         </header>
         <div className="portal-content">{children}</div>
       </div>
+      <StaffFloatingChat />
     </div>
   );
 }

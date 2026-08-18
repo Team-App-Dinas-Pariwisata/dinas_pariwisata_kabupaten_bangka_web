@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 
 
 export const metadata: Metadata = {
-  title: "Berita | APPEKRAF Kabupaten Bangka",
+  title: "Berita | SI PARIK BANGKA Kabupaten Bangka",
   description: "Berita terbaru ekonomi kreatif dan pariwisata Kabupaten Bangka.",
 };
 
@@ -66,7 +66,7 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
                     <div className="public-news-card-body">
                       <time>{formatDate(item.tanggal_publikasi)}</time>
                       <h3><Link href={`/berita/${item.slug}`}>{item.judul}</Link></h3>
-                      <p>{item.ringkasan || item.subjudul || "Informasi terbaru dari APPEKRAF Kabupaten Bangka."}</p>
+                      <p>{item.ringkasan || item.subjudul || "Informasi terbaru dari SI PARIK BANGKA Kabupaten Bangka."}</p>
                       <Link href={`/berita/${item.slug}`} className="public-read-link">Baca berita <span>→</span></Link>
                     </div>
                   </article>

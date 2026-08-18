@@ -1,7 +1,12 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 export const SESSION_COOKIE = "appekraf_session";
-export type AppRole = "admin" | "pengguna";
+
+// Cookie dibuat persisten dan menggunakan sliding session.
+// Selama pengguna masih memakai portal, proxy akan memperpanjang masa sesi.
+export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
+
+export type AppRole = "admin" | "pengguna" | "pengaju";
 
 export type SessionPayload = {
   uid: number;
@@ -20,7 +25,10 @@ function sign(data: string) {
   return createHmac("sha256", secret()).update(data).digest("base64url");
 }
 
-export function createSessionToken(payload: Omit<SessionPayload, "exp">, maxAgeSeconds = 60 * 60 * 8) {
+export function createSessionToken(
+  payload: Omit<SessionPayload, "exp">,
+  maxAgeSeconds = SESSION_MAX_AGE_SECONDS,
+) {
   const fullPayload: SessionPayload = {
     ...payload,
     exp: Math.floor(Date.now() / 1000) + maxAgeSeconds,
@@ -40,10 +48,20 @@ export function verifySessionToken(token?: string | null): SessionPayload | null
 
   try {
     const payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8")) as SessionPayload;
-    if (!payload.uid || !["admin", "pengguna"].includes(payload.role)) return null;
+    if (!payload.uid || !["admin", "pengguna", "pengaju"].includes(payload.role)) return null;
     if (payload.exp <= Math.floor(Date.now() / 1000)) return null;
     return payload;
   } catch {
     return null;
   }
+}
+
+export function sessionCookieOptions() {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: SESSION_MAX_AGE_SECONDS,
+  };
 }

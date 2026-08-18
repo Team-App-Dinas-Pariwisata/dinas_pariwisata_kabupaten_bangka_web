@@ -25,8 +25,10 @@ function nowMysql() {
   return new Date().toISOString().slice(0, 19).replace("T", " ");
 }
 
-function normalizeData(config: ResourceConfig, raw: Record<string, unknown>) {
-  const out: Record<string, unknown> = {};
+type DatabaseValue = string | number | boolean | null;
+
+function normalizeData(config: ResourceConfig, raw: Record<string, unknown>): Record<string, DatabaseValue> {
+  const out: Record<string, DatabaseValue> = {};
   for (const key of config.writable) {
     if (!(key in raw)) continue;
     const field = config.fields.find((item) => item.key === key);
@@ -42,12 +44,16 @@ function normalizeData(config: ResourceConfig, raw: Record<string, unknown>) {
     }
     else if (field?.type === "datetime-local") value = toMysqlDate(value);
     else if (typeof value === "string") value = value.trim() || null;
-    out[key] = value;
+    else if (value === undefined) value = null;
+    else if (value !== null && typeof value !== "number" && typeof value !== "boolean") {
+      throw new Error(`Nilai ${field?.label ?? key} tidak valid.`);
+    }
+    out[key] = value as DatabaseValue;
   }
   return out;
 }
 
-function validateRequired(config: ResourceConfig, data: Record<string, unknown>) {
+function validateRequired(config: ResourceConfig, data: Record<string, DatabaseValue>) {
   return config.required.find((key) => data[key] === null || data[key] === undefined || data[key] === "");
 }
 
@@ -56,9 +62,9 @@ function errorMessage(error: unknown) {
   if (code === "ER_DUP_ENTRY") return "Data duplikat terdeteksi. Periksa judul atau data unik lainnya.";
   if (code === "ER_NO_REFERENCED_ROW_2") return "Data referensi tidak ditemukan. Periksa kategori yang dipilih.";
   if (code === "ER_ROW_IS_REFERENCED_2") return "Data masih digunakan oleh data lain dan tidak dapat dihapus.";
-  if (code === "ER_CHECK_CONSTRAINT_VIOLATED") return "Data tidak memenuhi aturan validasi database.";
+  if (code === "ER_CHECK_CONSTRAINT_VIOLATED") return "Data tidak memenuhi aturan yang berlaku.";
   if (error instanceof Error && error.message.startsWith("Nilai ")) return error.message;
-  return "Operasi database gagal diproses.";
+  return "Permintaan belum dapat diproses.";
 }
 
 async function userOnly(request: NextRequest) {

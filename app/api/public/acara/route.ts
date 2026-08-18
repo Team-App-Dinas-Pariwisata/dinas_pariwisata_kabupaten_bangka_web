@@ -80,7 +80,7 @@ export async function GET() {
   } catch (error) {
     console.error("Public acara error:", error);
     return NextResponse.json(
-      { message: "Acara belum dapat dimuat dari database.", data: [] },
+      { message: "Acara belum dapat dimuat saat ini.", data: [] },
       { status: 500, headers: { "Cache-Control": "no-store, max-age=0" } },
     );
   }

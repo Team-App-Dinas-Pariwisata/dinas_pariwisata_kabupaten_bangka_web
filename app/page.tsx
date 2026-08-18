@@ -1,16 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import PublicSiteHeader from "@/components/public/PublicSiteHeader";
-
-type FeatureTab = "event" | "berita" | "unggulan";
-
-type HeroPanelItem = {
-  title: string;
-  meta: string;
-  sub: string;
-  image: string;
-};
+import VerifiedDirectory from "@/components/public/VerifiedDirectory";
+import EkrafStatistics from "@/components/public/EkrafStatistics";
+import PublicContactSection from "@/components/public/PublicContactSection";
 
 type PublicBerita = {
   id: number;
@@ -52,10 +46,6 @@ type PublicAcara = {
   nama_kategori: string | null;
 };
 
-type AiChatMessage = {
-  role: "assistant" | "user";
-  text: string;
-};
 
 type IconName =
   | "arrow"
@@ -73,6 +63,13 @@ type IconName =
   | "game"
   | "film"
   | "architecture"
+  | "interior"
+  | "product"
+  | "publishing"
+  | "advertising"
+  | "performance"
+  | "art"
+  | "broadcast"
   | "menu"
   | "close"
   | "chevron"
@@ -80,94 +77,53 @@ type IconName =
   | "mail"
   | "phone";
 
-const subsectors = [
-  { name: "Kuliner", icon: "food" as IconName, count: "128 pelaku" },
-  { name: "Kriya", icon: "palette" as IconName, count: "76 pelaku" },
-  { name: "Fesyen", icon: "fashion" as IconName, count: "54 pelaku" },
-  { name: "Fotografi", icon: "camera" as IconName, count: "38 pelaku" },
-  { name: "Musik", icon: "music" as IconName, count: "32 pelaku" },
-  { name: "Film & Animasi", icon: "film" as IconName, count: "21 pelaku" },
-  { name: "Aplikasi & Gim", icon: "game" as IconName, count: "19 pelaku" },
-  { name: "Arsitektur", icon: "architecture" as IconName, count: "16 pelaku" },
-];
-
-const heroPanels: Record<FeatureTab, HeroPanelItem[]> = {
-  event: [
-    {
-      title: "Festival Semarak Ekraf Bangka",
-      meta: "12–14 September 2026",
-      sub: "Taman Sari, Sungailiat",
-      image:
-        "/hero-bangka.jpg",
-    },
-    {
-      title: "Bangka Creative Market",
-      meta: "05 Oktober 2026",
-      sub: "Kawasan Kota Sungailiat",
-      image:
-        "/kriya-bangka.jpg",
-    },
-  ],
-  berita: [
-    {
-      title: "Kolaborasi Ekraf & Pariwisata Bahari",
-      meta: "Sorotan Minggu Ini",
-      sub: "Cerita pelaku kreatif pesisir Bangka",
-      image:
-        "/hero-bangka.jpg",
-    },
-    {
-      title: "Produk Kriya Lokal Naik Kelas",
-      meta: "Berita Ekraf",
-      sub: "Dari bahan alam menjadi produk bernilai",
-      image:
-        "/kriya-bangka.jpg",
-    },
-  ],
-  unggulan: [
-    {
-      title: "Kriya Lidi Nipah Bangka",
-      meta: "Kriya",
-      sub: "Produk lokal dengan identitas pesisir",
-      image:
-        "/kriya-bangka.jpg",
-    },
-    {
-      title: "Kuliner Laut & Olahan Lokal",
-      meta: "Kuliner",
-      sub: "Cita rasa Bangka dalam kemasan modern",
-      image:
-        "/kuliner-bangka.png",
-    },
-  ],
+type PublicSubsector = {
+  id: number;
+  kode: string;
+  nama_subsektor: string;
+  deskripsi: string | null;
+  pelaku_count: number;
 };
 
-const featureTabs: { id: FeatureTab; label: string }[] = [
-  { id: "event", label: "Event" },
-  { id: "berita", label: "Berita" },
-  { id: "unggulan", label: "Pelaku Unggulan" },
+const fallbackSubsectors: PublicSubsector[] = [
+  { id: 1, kode: "APL", nama_subsektor: "Aplikasi", deskripsi: null, pelaku_count: 0 },
+  { id: 2, kode: "ARS", nama_subsektor: "Arsitektur", deskripsi: null, pelaku_count: 0 },
+  { id: 3, kode: "DIN", nama_subsektor: "Desain Interior", deskripsi: null, pelaku_count: 0 },
+  { id: 4, kode: "DKV", nama_subsektor: "Desain Komunikasi Visual", deskripsi: null, pelaku_count: 0 },
+  { id: 5, kode: "DPR", nama_subsektor: "Desain Produk", deskripsi: null, pelaku_count: 0 },
+  { id: 6, kode: "FSH", nama_subsektor: "Fashion", deskripsi: null, pelaku_count: 0 },
+  { id: 7, kode: "FAV", nama_subsektor: "Film, Animasi dan Video", deskripsi: null, pelaku_count: 0 },
+  { id: 8, kode: "FOT", nama_subsektor: "Fotografi", deskripsi: null, pelaku_count: 0 },
+  { id: 9, kode: "KRY", nama_subsektor: "Kriya", deskripsi: null, pelaku_count: 0 },
+  { id: 10, kode: "KUL", nama_subsektor: "Kuliner", deskripsi: null, pelaku_count: 0 },
+  { id: 11, kode: "MUS", nama_subsektor: "Musik", deskripsi: null, pelaku_count: 0 },
+  { id: 12, kode: "PEN", nama_subsektor: "Penerbitan", deskripsi: null, pelaku_count: 0 },
+  { id: 13, kode: "IKL", nama_subsektor: "Periklanan", deskripsi: null, pelaku_count: 0 },
+  { id: 14, kode: "SPT", nama_subsektor: "Seni Pertunjukan", deskripsi: null, pelaku_count: 0 },
+  { id: 15, kode: "SRP", nama_subsektor: "Seni Rupa", deskripsi: null, pelaku_count: 0 },
+  { id: 16, kode: "TVR", nama_subsektor: "Televisi dan Radio", deskripsi: null, pelaku_count: 0 },
+  { id: 17, kode: "GME", nama_subsektor: "Pengembangan Permainan", deskripsi: null, pelaku_count: 0 },
 ];
 
-const submissionOptions = [
-  {
-    title: "Pelaku Ekraf",
-    description: "Pendataan usaha dan pelaku ekonomi kreatif.",
-    icon: "briefcase" as IconName,
-    href: "/pengajuan/pelaku-ekraf",
-  },
-  {
-    title: "SDM Pariwisata",
-    description: "Pendataan SDM dan tenaga pendukung pariwisata.",
-    icon: "spark" as IconName,
-    href: "/pengajuan/sdm-pariwisata",
-  },
-  {
-    title: "Komunitas",
-    description: "Pendataan komunitas, asosiasi, dan lembaga.",
-    icon: "users" as IconName,
-    href: "/pengajuan/komunitas",
-  },
-];
+const subsectorDisplayOrder = ["KUL", "KRY", "FSH", "FOT", "MUS", "FAV", "GME", "ARS", "APL", "DIN", "DKV", "DPR", "PEN", "IKL", "SPT", "SRP", "TVR"];
+
+function sortSubsectors(items: PublicSubsector[]) {
+  return [...items].sort((a, b) => {
+    const ai = subsectorDisplayOrder.indexOf(a.kode);
+    const bi = subsectorDisplayOrder.indexOf(b.kode);
+    return (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi);
+  });
+}
+
+function subsectorIcon(kode: string): IconName {
+  const icons: Record<string, IconName> = {
+    APL: "briefcase", ARS: "architecture", DIN: "interior", DKV: "palette", DPR: "product",
+    FSH: "fashion", FAV: "film", FOT: "camera", KRY: "palette", KUL: "food", MUS: "music",
+    PEN: "publishing", IKL: "advertising", SPT: "performance", SRP: "art", TVR: "broadcast", GME: "game",
+  };
+  return icons[kode] || "spark";
+}
+
 
 const newsFallbackImages = ["/kriya-bangka.jpg", "/kuliner-bangka.png", "/hero-home-v15.jpg"];
 
@@ -223,62 +179,37 @@ function embeddableImage(url: string | null, fallback: string) {
 
 export default function Home() {
   const heroRef = useRef<HTMLElement>(null);
-  const [activeTab, setActiveTab] = useState<FeatureTab>("event");
-  const [panelOffset, setPanelOffset] = useState(0);
-  const [beritaPanels, setBeritaPanels] = useState<HeroPanelItem[]>(heroPanels.berita);
-  const [eventPanels, setEventPanels] = useState<HeroPanelItem[]>(heroPanels.event);
   const [beritaItems, setBeritaItems] = useState<PublicBerita[]>([]);
   const [acaraItems, setAcaraItems] = useState<PublicAcara[]>([]);
+  const [subsectorItems, setSubsectorItems] = useState<PublicSubsector[]>(sortSubsectors(fallbackSubsectors));
   const [contentLoading, setContentLoading] = useState(true);
 
-  const panelItems = useMemo(() => {
-    const items = activeTab === "berita"
-      ? beritaPanels
-      : activeTab === "event"
-        ? eventPanels
-        : heroPanels.unggulan;
-    if (items.length === 0) return [];
-    const visibleCount = Math.min(2, items.length);
-    return Array.from({ length: visibleCount }, (_, index) =>
-      items[(index + panelOffset) % items.length],
-    );
-  }, [activeTab, beritaPanels, eventPanels, panelOffset]);
 
   useEffect(() => {
     let cancelled = false;
 
     const loadHomepageContent = async () => {
       try {
-        const [beritaResponse, acaraResponse] = await Promise.all([
+        const [beritaResponse, acaraResponse, subsectorResponse] = await Promise.all([
           fetch("/api/public/berita", { cache: "no-store" }),
           fetch("/api/public/acara", { cache: "no-store" }),
+          fetch("/api/public/subsektor", { cache: "no-store" }),
         ]);
 
         const beritaPayload = (await beritaResponse.json()) as { data?: PublicBerita[] };
         const acaraPayload = (await acaraResponse.json()) as { data?: PublicAcara[] };
+        const subsectorPayload = (await subsectorResponse.json()) as { data?: PublicSubsector[] };
 
         if (!cancelled && beritaResponse.ok && Array.isArray(beritaPayload.data)) {
           setBeritaItems(beritaPayload.data);
-          if (beritaPayload.data.length > 0) {
-            setBeritaPanels(beritaPayload.data.map((item, index): HeroPanelItem => ({
-              title: item.judul,
-              meta: `${item.nama_kategori || "Berita"} · ${formatNewsDate(item.tanggal_publikasi)}`,
-              sub: item.ringkasan || item.subjudul || item.penulis_tampil || "Informasi terbaru APPEKRAF Kabupaten Bangka",
-              image: embeddableImage(item.foto_utama, newsFallbackImages[index % newsFallbackImages.length]),
-            })));
-          }
         }
 
         if (!cancelled && acaraResponse.ok && Array.isArray(acaraPayload.data)) {
           setAcaraItems(acaraPayload.data);
-          if (acaraPayload.data.length > 0) {
-            setEventPanels(acaraPayload.data.map((item, index): HeroPanelItem => ({
-              title: item.nama_acara,
-              meta: `${item.nama_kategori || "Acara"} · ${formatEventRange(item.tanggal_mulai, item.tanggal_selesai)}`,
-              sub: item.nama_lokasi || item.ringkasan || item.penyelenggara || "Agenda APPEKRAF Kabupaten Bangka",
-              image: embeddableImage(item.foto_utama, newsFallbackImages[index % newsFallbackImages.length]),
-            })));
-          }
+        }
+
+        if (!cancelled && subsectorResponse.ok && Array.isArray(subsectorPayload.data) && subsectorPayload.data.length > 0) {
+          setSubsectorItems(sortSubsectors(subsectorPayload.data));
         }
       } catch (error) {
         console.error("Gagal memuat berita dan acara homepage:", error);
@@ -315,28 +246,6 @@ export default function Home() {
     };
   }, []);
 
-  const selectTab = (tab: FeatureTab) => {
-    setActiveTab(tab);
-    setPanelOffset(0);
-  };
-
-  const handleTabKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, currentTab: FeatureTab) => {
-    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-
-    event.preventDefault();
-    const currentIndex = featureTabs.findIndex((tab) => tab.id === currentTab);
-    let nextIndex = currentIndex;
-
-    if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % featureTabs.length;
-    if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + featureTabs.length) % featureTabs.length;
-    if (event.key === "Home") nextIndex = 0;
-    if (event.key === "End") nextIndex = featureTabs.length - 1;
-
-    const nextTab = featureTabs[nextIndex].id;
-    selectTab(nextTab);
-    window.requestAnimationFrame(() => document.getElementById(`feature-tab-${nextTab}`)?.focus());
-  };
-
   const featuredNews = beritaItems[0];
   const secondaryNews = beritaItems.slice(1, 3);
   const visibleEvents = acaraItems.slice(0, 4);
@@ -354,7 +263,7 @@ export default function Home() {
         <div className="hero-content page-container">
           <div className="hero-copy">
             <h1>
-              APPEKRAF
+              SI PARIK BANGKA
             </h1>
             <p className="hero-lead">
               Platform pendataan pelaku ekonomi kreatif, SDM pariwisata, komunitas,
@@ -363,9 +272,8 @@ export default function Home() {
             </p>
 
             <div className="hero-actions" id="pengajuan">
-              <SubmissionDropdown />
-              <a className="button button-glass" href="#pelaku-ekraf">
-                Komunitas / Asosiasi / Lembaga
+              <a className="button button-primary" href="/akun/masuk">
+                Ajukan Data Sekarang <Icon name="arrow" size={18} />
               </a>
             </div>
 
@@ -385,7 +293,8 @@ export default function Home() {
             </div>
           </div>
 
-          <aside className="hero-spotlight" aria-label="Tentang APPEKRAF">
+
+          <aside className="hero-spotlight" aria-label="Tentang SI PARIK BANGKA">
             <div className="spotlight-head">
               <div>
                 <span className="spotlight-kicker">Portal Digital</span>
@@ -409,59 +318,6 @@ export default function Home() {
           </aside>
         </div>
 
-        <div className="hero-feature-wrap page-container">
-          <section className="hero-feature-card" aria-label="Sorotan APPEKRAF">
-            <div className="feature-tabs" role="tablist" aria-label="Kategori sorotan">
-              {featureTabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  id={`feature-tab-${tab.id}`}
-                  type="button"
-                  className={activeTab === tab.id ? "active" : ""}
-                  onClick={() => selectTab(tab.id)}
-                  onKeyDown={(event) => handleTabKeyDown(event, tab.id)}
-                  role="tab"
-                  aria-selected={activeTab === tab.id}
-                  aria-controls={`feature-panel-${tab.id}`}
-                  tabIndex={activeTab === tab.id ? 0 : -1}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            <div
-              key={activeTab}
-              id={`feature-panel-${activeTab}`}
-              className="feature-list"
-              role="tabpanel"
-              aria-labelledby={`feature-tab-${activeTab}`}
-            >
-              {panelItems.map((item) => (
-                <article className="mini-feature" key={`${activeTab}-${item.title}`}>
-                  <div
-                    className="mini-feature-image"
-                    style={{ backgroundImage: `url(${item.image})` }}
-                    aria-hidden="true"
-                  />
-                  <div className="mini-feature-copy">
-                    <strong>{item.title}</strong>
-                    <span className="mini-feature-meta"><Icon name="calendar" size={14} /> {item.meta}</span>
-                    <p className="mini-feature-summary">{item.sub}</p>
-                  </div>
-                </article>
-              ))}
-              <button
-                type="button"
-                className="feature-next"
-                aria-label="Tampilkan sorotan berikutnya"
-                onClick={() => setPanelOffset((value) => value + 1)}
-              >
-                <Icon name="arrow" size={24} />
-              </button>
-            </div>
-          </section>
-        </div>
       </section>
 
       <section className="section section-subsector" id="subsektor">
@@ -478,71 +334,24 @@ export default function Home() {
           </div>
 
           <div className="subsector-grid">
-            {subsectors.map((item, index) => (
-              <a href="#pelaku-ekraf" className="subsector-card" key={item.name}>
+            {subsectorItems.map((item, index) => (
+              <a href={`/subsektor/${item.id}`} className="subsector-card" key={item.id}>
                 <span className="subsector-index">{String(index + 1).padStart(2, "0")}</span>
-                <span className="subsector-icon"><Icon name={item.icon} size={42} /></span>
+                <span className="subsector-icon"><Icon name={subsectorIcon(item.kode)} size={42} /></span>
                 <div>
-                  <strong>{item.name}</strong>
-                  <span>{item.count}</span>
+                  <strong>{item.nama_subsektor}</strong>
+                  <span>{item.pelaku_count} pelaku</span>
                 </div>
                 <span className="subsector-arrow"><Icon name="arrow" size={17} /></span>
               </a>
             ))}
           </div>
-
-          <div className="section-bottom-link">
-            <a href="#pelaku-ekraf" className="text-link dark-link">
-              Lihat seluruh 17 subsektor <Icon name="arrow" size={16} />
-            </a>
-          </div>
         </div>
       </section>
 
-      <section className="section ecosystem" id="pelaku-ekraf">
-        <div className="page-container ecosystem-grid">
-          <div className="ecosystem-visual">
-            <div className="ecosystem-photo ecosystem-photo-main" aria-hidden="true" />
-            <div className="ecosystem-photo ecosystem-photo-small" aria-hidden="true" />
-            <div className="ecosystem-badge">
-              <span><Icon name="users" size={20} /></span>
-              <div>
-                <strong>Ekosistem lokal</strong>
-                <small>pelaku · komunitas · mitra</small>
-              </div>
-            </div>
-          </div>
+      <VerifiedDirectory />
 
-          <div className="ecosystem-copy">
-            <span className="section-kicker">Pelaku Ekraf Kabupaten Bangka</span>
-            <h2>Data yang terkoneksi, kolaborasi yang lebih mudah.</h2>
-            <p>
-              APPEKRAF dirancang sebagai pintu masuk untuk mengenal pelaku kreatif,
-              komunitas, asosiasi, dan SDM pariwisata. Profil yang terverifikasi dapat
-              membantu publik menemukan produk, layanan, dan jejaring kreatif lokal.
-            </p>
-
-            <div className="ecosystem-points">
-              <div>
-                <span><Icon name="briefcase" size={19} /></span>
-                <div><strong>Profil pelaku lebih terstruktur</strong><small>Informasi inti mudah ditemukan dan diperbarui.</small></div>
-              </div>
-              <div>
-                <span><Icon name="spark" size={19} /></span>
-                <div><strong>Promosi potensi lokal</strong><small>Menampilkan karya dan aktivitas kreatif secara lebih menarik.</small></div>
-              </div>
-              <div>
-                <span><Icon name="users" size={19} /></span>
-                <div><strong>Jaringan kolaborasi</strong><small>Menghubungkan pelaku dengan komunitas dan mitra terkait.</small></div>
-              </div>
-            </div>
-
-            <a href="#dokumen" className="button button-dark">
-              Lihat Pelaku Ekraf <Icon name="arrow" size={18} />
-            </a>
-          </div>
-        </div>
-      </section>
+      <EkrafStatistics />
 
       <section className="section editorial-section" id="berita-acara">
         <div className="page-container">
@@ -582,7 +391,7 @@ export default function Home() {
                       <div className="news-featured-copy">
                         <span className="content-meta">{formatNewsDate(featuredNews.tanggal_publikasi)}</span>
                         <h3>{featuredNews.judul}</h3>
-                        <p>{featuredNews.ringkasan || featuredNews.subjudul || "Informasi terbaru dari APPEKRAF Kabupaten Bangka."}</p>
+                        <p>{featuredNews.ringkasan || featuredNews.subjudul || "Informasi terbaru dari SI PARIK BANGKA Kabupaten Bangka."}</p>
                         <a href={`/berita/${featuredNews.slug}`} className="content-link">
                           Baca selengkapnya <Icon name="arrow" size={16} />
                         </a>
@@ -602,7 +411,7 @@ export default function Home() {
                             <div>
                               <span className="content-meta">{news.nama_kategori || "Berita"} · {formatNewsDate(news.tanggal_publikasi)}</span>
                               <h3>{news.judul}</h3>
-                              <p>{news.ringkasan || news.subjudul || "Informasi terbaru APPEKRAF Kabupaten Bangka."}</p>
+                              <p>{news.ringkasan || news.subjudul || "Informasi terbaru SI PARIK BANGKA Kabupaten Bangka."}</p>
                             </div>
                             <a href={`/berita/${news.slug}`} className="round-link" aria-label={`Baca ${news.judul}`}>
                               <Icon name="arrow" size={17} />
@@ -673,9 +482,6 @@ export default function Home() {
               Siapkan identitas dasar, foto dokumentasi atau logo, dan dokumen pendukung
               bila tersedia. Alur pengajuan dirancang singkat dan mudah dipahami.
             </p>
-            <a href="#beranda" className="button button-light">
-              Ajukan Data Sekarang <Icon name="arrow" size={18} />
-            </a>
           </div>
 
           <div className="document-steps">
@@ -698,66 +504,13 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="section about" id="tentang">
-        <div className="page-container about-grid">
-          <div>
-            <span className="section-kicker">Tentang Platform</span>
-            <h2>Digitalisasi data kreatif untuk Bangka yang lebih terhubung.</h2>
-          </div>
-          <p>
-            APPEKRAF Kabupaten Bangka dihadirkan untuk mendukung pendataan, promosi,
-            pembinaan, dan akses informasi ekonomi kreatif serta SDM pariwisata dalam
-            satu layanan digital yang modern dan ramah pengguna.
-          </p>
-        </div>
-      </section>
-
-      <section className="home-contact-section" id="kontak" aria-labelledby="home-contact-title">
-        <div className="page-container">
-          <div className="home-contact-card">
-            <div className="home-contact-map">
-              <iframe
-                title="Peta Dinas Pariwisata dan Kebudayaan Kabupaten Bangka"
-                src="https://www.google.com/maps?q=Dinas+Pariwisata+dan+Kebudayaan+Kabupaten+Bangka,+Jl.+A.+Yani,+Sungailiat,+Bangka&output=embed"
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                allowFullScreen
-              />
-            </div>
-
-            <div className="home-contact-copy">
-              <span className="section-kicker">Hubungi Kami</span>
-              <h2 id="home-contact-title">Kontak Kami</h2>
-              <p>Kami menyediakan berbagai media yang dapat Anda hubungi untuk informasi layanan pariwisata dan ekonomi kreatif Kabupaten Bangka.</p>
-
-              <div className="home-contact-list">
-                <div className="home-contact-item">
-                  <span className="home-contact-icon"><Icon name="clock" size={22} /></span>
-                  <div><small>Jadwal Kerja</small><strong>Senin–Jumat, 08.00–16.00 WIB</strong></div>
-                </div>
-                <div className="home-contact-item">
-                  <span className="home-contact-icon"><Icon name="pin" size={22} /></span>
-                  <div><small>Alamat</small><strong>Jl. A. Yani (Jalur Dua), Sungailiat, Bangka 33215</strong></div>
-                </div>
-                <a className="home-contact-item" href="mailto:parbudaya2021@bangka.go.id">
-                  <span className="home-contact-icon"><Icon name="mail" size={22} /></span>
-                  <div><small>Email</small><strong>parbudaya2021@bangka.go.id</strong></div>
-                </a>
-                <a className="home-contact-item" href="tel:+6271792496">
-                  <span className="home-contact-icon"><Icon name="phone" size={22} /></span>
-                  <div><small>Telepon</small><strong>(0717) 92496</strong></div>
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <PublicContactSection />
 
       <footer className="footer">
         <div className="page-container footer-main">
           <div className="footer-brand">
-            <a className="footer-official-brand" href="#beranda" aria-label="Dinas Pariwisata dan Kebudayaan Kabupaten Bangka">
-              <img src="/branding/logo-bangka-header.png" alt="Kabupaten Bangka, Exotic Bangka, dan Wonderful Indonesia" />
+            <a className="footer-si-parik-brand" href="#beranda" aria-label="SI PARIK BANGKA">
+              <img src="/logo-si-parik-preloader.png" alt="SI PARIK BANGKA" />
             </a>
             <p>
               Aplikasi Pendataan Pelaku Ekonomi Kreatif dan SDM Pariwisata Kabupaten Bangka.
@@ -778,8 +531,9 @@ export default function Home() {
             <a href="#pelaku-ekraf">Komunitas & Asosiasi</a>
             <a href="/berita">Berita</a>
             <a href="/acara">Acara</a>
-            <a href="#tentang">Tentang Kami</a>
-            <a href="/login">Portal Admin & Pengguna</a>
+            <a href="#kontak">Kontak Kami</a>
+            <a href="/akun/masuk">Akun Pengaju</a>
+            <a href="/petugas">Portal Admin & Pengguna</a>
           </div>
 
           <div className="footer-column footer-contact">
@@ -791,231 +545,12 @@ export default function Home() {
         </div>
 
         <div className="page-container footer-bottom">
-          <span>© 2026 APPEKRAF Kabupaten Bangka</span>
+          <span>© 2026 SI PARIK BANGKA Kabupaten Bangka</span>
           <span>Dirancang untuk layanan publik yang lebih sederhana.</span>
         </div>
       </footer>
 
-      <FloatingAiChat />
     </main>
-  );
-}
-
-function SubmissionDropdown({ compact = false }: { compact?: boolean }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!dropdownRef.current?.contains(event.target as Node)) setIsOpen(false);
-    };
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setIsOpen(false);
-    };
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
-
-  return (
-    <div
-      ref={dropdownRef}
-      className={`submission-dropdown ${compact ? "submission-dropdown-topbar" : ""} ${isOpen ? "is-open" : ""}`}
-    >
-      <button
-        type="button"
-        className={compact ? "topbar-cta submission-trigger" : "button button-primary submission-trigger"}
-        onClick={() => setIsOpen((value) => !value)}
-        aria-haspopup="menu"
-        aria-expanded={isOpen}
-      >
-        {compact ? "Pengajuan" : "Mulai Pengajuan"}
-        <span className="submission-chevron"><Icon name="chevron" size={16} /></span>
-      </button>
-
-      {isOpen && (
-        <div className="submission-menu" role="menu" aria-label="Pilih jenis pengajuan">
-          <div className="submission-menu-head">
-            <span>Pilih pengajuan</span>
-            <small>Silakan pilih kategori data yang akan diajukan.</small>
-          </div>
-          {submissionOptions.map((option) => (
-            <a
-              key={option.title}
-              href={option.href}
-              className="submission-option"
-              role="menuitem"
-              onClick={() => setIsOpen(false)}
-            >
-              <span className="submission-option-icon"><Icon name={option.icon} size={18} /></span>
-              <span className="submission-option-copy">
-                <strong>{option.title}</strong>
-                <small>{option.description}</small>
-              </span>
-              <Icon name="arrow" size={16} />
-            </a>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function FloatingAiChat() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [question, setQuestion] = useState("");
-  const [isSending, setIsSending] = useState(false);
-  const [messages, setMessages] = useState<AiChatMessage[]>([
-    {
-      role: "assistant",
-      text: "Halo! Tulis kebutuhan wisata Anda. Contoh pertanyaan di bawah sudah disesuaikan dengan data yang tersedia pada database sehingga dapat langsung menghasilkan alternatif untuk dirangking dengan SAW.",
-    },
-  ]);
-
-  const examples = [
-    "Cari wisata bahari di Bangka dengan tiket maksimal Rp15.000, utamakan akses mudah",
-    "Cari kuliner seafood halal maksimal Rp100.000 yang tersedia delivery",
-    "Cari hotel minimal bintang 3 dengan budget maksimal Rp700.000",
-    "Cari satwa endemik Mentilin dengan lokasi pengamatan",
-  ];
-
-  function getLocationIfNeeded(message: string) {
-    const needsLocation = /\b(dekat|terdekat|jarak|radius|\d+(?:[.,]\d+)?\s*(?:km|kilometer|meter|m))\b/i.test(message);
-    if (!needsLocation || !navigator.geolocation) {
-      return Promise.resolve<{ latitude: number | null; longitude: number | null }>({ latitude: null, longitude: null });
-    }
-
-    return new Promise<{ latitude: number | null; longitude: number | null }>((resolve) => {
-      navigator.geolocation.getCurrentPosition(
-        (position) => resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude }),
-        () => resolve({ latitude: null, longitude: null }),
-        { enableHighAccuracy: true, timeout: 7000, maximumAge: 120000 },
-      );
-    });
-  }
-
-  async function sendQuestion(value?: string) {
-    const message = (value ?? question).trim();
-    if (!message || isSending) return;
-
-    setQuestion("");
-    setIsSending(true);
-    setMessages((current) => [...current, { role: "user", text: message }]);
-
-    try {
-      const location = await getLocationIfNeeded(message);
-      const response = await fetch("/api/ai/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message,
-          latitude: location.latitude,
-          longitude: location.longitude,
-        }),
-      });
-      const payload = await response.json() as {
-        type?: string;
-        response?: string;
-        redirect_url?: string;
-        message?: string;
-      };
-      if (!response.ok) throw new Error(payload.message || "Chatbot belum dapat memproses pertanyaan.");
-
-      const reply = payload.response || "Permintaan sudah diproses.";
-      setMessages((current) => [...current, { role: "assistant", text: reply }]);
-
-      if (payload.type === "search_redirect" && payload.redirect_url) {
-        window.setTimeout(() => window.location.assign(payload.redirect_url as string), 850);
-      }
-    } catch (error) {
-      setMessages((current) => [
-        ...current,
-        {
-          role: "assistant",
-          text: error instanceof Error ? error.message : "Layanan NLP belum dapat dihubungi.",
-        },
-      ]);
-    } finally {
-      setIsSending(false);
-    }
-  }
-
-  function handleChatKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      void sendQuestion();
-    }
-  }
-
-  return (
-    <>
-      {!isOpen && (
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
-          className="ai-launcher"
-          aria-label="Buka Tanya AI Bangka"
-        >
-          <span className="ai-launcher-label" aria-hidden="true">
-            Rekomendasi Wisata
-          </span>
-          <img src="/animasi.gif" alt="Tanya AI Bangka" />
-        </button>
-      )}
-
-      {isOpen && (
-        <div className="ai-panel" role="dialog" aria-label="Tanya AI Bangka">
-          <div className="ai-panel-head">
-            <div>
-              <span className="ai-status"><i /> Online</span>
-              <strong>Tanya AI Bangka</strong>
-              <small>Asisten informasi ekraf & pariwisata</small>
-            </div>
-            <button type="button" onClick={() => setIsOpen(false)} aria-label="Tutup Tanya AI">
-              <Icon name="close" size={18} />
-            </button>
-          </div>
-          <div className="ai-panel-body">
-            <div className="ai-conversation" aria-live="polite">
-              {messages.map((message, index) => (
-                <div className={`ai-bubble ${message.role === "user" ? "is-user" : ""}`} key={`${message.role}-${index}`}>
-                  {message.text}
-                </div>
-              ))}
-              {isSending && <div className="ai-bubble is-loading">Menganalisis kebutuhan dan kriteria SPK...</div>}
-            </div>
-            <div className="ai-example-label">Contoh pertanyaan</div>
-            <div className="ai-chips">
-              {examples.map((example) => (
-                <button type="button" key={example} onClick={() => void sendQuestion(example)} disabled={isSending}>
-                  {example}
-                </button>
-              ))}
-            </div>
-            <div className="ai-input-wrap">
-              <input
-                type="text"
-                value={question}
-                onChange={(event) => setQuestion(event.target.value)}
-                onKeyDown={handleChatKeyDown}
-                placeholder="Contoh: kuliner seafood halal maksimal Rp100.000..."
-                aria-label="Pertanyaan untuk AI"
-                disabled={isSending}
-              />
-              <button type="button" aria-label="Kirim pertanyaan" onClick={() => void sendQuestion()} disabled={isSending || !question.trim()}>
-                <Icon name="arrow" size={17} />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
   );
 }
 
@@ -1063,6 +598,20 @@ function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
       return <svg {...common}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M7 5v14M17 5v14M3 10h4M17 10h4M3 14h4M17 14h4" /></svg>;
     case "architecture":
       return <svg {...common}><path d="M4 21V10l8-7 8 7v11M8 21v-7h8v7M3 21h18" /></svg>;
+    case "interior":
+      return <svg {...common}><path d="M4 20V9l8-5 8 5v11" /><path d="M7 20v-6h10v6M9 10h6M12 10v4" /></svg>;
+    case "product":
+      return <svg {...common}><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z" /><path d="m4.5 7.8 7.5 4.3 7.5-4.3M12 12.1V21" /></svg>;
+    case "publishing":
+      return <svg {...common}><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21.5v-16Z" /><path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13v16h4.5a2.5 2.5 0 0 1 2.5 2.5v-16Z" /></svg>;
+    case "advertising":
+      return <svg {...common}><path d="M4 13V9l12-4v12L4 13Z" /><path d="M16 9.5h2.5a2.5 2.5 0 0 1 0 5H16M6 13l1.5 6h3L9 12.5" /></svg>;
+    case "performance":
+      return <svg {...common}><path d="M5 4h14v5c0 6-3 10-7 12-4-2-7-6-7-12V4Z" /><path d="M8 9c.7-.8 1.5-1.2 2.5-1.2S12.3 8.2 13 9M8.5 14c1 .8 2.2 1.2 3.5 1.2s2.5-.4 3.5-1.2" /></svg>;
+    case "art":
+      return <svg {...common}><path d="M4 18c3-6 7-11 14-14l2 2c-3 7-8 11-14 14H4v-2Z" /><path d="m14 7 3 3M6 16l2 2" /></svg>;
+    case "broadcast":
+      return <svg {...common}><rect x="4" y="6" width="16" height="12" rx="2" /><path d="m9 3 3 3 3-3M8 11h5v3H8zM16 11h.01M16 14h.01" /></svg>;
     case "clock":
       return <svg {...common}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></svg>;
     case "mail":

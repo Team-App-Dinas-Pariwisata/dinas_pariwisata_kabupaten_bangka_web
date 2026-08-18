@@ -1,16 +1,10 @@
-import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
 import type { ResultSetHeader } from "mysql2/promise";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { allSubmissionFields, submissionConfigs, type SubmissionField, type SubmissionType } from "@/lib/submission-config";
-import { isImageFile, uploadImageToImgBB } from "@/lib/imgbb";
+import { uploadSubmissionFileToR2 } from "@/lib/r2";
 
 export const runtime = "nodejs";
-
-const MAX_FILE_BYTES = 5 * 1024 * 1024;
-const ALLOWED_DOCUMENT_MIME = new Set(["application/pdf"]);
 
 function text(form: FormData, key: string) {
   const value = form.get(key);
@@ -27,35 +21,29 @@ function registration(prefix: string) {
   return `${prefix}-${new Date().getFullYear()}-${stamp.slice(-7)}${random}`.slice(0, 30);
 }
 
-function extensionFor(file: File) {
-  if (file.type === "application/pdf") return ".pdf";
-  if (file.type === "image/png") return ".png";
-  if (file.type === "image/webp") return ".webp";
-  if (file.type === "image/jpeg") return ".jpg";
-  return path.extname(file.name).slice(0, 8).toLowerCase();
+async function saveFile(file: File, type: SubmissionType, key: string, ownerId?: number | null) {
+  const uploaded = await uploadSubmissionFileToR2(file, type, key, ownerId);
+  return uploaded.storageUrl;
 }
 
-async function saveFile(file: File, type: SubmissionType, key: string) {
-  if (!file.size) return null;
-  if (file.size > MAX_FILE_BYTES) throw new Error(`Ukuran ${key} maksimal 5 MB.`);
 
-  // Semua file gambar disimpan di ImgBB dan database menyimpan URL viewer ImgBB (data.url_viewer).
-  if (isImageFile(file)) {
-    const uploaded = await uploadImageToImgBB(file);
-    return uploaded.viewerUrl;
+function validateFileForField(file: File, field: SubmissionField) {
+  const mime = file.type.toLowerCase().split(";", 1)[0].trim();
+  const ext = file.name.toLowerCase().split(".").pop() ?? "";
+  const isJpeg = mime === "image/jpeg" || mime === "image/jpg" || ext === "jpg" || ext === "jpeg";
+  const isPng = mime === "image/png" || ext === "png";
+  const isPdf = mime === "application/pdf" || ext === "pdf";
+
+  if (field.fileKind === "document") {
+    if (!(isPdf || isJpeg || isPng)) {
+      throw new Error(`${field.label}: format dokumen harus PDF, JPG/JPEG, atau PNG.`);
+    }
+    return;
   }
 
-  // ImgBB adalah image-hosting API, jadi PDF tetap disimpan lokal sebagai dokumen pendukung.
-  if (!ALLOWED_DOCUMENT_MIME.has(file.type)) {
-    throw new Error(`Format ${key} harus berupa gambar atau PDF.`);
+  if (!(isJpeg || isPng)) {
+    throw new Error(`${field.label}: format gambar harus JPG/JPEG atau PNG.`);
   }
-
-  const month = new Date().toISOString().slice(0, 7);
-  const directory = path.join(process.cwd(), "public", "uploads", "pengajuan", month);
-  await mkdir(directory, { recursive: true });
-  const filename = `${type}-${key}-${randomUUID()}${extensionFor(file)}`;
-  await writeFile(path.join(directory, filename), Buffer.from(await file.arrayBuffer()));
-  return `/uploads/pengajuan/${month}/${filename}`;
 }
 
 function requiredMissing(form: FormData, field: SubmissionField) {
@@ -73,7 +61,7 @@ function dbErrorMessage(error: unknown) {
   if (code === "ER_DUP_ENTRY") return "Nomor registrasi atau data unik sudah tercatat. Silakan kirim ulang.";
   if (code === "ER_NO_REFERENCED_ROW_2") return "Kecamatan, kelurahan, subsektor, atau komunitas yang dipilih tidak valid.";
   if (code === "ER_DATA_TOO_LONG") return "Ada data yang terlalu panjang untuk disimpan.";
-  if (error instanceof Error && (error.message.includes("maksimal 5 MB") || error.message.includes("Format") || error.message.includes("ImgBB") || error.message.includes("IMGBB_API_KEY") || error.message.includes("Upload"))) return error.message;
+  if (error instanceof Error && /(maksimal|format|cloudflare r2|r2|upload)/i.test(error.message)) return error.message;
   return "Pengajuan belum dapat disimpan. Periksa data dan koneksi database.";
 }
 
@@ -93,13 +81,16 @@ export async function POST(request: Request) {
       if (nik.length !== 16) return NextResponse.json({ message: "NIK wajib terdiri dari 16 digit." }, { status: 400 });
     }
 
-    const data: Record<string, unknown> = { no_registrasi: registration(config.registrationPrefix) };
+    const data: Record<string, string | number | null> = { no_registrasi: registration(config.registrationPrefix) };
 
     for (const field of fields) {
       if (field.key === "konfirmasi_kebenaran") continue;
       if (field.type === "file") {
         const entry = form.get(field.key);
-        if (entry instanceof File && entry.size > 0) data[field.key] = await saveFile(entry, type, field.key);
+        if (entry instanceof File && entry.size > 0) {
+          validateFileForField(entry, field);
+          data[field.key] = await saveFile(entry, type, field.key, null);
+        }
         continue;
       }
       if (field.type === "checkbox") {

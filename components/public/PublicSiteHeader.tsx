@@ -1,9 +1,9 @@
 import Link from "next/link";
 
 const pelakuItems = [
-  { label: "Pelaku Ekraf", href: "/pengajuan/pelaku-ekraf" },
-  { label: "Pelaku SDM Pariwisata", href: "/pengajuan/sdm-pariwisata" },
-  { label: "Komunitas/Lembaga/Asosiasi", href: "/pengajuan/komunitas" },
+  { label: "Pelaku Ekraf", href: "/akun/pengajuan/pelaku-ekraf" },
+  { label: "Pelaku SDM Pariwisata", href: "/akun/pengajuan/sdm-pariwisata" },
+  { label: "Komunitas/Lembaga/Asosiasi", href: "/akun/pengajuan/komunitas" },
 ];
 
 const wisataItems = [
@@ -14,7 +14,7 @@ const wisataItems = [
   { label: "Pencarian", href: "/pencarian" },
 ];
 
-type NavIconName = "home" | "news" | "calendar" | "grid" | "users" | "map" | "info" | "login";
+type NavIconName = "home" | "news" | "calendar" | "grid" | "users" | "map" | "info";
 
 function NavIcon({ name }: { name: NavIconName }) {
   const common = {
@@ -44,8 +44,6 @@ function NavIcon({ name }: { name: NavIconName }) {
       return <svg {...common}><path d="M12 21s6.5-5.6 6.5-11.5a6.5 6.5 0 1 0-13 0C5.5 15.4 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.2"/></svg>;
     case "info":
       return <svg {...common}><circle cx="12" cy="12" r="9"/><path d="M12 10.5V16"/><path d="M12 7.5h.01"/></svg>;
-    case "login":
-      return <svg {...common}><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M13 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/></svg>;
   }
 }
 
@@ -79,8 +77,8 @@ export default function PublicSiteHeader({ overlay = false }: { overlay?: boolea
           <span className="public-brand-logo-shell">
             <img
               className="public-brand-logo"
-              src="/branding/logo-bangka-header.png"
-              alt="Kabupaten Bangka, Exotic Bangka, dan Wonderful Indonesia"
+              src="/branding/logo-si-parik-navbar.png"
+              alt="SI PARIK BANGKA — Portal Ekonomi Kreatif Kabupaten Bangka"
             />
           </span>
         </Link>
@@ -89,13 +87,10 @@ export default function PublicSiteHeader({ overlay = false }: { overlay?: boolea
           <Link href="/"><NavIcon name="home"/><span>Beranda</span></Link>
           <Link href="/berita"><NavIcon name="news"/><span>Berita</span></Link>
           <Link href="/acara"><NavIcon name="calendar"/><span>Acara</span></Link>
-          <Link href="/#subsektor"><NavIcon name="grid"/><span>Subsektor</span></Link>
           <DesktopDropdown label="Pelaku Ekraf" icon="users" items={pelakuItems} />
           <DesktopDropdown label="Wisata" icon="map" items={wisataItems} />
-          <Link href="/#tentang"><NavIcon name="info"/><span>Tentang Kami</span></Link>
         </nav>
 
-        <Link href="/login" className="public-header-login"><NavIcon name="login"/><span>Masuk</span></Link>
 
         <details className="public-mobile-menu">
           <summary aria-label="Buka navigasi"><span></span><span></span><span></span></summary>
@@ -103,11 +98,8 @@ export default function PublicSiteHeader({ overlay = false }: { overlay?: boolea
             <Link href="/"><NavIcon name="home"/><span>Beranda</span></Link>
             <Link href="/berita"><NavIcon name="news"/><span>Berita</span></Link>
             <Link href="/acara"><NavIcon name="calendar"/><span>Acara</span></Link>
-            <Link href="/#subsektor"><NavIcon name="grid"/><span>Subsektor</span></Link>
             <MobileDropdown label="Pelaku Ekraf" icon="users" items={pelakuItems} />
             <MobileDropdown label="Wisata" icon="map" items={wisataItems} />
-            <Link href="/#tentang"><NavIcon name="info"/><span>Tentang Kami</span></Link>
-            <Link href="/login"><NavIcon name="login"/><span>Portal Admin & Pengguna</span></Link>
           </div>
         </details>
       </div>

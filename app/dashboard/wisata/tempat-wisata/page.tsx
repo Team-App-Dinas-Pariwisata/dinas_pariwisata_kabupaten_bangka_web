@@ -1,7 +1,7 @@
 import { DataManager } from "@/components/portal/DataManager";
 import { resourceConfigs } from "@/lib/resources";
 
-export const metadata = { title: "Tempat Wisata | Portal APPEKRAF" };
+export const metadata = { title: "Tempat Wisata | Portal SI PARIK BANGKA" };
 
 export default function Page() {
   const config = resourceConfigs["tempat-wisata"];

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import PublicSiteFooter from "@/components/public/PublicSiteFooter";
 import PublicSiteHeader from "@/components/public/PublicSiteHeader";
+import ShareLinkButton from "@/components/public/ShareLinkButton";
 import { getPublicNewsBySlug, getRelatedNews } from "@/lib/public-content";
 
 export const dynamic = "force-dynamic";
@@ -21,10 +22,10 @@ function formatDate(value: string | null) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const item = await getPublicNewsBySlug(slug);
-  if (!item) return { title: "Berita tidak ditemukan | APPEKRAF" };
+  if (!item) return { title: "Berita tidak ditemukan | SI PARIK BANGKA" };
   return {
-    title: `${item.judul} | APPEKRAF Kabupaten Bangka`,
-    description: item.ringkasan || item.subjudul || "Berita APPEKRAF Kabupaten Bangka",
+    title: `${item.judul} | SI PARIK BANGKA Kabupaten Bangka`,
+    description: item.ringkasan || item.subjudul || "Berita SI PARIK BANGKA Kabupaten Bangka",
   };
 }
 
@@ -70,7 +71,14 @@ export default async function DetailBeritaPage({ params }: Props) {
             <aside className="public-detail-aside">
               <span>Bagikan informasi</span>
               <p>Gunakan tautan halaman ini untuk membagikan berita kepada masyarakat dan mitra.</p>
-              <Link href="/berita" className="public-outline-button">← Kembali ke berita</Link>
+              <div className="public-detail-actions">
+                <Link href="/berita" className="public-outline-button">← Kembali ke berita</Link>
+                <ShareLinkButton
+                  title={item.judul}
+                  text={item.ringkasan || item.subjudul || "Berita SI PARIK BANGKA Kabupaten Bangka"}
+                  label="Bagikan link berita"
+                />
+              </div>
             </aside>
           </div>
         </article>

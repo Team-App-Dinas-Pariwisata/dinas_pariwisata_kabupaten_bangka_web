@@ -1,7 +1,7 @@
 import { DataManager } from "@/components/portal/DataManager";
 import { resourceConfigs } from "@/lib/resources";
 
-export const metadata = { title: "Kuliner | Portal APPEKRAF" };
+export const metadata = { title: "Kuliner | Portal SI PARIK BANGKA" };
 
 export default function Page() {
   const config = resourceConfigs.kuliner;

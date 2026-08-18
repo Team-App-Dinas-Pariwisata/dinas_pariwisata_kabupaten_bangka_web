@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { normalizeDbRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
-import { createSessionToken, SESSION_COOKIE, type AppRole } from "@/lib/session";
+import { createSessionToken, SESSION_COOKIE, sessionCookieOptions, type AppRole } from "@/lib/session";
 
 type LoginRow = RowDataPacket & {
   id: number;
@@ -43,13 +43,7 @@ export async function POST(request: NextRequest) {
       message: "Login berhasil.",
       redirectTo: normalizedRole === "admin" ? "/admin/pengguna" : "/dashboard",
     });
-    response.cookies.set(SESSION_COOKIE, token, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 60 * 60 * 8,
-    });
+    response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions());
     return response;
   } catch (error) {
     console.error("Login error:", error);

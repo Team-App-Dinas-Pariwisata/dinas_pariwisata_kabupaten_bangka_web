@@ -66,6 +66,27 @@ export async function PATCH(request: NextRequest) {
   const id = Number(body.id);
   const action = String(body.action ?? "");
   const note = String(body.note ?? "").trim();
+
+  if (action === "feature") {
+    if (type !== "ekraf" || !id) {
+      return NextResponse.json({ message: "Permintaan unggulan tidak valid." }, { status: 400 });
+    }
+    const unggulan = Number(body.unggulan) === 1 ? 1 : 0;
+    try {
+      const [result] = await db().execute<ResultSetHeader>(
+        "UPDATE pengajuan_ekraf SET unggulan = ?, updated_by = ? WHERE id = ? AND status = 'Disetujui'",
+        [unggulan, user.id, id],
+      );
+      if (!result.affectedRows) {
+        return NextResponse.json({ message: "Hanya Pelaku Ekraf yang sudah disetujui yang dapat ditandai sebagai unggulan." }, { status: 400 });
+      }
+      return NextResponse.json({ message: unggulan ? "Pelaku Ekraf ditandai sebagai unggulan." : "Status unggulan Pelaku Ekraf dihapus." });
+    } catch (error) {
+      console.error("Submission feature error:", error);
+      return NextResponse.json({ message: "Status unggulan gagal disimpan ke database." }, { status: 500 });
+    }
+  }
+
   if (!validType(type) || !id || !["approve", "reject"].includes(action)) {
     return NextResponse.json({ message: "Permintaan verifikasi tidak valid." }, { status: 400 });
   }
@@ -80,8 +101,11 @@ export async function PATCH(request: NextRequest) {
 
     if (type === "ekraf") {
       const [result] = await connection.execute<ResultSetHeader>(
-        "UPDATE pengajuan_ekraf SET status = ?, catatan_verifikasi = ?, diverifikasi_oleh = ?, tanggal_verifikasi = NOW(), updated_by = ? WHERE id = ?",
-        [status, note || null, user.id, user.id, id],
+        `UPDATE pengajuan_ekraf
+         SET status = ?, catatan_verifikasi = ?, diverifikasi_oleh = ?, tanggal_verifikasi = NOW(), updated_by = ?,
+             unggulan = CASE WHEN ? = 'Disetujui' THEN unggulan ELSE 0 END
+         WHERE id = ?`,
+        [status, note || null, user.id, user.id, status, id],
       );
       if (!result.affectedRows) throw new Error("NOT_FOUND");
     }

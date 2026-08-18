@@ -46,7 +46,7 @@ export function DashboardOverview() {
   return (
     <section>
       <div className="portal-page-head">
-        <div><p className="portal-breadcrumb">Dashboard</p><h1>Dashboard Pengelolaan Data</h1><p>Pantau pengajuan yang masuk, berita, dan acara APPEKRAF Kabupaten Bangka.</p></div>
+        <div><p className="portal-breadcrumb">Dashboard</p><h1>Dashboard Pengelolaan Data</h1><p>Pantau pengajuan yang masuk, berita, dan acara SI PARIK BANGKA Kabupaten Bangka.</p></div>
       </div>
       {error && <div className="portal-alert error">{error}</div>}
       <div className="portal-stat-row">
@@ -62,9 +62,9 @@ export function DashboardOverview() {
       </div>
 
       <div className="portal-panel">
-        <div className="portal-panel-head"><div><h2>Pengajuan terbaru</h2><p>Gabungan pengajuan Pelaku Ekraf, SDM Pariwisata, dan Komunitas.</p></div></div>
+        <div className="portal-panel-head"><div><h2>Pengajuan yang perlu ditinjau</h2><p>Hanya menampilkan pengajuan berstatus Menunggu atau Perlu Perbaikan dari Pelaku Ekraf, SDM Pariwisata, dan Komunitas.</p></div></div>
         <div className="dm-table-wrap embedded"><table className="dm-table"><thead><tr><th>No. Registrasi</th><th>Jenis</th><th>Nama</th><th>Detail</th><th>Status</th><th>Tanggal</th></tr></thead><tbody>
-          {!data ? <tr><td colSpan={6} className="dm-empty">Memuat data…</td></tr> : data.recent.length === 0 ? <tr><td colSpan={6} className="dm-empty">Belum ada pengajuan.</td></tr> : data.recent.map((row) => <tr key={`${row.jenis}-${row.id}`}><td><Link className="table-link" href={hrefByType[row.jenis]}>{row.no_registrasi || "—"}</Link></td><td>{row.jenis === "ekraf" ? "Pelaku Ekraf" : row.jenis === "sdm" ? "SDM Pariwisata" : "Komunitas"}</td><td>{row.nama}</td><td>{row.detail}</td><td><span className={`portal-status ${row.status.toLowerCase().replaceAll(" ", "-")}`}>{row.status}</span></td><td>{formatDate(row.created_at)}</td></tr>)}
+          {!data ? <tr><td colSpan={6} className="dm-empty">Memuat data…</td></tr> : data.recent.length === 0 ? <tr><td colSpan={6} className="dm-empty">Tidak ada pengajuan yang masih menunggu tindak lanjut.</td></tr> : data.recent.map((row) => <tr key={`${row.jenis}-${row.id}`}><td><Link className="table-link" href={hrefByType[row.jenis]}>{row.no_registrasi || "—"}</Link></td><td>{row.jenis === "ekraf" ? "Pelaku Ekraf" : row.jenis === "sdm" ? "SDM Pariwisata" : "Komunitas"}</td><td>{row.nama}</td><td>{row.detail}</td><td><span className={`portal-status ${row.status.toLowerCase().replaceAll(" ", "-")}`}>{row.status}</span></td><td>{formatDate(row.created_at)}</td></tr>)}
         </tbody></table></div>
       </div>
     </section>
