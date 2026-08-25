@@ -88,6 +88,7 @@ export const submissionConfigs: Record<SubmissionType, SubmissionConfig> = {
           { key: "omzet_per_tahun", label: "Omzet per Tahun (Rp)", type: "number" },
           { key: "media_sosial", label: "Media Sosial", placeholder: "Instagram / TikTok / Facebook" },
           { key: "website", label: "Website", placeholder: "https://..." },
+          { key: "link_shopee", label: "Link Shopee", placeholder: "https://shopee.co.id/..." },
         ],
       },
       {

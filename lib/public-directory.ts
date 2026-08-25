@@ -30,6 +30,7 @@ export type PublicDirectoryDetail = {
   exhibitions: string | null;
   social_media: string | null;
   website: string | null;
+  shopee: string | null;
 
   role: string | null;
   workplace: string | null;
@@ -93,6 +94,7 @@ function normalizeRow(row: DirectoryRow | undefined): PublicDirectoryDetail | nu
     latitude: row.latitude === null ? null : Number(row.latitude),
     longitude: row.longitude === null ? null : Number(row.longitude),
     image: publicImage(row.type, Number(row.id), row.image),
+    shopee: row.shopee ? String(row.shopee) : null,
   };
 }
 
@@ -155,6 +157,7 @@ export async function getPublicDirectoryDetail(type: PublicDirectoryType, id: nu
         NULLIF(p.pameran, '') AS exhibitions,
         NULLIF(p.media_sosial, '') AS social_media,
         NULLIF(p.website, '') AS website,
+        NULLIF(p.link_shopee, '') AS shopee,
         ${nullSdmFields},
         ${nullCommunityFields}
       FROM pengajuan_ekraf p

@@ -180,9 +180,10 @@ export default function DirectoryDetailView({
                 {start ? <div><small>{item.type === "sdm" ? "Mulai bertugas" : "Tahun mulai"}</small><strong>{start}</strong></div> : null}
               </div>
 
-              {(websiteUrl || socialUrl || item.social_media) ? (
+              {(websiteUrl || item.shopee || socialUrl || item.social_media) ? (
                 <div className="directory-detail-links">
                   {websiteUrl ? <a href={websiteUrl} target="_blank" rel="noreferrer" className="public-primary-button">Kunjungi website ↗</a> : null}
+                  {item.shopee ? <a href={item.shopee} target="_blank" rel="noreferrer" className="public-outline-button">Kunjungi Shopee ↗</a> : null}
                   {socialUrl ? <a href={socialUrl} target="_blank" rel="noreferrer" className="public-outline-button">Media sosial ↗</a> : null}
                   {!socialUrl && item.social_media ? <p><small>Media sosial</small><strong>{item.social_media}</strong></p> : null}
                 </div>
