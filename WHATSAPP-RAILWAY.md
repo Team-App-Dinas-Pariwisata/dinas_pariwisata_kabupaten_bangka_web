@@ -1,138 +1,160 @@
-# Migrasi Notifikasi SI PARIK ke whatsapp-web.js
+# Provider WhatsApp Fleksibel SI PARIK
 
-Implementasi ini mengganti Fonnte dengan dua bagian:
+Portal SI PARIK mendukung dua provider dari satu source code:
 
-1. Portal Next.js mengirim pesan ke service WhatsApp melalui API privat dan menampilkan QR hanya pada akun admin di `/admin/whatsapp`.
-2. Folder `whatsapp-service` adalah service Node.js/Express yang menjalankan `whatsapp-web.js` dan Chromium di Railway.
+1. **Fonnte** — pesan dikirim melalui API Fonnte.
+2. **Node.js (`whatsapp-web.js`)** — pesan dikirim melalui service mandiri pada folder `whatsapp-service`, baik di komputer lokal maupun Railway.
 
-Sesi menggunakan `LocalAuth`. Di Railway, direktori sesi harus berada pada volume persisten `/data`; tanpa volume, sesi hilang ketika deploy atau restart dan QR harus dipindai lagi.
-
-## 1. Buat API key
-
-Buat string acak minimal 32 karakter. Contoh melalui terminal:
-
-```bash
-openssl rand -hex 32
-```
-
-Simpan hasil yang sama pada service portal dan service WhatsApp. Jangan menaruh nilai asli di source code atau commit Git.
-
-## 2. Deploy service WhatsApp ke Railway
-
-1. Push proyek ini ke repository GitHub.
-2. Di project Railway, pilih **New Service → GitHub Repo**, lalu pilih repository yang sama.
-3. Beri nama service `whatsapp-service`.
-4. Pada **Settings → Source**, atur **Root Directory** menjadi `/whatsapp-service`.
-5. Railway akan menemukan `whatsapp-service/Dockerfile` secara otomatis.
-6. Tambahkan variables berikut pada service:
+Provider aktif dipilih melalui environment portal. Tidak perlu mengubah source code:
 
 ```env
-WA_SERVICE_API_KEY=PASTE_KUNCI_ACAK_DI_SINI
+WHATSAPP_PROVIDER=webjs
+```
+
+atau:
+
+```env
+WHATSAPP_PROVIDER=fonnte
+```
+
+Setelah mengganti provider, restart aplikasi lokal atau deploy ulang portal. Kredensial kedua provider boleh tetap tersimpan bersamaan; hanya provider yang dipilih yang dipakai.
+
+## 1. Mode Fonnte
+
+Isi environment portal:
+
+```env
+WHATSAPP_PROVIDER=fonnte
+FONNTE_TOKEN=TOKEN_DEVICE_FONNTE_ANDA
+FONNTE_API_BASE_URL=https://api.fonnte.com
+FONNTE_COUNTRY_CODE=62
+DISABLE_WHATSAPP_NOTIFICATIONS=false
+NOTIF_CHANNEL=whatsapp
+```
+
+Sebelum digunakan:
+
+1. Buat atau login ke akun Fonnte.
+2. Tambahkan perangkat dan hubungkan nomor WhatsApp dari dashboard Fonnte.
+3. Salin **device token**, bukan password akun, ke `FONNTE_TOKEN`.
+4. Restart/deploy ulang portal.
+5. Login sebagai admin lalu buka `/admin/whatsapp` untuk memeriksa nomor, status, paket, kuota, dan masa aktif.
+
+QR, restart perangkat, dan pergantian nomor pada mode ini dikelola melalui dashboard Fonnte. Portal tidak menampilkan token di browser.
+
+## 2. Mode Node.js di komputer lokal
+
+Pada folder `whatsapp-service`:
+
+```powershell
+Copy-Item .env.local.example .env
+npm ci
+npm start
+```
+
+Pada `.env.local` portal:
+
+```env
+WHATSAPP_PROVIDER=webjs
+WA_SERVICE_URL=http://127.0.0.1:3001
+WA_SERVICE_API_KEY=ganti-dengan-kunci-acak-minimal-32-karakter
+DISABLE_WHATSAPP_NOTIFICATIONS=false
+NOTIF_CHANNEL=whatsapp
+```
+
+`WA_SERVICE_API_KEY` pada portal harus sama dengan key di `whatsapp-service/.env`.
+
+Jalankan portal dari terminal kedua dengan `npm run dev`, login sebagai admin, lalu buka `http://localhost:3000/admin/whatsapp`. Sesi lokal tersimpan di `whatsapp-service/.wwebjs_auth`.
+
+## 3. Mode Node.js di Railway
+
+1. Buat service Railway dari repository proyek.
+2. Atur **Root Directory** menjadi `/whatsapp-service`.
+3. Tambahkan variables service:
+
+```env
+WA_SERVICE_API_KEY=PASTE_KUNCI_ACAK_MINIMAL_32_KARAKTER
 WA_SESSION_PATH=/data/.wwebjs_auth
 WA_CLIENT_ID=siparik
 WA_DEFAULT_COUNTRY_CODE=62
+WA_AUTO_START=true
+WA_PRINT_QR_TERMINAL=false
 ```
 
-`PORT` disediakan Railway secara otomatis. Dockerfile sudah menetapkan lokasi Chromium.
+4. Tambahkan Railway Volume dengan mount path tepat `/data`.
+5. Gunakan `/health` sebagai health check.
+6. Gunakan hanya satu replica.
 
-7. Di service yang sama, buka **Volumes → Add Volume** dan isi **Mount Path** dengan tepat:
-
-```text
-/data
-```
-
-8. Gunakan `/health` sebagai health check path. Endpoint ini tetap sehat ketika QR belum dipindai, sehingga deployment tidak menunggu tindakan admin.
-9. Gunakan hanya **satu replica**. Satu sesi WhatsApp Web tidak boleh dijalankan serentak oleh beberapa instance.
-
-## 3. Hubungkan portal Next.js
-
-Tambahkan variables berikut pada service tempat portal SI PARIK berjalan:
+Pada service portal:
 
 ```env
+WHATSAPP_PROVIDER=webjs
 WA_SERVICE_URL=http://whatsapp-service.railway.internal:3000
 WA_SERVICE_API_KEY=PASTE_KUNCI_YANG_SAMA
 DISABLE_WHATSAPP_NOTIFICATIONS=false
 NOTIF_CHANNEL=whatsapp
 ```
 
-Alamat `railway.internal` hanya dapat digunakan jika portal dan service WhatsApp berada dalam project serta environment Railway yang sama. Lalu lintas ini tidak perlu domain publik.
+Jika portal berada di luar Railway, gunakan domain publik HTTPS service WhatsApp sebagai `WA_SERVICE_URL`.
 
-Jika portal berjalan di Vercel atau server lain:
+## 4. Cara berpindah provider
 
-1. Buat domain publik untuk service WhatsApp di **Settings → Networking → Generate Domain**.
-2. Isi `WA_SERVICE_URL` pada portal dengan domain HTTPS tersebut, misalnya `https://nama-service.up.railway.app`.
-3. API tetap dilindungi Bearer API key; QR tidak dapat diambil tanpa key.
+Dari Node.js ke Fonnte:
 
-Setelah variables tersimpan, deploy ulang portal.
+```env
+WHATSAPP_PROVIDER=fonnte
+FONNTE_TOKEN=TOKEN_DEVICE_FONNTE_ANDA
+```
 
-## 4. Pindai QR pertama kali
+Service Node.js boleh dihentikan setelah Fonnte berhasil dipakai. Untuk kembali ke Node.js:
 
-1. Login ke SI PARIK sebagai **Admin**.
-2. Buka menu **Koneksi WhatsApp** atau URL `/admin/whatsapp`.
-3. Tunggu status **Menunggu pemindaian QR**.
-4. Di ponsel, buka **WhatsApp → Perangkat tertaut → Tautkan perangkat**.
-5. Pindai QR pada halaman admin.
-6. Tunggu status berubah menjadi **Terhubung**.
+```env
+WHATSAPP_PROVIDER=webjs
+WA_SERVICE_URL=http://127.0.0.1:3001
+WA_SERVICE_API_KEY=KUNCI_SERVICE_NODEJS
+```
 
-Setelah berhasil, sesi disimpan pada volume Railway. Restart maupun deployment berikutnya akan memulihkan sesi dan tidak meminta QR lagi.
-
-QR perlu dipindai ulang hanya jika salah satu kondisi ini terjadi:
-
-- admin menekan **Hapus Sesi & Buat QR Baru**;
-- perangkat Railway dihapus dari menu **Perangkat tertaut** di ponsel;
-- volume `/data` dilepas atau dihapus;
-- WhatsApp membatalkan sesi karena alasan keamanan.
-
-Tombol **Mulai Ulang Koneksi** tidak menghapus sesi dan aman digunakan ketika koneksi macet.
+Alias `fonte` diterima sebagai `fonnte`; `nodejs`, `whatsapp-webjs`, dan `whatsapp-web.js` diterima sebagai `webjs`. Nilai yang disarankan tetap `fonnte` atau `webjs`.
 
 ## 5. Alur notifikasi
 
 Saat petugas menyetujui atau menolak pengajuan:
 
-1. transaksi database diselesaikan lebih dahulu;
-2. portal memanggil `POST /api/send` pada service WhatsApp;
-3. nomor Indonesia dinormalisasi otomatis (`0812...` menjadi `62812...`);
-4. jika WhatsApp belum siap atau pengiriman gagal, sistem mencoba fallback email;
-5. kegagalan notifikasi tidak membatalkan hasil verifikasi yang sudah tersimpan.
+1. transaksi database diselesaikan terlebih dahulu;
+2. portal membaca `WHATSAPP_PROVIDER`;
+3. pesan WhatsApp dikirim melalui provider terpilih;
+4. email tetap dikirim, baik WhatsApp berhasil maupun gagal;
+5. kegagalan salah satu kanal tidak membatalkan hasil verifikasi.
 
-## 6. Uji cepat
+Untuk mematikan WhatsApp sementara tanpa menghapus konfigurasi:
 
-Health check tidak memerlukan API key:
-
-```bash
-curl https://DOMAIN-SERVICE/health
+```env
+DISABLE_WHATSAPP_NOTIFICATIONS=true
 ```
 
-Status service memerlukan API key:
+Email tetap dicoba selama alamat email pemohon dan konfigurasi SMTP tersedia.
 
-```bash
-curl https://DOMAIN-SERVICE/api/status \
-  -H "Authorization: Bearer KUNCI_ANDA"
-```
+## 6. Halaman admin
 
-Pengujian pesan:
+- **Node.js:** status diperbarui otomatis, QR ditampilkan, serta tersedia restart dan reset sesi.
+- **Fonnte:** status perangkat, nomor, paket, kuota, dan masa aktif ditampilkan. QR dikelola dari dashboard Fonnte.
 
-```bash
-curl -X POST https://DOMAIN-SERVICE/api/send \
-  -H "Authorization: Bearer KUNCI_ANDA" \
-  -H "Content-Type: application/json" \
-  -d '{"phone":"081234567890","message":"Tes notifikasi SI PARIK"}'
-```
+Endpoint halaman tetap dilindungi login dan role admin.
 
-## Catatan keamanan dan operasional
+## 7. Keamanan
 
-- Jangan pernah menampilkan `WA_SERVICE_API_KEY` di browser atau memasukkannya ke variable berawalan `NEXT_PUBLIC_`.
-- Batasi penggunaan nomor untuk notifikasi transaksional kepada pengguna yang memang memberikan nomor WhatsApp.
-- Jangan gunakan service untuk broadcast massal atau spam.
-- `whatsapp-web.js` adalah klien tidak resmi yang mengendalikan WhatsApp Web melalui Chromium. Perubahan di WhatsApp Web dapat sewaktu-waktu memerlukan pembaruan package, dan penggunaan klien tidak resmi memiliki risiko pembatasan akun.
-- Untuk sistem yang bersifat kritis atau membutuhkan kepatuhan resmi, pertimbangkan WhatsApp Business Platform/Cloud API.
+- Jangan memakai variable `NEXT_PUBLIC_*` untuk `FONNTE_TOKEN` atau `WA_SERVICE_API_KEY`.
+- Jangan commit `.env`, token, API key, atau folder sesi WhatsApp.
+- Gunakan satu nomor resmi khusus notifikasi layanan.
+- Hindari broadcast massal dan spam.
+- Kedua provider bergantung pada koneksi WhatsApp dan dapat terdampak pembatasan WhatsApp.
 
-## File utama yang berubah
+## 8. File utama
 
-- `lib/whatsapp.ts` — klien server-to-server pengganti Fonnte.
-- `lib/submission-notifications.ts` — memakai service WhatsApp baru dan tetap memiliki fallback email.
-- `app/api/admin/whatsapp/route.ts` — proxy admin yang memvalidasi sesi/role.
-- `app/admin/whatsapp/page.tsx` — halaman khusus admin.
-- `components/portal/WhatsAppManager.tsx` — tampilan status, QR, restart, dan reset sesi.
-- `whatsapp-service/server.js` — service Node.js untuk Railway.
-- `whatsapp-service/Dockerfile` — image Chromium untuk deployment.
+- `lib/whatsapp.ts` — pemilih provider serta klien Fonnte dan Node.js.
+- `lib/submission-notifications.ts` — mengirim WhatsApp dan tetap mengirim email.
+- `app/api/admin/whatsapp/route.ts` — status dan kontrol provider untuk admin.
+- `components/portal/WhatsAppManager.tsx` — tampilan admin sesuai provider.
+- `whatsapp-service/server.js` — service Node.js `whatsapp-web.js`.
+- `.env.example` — contoh konfigurasi kedua provider.
+

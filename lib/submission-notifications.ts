@@ -158,7 +158,7 @@ function isWhatsAppDisabled(): boolean {
 
 /**
  * Mengirim notifikasi ke pemohon setelah pengajuannya disetujui/ditolak.
- * Menggunakan WhatsApp jika aktif, jika gagal atau dimatikan, fallback ke email.
+ * WhatsApp dan email dikirim secara independen jika masing-masing kanal tersedia.
  */
 export async function notifySubmissionDecision(params: {
   type: SubmissionType;
@@ -196,14 +196,14 @@ export async function notifySubmissionDecision(params: {
       const waResult = await sendWhatsAppMessage(row.no_hp, plainText);
       if (waResult.ok) {
         console.log(`[notif] WhatsApp terkirim ke ${row.no_hp} untuk ${params.type}#${params.id}`);
-        return;
+      } else {
+        console.warn(`[notif] WhatsApp gagal: ${waResult.reason}. Email tetap akan dicoba.`);
       }
-      console.warn(`[notif] WhatsApp gagal: ${waResult.reason}. Beralih ke email.`);
     } else {
-      console.log(`[notif] WhatsApp dinonaktifkan / nomor kosong, menggunakan email.`);
+      console.log(`[notif] WhatsApp dinonaktifkan / nomor kosong. Email tetap akan dicoba.`);
     }
 
-    // Kirim email
+    // Email selalu dicoba, terlepas dari hasil pengiriman WhatsApp.
     if (row.email && row.email.trim()) {
       try {
         await sendEmail({

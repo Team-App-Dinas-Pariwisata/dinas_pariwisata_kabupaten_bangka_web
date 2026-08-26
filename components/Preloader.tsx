@@ -1,35 +1,43 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const MIN_VISIBLE_MS = 700;
 const FALLBACK_HIDE_MS = 2200;
+const SKIP_PATH_PREFIXES = ["/dashboard", "/admin", "/akun", "/petugas", "/login"];
 
 export default function Preloader() {
-  const [isVisible, setIsVisible] = useState(true);
+  const pathname = usePathname();
+  const shouldSkip = SKIP_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  const [isVisible, setIsVisible] = useState(!shouldSkip);
   const [isLeaving, setIsLeaving] = useState(false);
-  const hasFinished = useRef(false);
 
   useEffect(() => {
+    if (shouldSkip) return;
+
     const startedAt = performance.now();
-    let hideTimer: ReturnType<typeof setTimeout> | undefined;
+    let finishScheduled = false;
+    let frameId: number | undefined;
+    let leaveTimer: ReturnType<typeof setTimeout> | undefined;
+    let removeTimer: ReturnType<typeof setTimeout> | undefined;
 
     const finish = () => {
-      if (hasFinished.current) return;
-      hasFinished.current = true;
+      if (finishScheduled) return;
+      finishScheduled = true;
 
       const elapsed = performance.now() - startedAt;
       const remaining = Math.max(0, MIN_VISIBLE_MS - elapsed);
 
-      hideTimer = setTimeout(() => {
+      leaveTimer = setTimeout(() => {
         setIsLeaving(true);
-        hideTimer = setTimeout(() => setIsVisible(false), 420);
+        removeTimer = setTimeout(() => setIsVisible(false), 420);
       }, remaining);
     };
 
     if (document.readyState === "complete") {
-      requestAnimationFrame(finish);
+      frameId = requestAnimationFrame(finish);
     } else {
       window.addEventListener("load", finish, { once: true });
     }
@@ -39,11 +47,13 @@ export default function Preloader() {
     return () => {
       window.removeEventListener("load", finish);
       clearTimeout(fallbackTimer);
-      if (hideTimer) clearTimeout(hideTimer);
+      if (frameId !== undefined) cancelAnimationFrame(frameId);
+      if (leaveTimer) clearTimeout(leaveTimer);
+      if (removeTimer) clearTimeout(removeTimer);
     };
-  }, []);
+  }, [shouldSkip]);
 
-  if (!isVisible) return null;
+  if (shouldSkip || !isVisible) return null;
 
   return (
     <div

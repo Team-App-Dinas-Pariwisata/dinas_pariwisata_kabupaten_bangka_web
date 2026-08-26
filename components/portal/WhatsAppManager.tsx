@@ -55,12 +55,16 @@ export function WhatsAppManager() {
 
   useEffect(() => {
     const initialTimer = window.setTimeout(() => void loadStatus(true), 0);
-    const timer = window.setInterval(() => void loadStatus(false), 3_000);
-    return () => {
-      window.clearTimeout(initialTimer);
-      window.clearInterval(timer);
-    };
+    return () => window.clearTimeout(initialTimer);
   }, [loadStatus]);
+
+  useEffect(() => {
+    // Status whatsapp-web.js berubah cepat saat membuat QR, sehingga perlu polling.
+    // Status Fonnte cukup dimuat sekali agar API profil perangkat tidak terkena limit.
+    if (status?.provider !== "webjs") return;
+    const timer = window.setInterval(() => void loadStatus(false), 3_000);
+    return () => window.clearInterval(timer);
+  }, [loadStatus, status?.provider]);
 
   async function runAction(action: "restart" | "reset") {
     if (action === "reset") {
@@ -99,7 +103,10 @@ export function WhatsAppManager() {
 
   const state = status?.state || "starting";
   const isReady = status?.ready === true;
-  const showQr = status?.state === "qr" && Boolean(status.qrDataUrl);
+  const isFonnte = status?.provider === "fonnte";
+  const showQr = status?.provider === "webjs"
+    && status.state === "qr"
+    && Boolean(status.qrDataUrl);
 
   return (
     <section className="wa-admin-page">
@@ -107,7 +114,11 @@ export function WhatsAppManager() {
         <div>
           <p className="portal-breadcrumb">Admin / Koneksi WhatsApp</p>
           <h1>Koneksi WhatsApp</h1>
-          <p>Pindai QR satu kali untuk mengaktifkan notifikasi otomatis SI PARIK.</p>
+          <p>
+            {isFonnte
+              ? "Notifikasi saat ini dikirim melalui provider Fonnte."
+              : "Pindai QR satu kali untuk mengaktifkan service WhatsApp Node.js."}
+          </p>
         </div>
         <button
           className="portal-secondary"
@@ -130,6 +141,7 @@ export function WhatsAppManager() {
             <div>
               <small>Status koneksi</small>
               <h2>{status ? stateLabels[status.state] : "Memuat status…"}</h2>
+              {status && <small>Provider aktif: {status.providerLabel}</small>}
             </div>
           </div>
 
@@ -162,35 +174,43 @@ export function WhatsAppManager() {
             <div className={`wa-status-illustration ${isReady ? "ready" : "waiting"}`}>
               <span><PortalIcon name={isReady ? "check" : "whatsapp"} /></span>
               <div>
-                <strong>{isReady ? "Notifikasi aktif" : "Menunggu service"}</strong>
+                <strong>
+                  {isFonnte
+                    ? (isReady ? "Fonnte siap digunakan" : "Fonnte belum terhubung")
+                    : (isReady ? "Notifikasi aktif" : "Menunggu service")}
+                </strong>
                 <p>
-                  {isReady
-                    ? "Sesi tersimpan pada volume Railway; deploy atau restart berikutnya tidak memerlukan QR baru."
-                    : "QR akan muncul di sini saat WhatsApp Web selesai dimuat."}
+                  {isFonnte
+                    ? "Koneksi nomor, QR, paket, dan perangkat dikelola melalui dashboard Fonnte."
+                    : isReady
+                      ? "Sesi tersimpan permanen; deploy atau restart berikutnya tidak memerlukan QR baru."
+                      : "QR akan muncul di sini saat WhatsApp Web selesai dimuat."}
                 </p>
               </div>
             </div>
           )}
 
-          <div className="wa-actions">
-            <button
-              className="portal-primary"
-              type="button"
-              disabled={Boolean(busyAction) || status?.configured === false}
-              onClick={() => void runAction("restart")}
-            >
-              <PortalIcon name="refresh" />
-              {busyAction === "restart" ? "Memulai ulang…" : "Mulai Ulang Koneksi"}
-            </button>
-            <button
-              className="wa-danger-button"
-              type="button"
-              disabled={Boolean(busyAction) || status?.configured === false}
-              onClick={() => void runAction("reset")}
-            >
-              {busyAction === "reset" ? "Menghapus sesi…" : "Hapus Sesi & Buat QR Baru"}
-            </button>
-          </div>
+          {status?.supportsSessionControl !== false && (
+            <div className="wa-actions">
+              <button
+                className="portal-primary"
+                type="button"
+                disabled={Boolean(busyAction) || status?.configured === false}
+                onClick={() => void runAction("restart")}
+              >
+                <PortalIcon name="refresh" />
+                {busyAction === "restart" ? "Memulai ulang…" : "Mulai Ulang Koneksi"}
+              </button>
+              <button
+                className="wa-danger-button"
+                type="button"
+                disabled={Boolean(busyAction) || status?.configured === false}
+                onClick={() => void runAction("reset")}
+              >
+                {busyAction === "reset" ? "Menghapus sesi…" : "Hapus Sesi & Buat QR Baru"}
+              </button>
+            </div>
+          )}
         </article>
 
         <aside className="wa-info-card">
@@ -199,10 +219,21 @@ export function WhatsAppManager() {
             <div><small>Perangkat aktif</small><strong>{status?.account?.name || "Belum ada akun"}</strong></div>
           </div>
           <dl>
+            <div><dt>Provider</dt><dd>{status?.providerLabel || "—"}</dd></div>
             <div><dt>Nomor WhatsApp</dt><dd>{maskPhone(status?.account?.phone)}</dd></div>
             <div><dt>Platform</dt><dd>{status?.account?.platform || "—"}</dd></div>
-            <div><dt>Terhubung sejak</dt><dd>{formatDate(status?.lastReadyAt || null)}</dd></div>
-            <div><dt>Aktivitas terakhir</dt><dd>{formatDate(status?.lastEventAt || null)}</dd></div>
+            {isFonnte ? (
+              <>
+                <div><dt>Paket</dt><dd>{status?.providerDetails?.packageName || "—"}</dd></div>
+                <div><dt>Sisa kuota</dt><dd>{status?.providerDetails?.quota || "—"}</dd></div>
+                <div><dt>Masa aktif</dt><dd>{status?.providerDetails?.expired || "—"}</dd></div>
+              </>
+            ) : (
+              <>
+                <div><dt>Terhubung sejak</dt><dd>{formatDate(status?.lastReadyAt || null)}</dd></div>
+                <div><dt>Aktivitas terakhir</dt><dd>{formatDate(status?.lastEventAt || null)}</dd></div>
+              </>
+            )}
           </dl>
           {status?.lastError && (
             <div className="wa-last-error">

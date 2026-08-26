@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRequestRole } from "@/lib/auth";
-import { controlWhatsApp, getWhatsAppStatus } from "@/lib/whatsapp";
+import {
+  controlWhatsApp,
+  getWhatsAppProvider,
+  getWhatsAppStatus,
+} from "@/lib/whatsapp";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,6 +37,13 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    if (getWhatsAppProvider() !== "webjs") {
+      return NextResponse.json(
+        { message: "Restart dan reset QR hanya tersedia saat provider Node.js dipilih." },
+        { status: 409 },
+      );
+    }
+
     const body = (await request.json()) as { action?: unknown; confirmation?: unknown };
     if (body.action !== "restart" && body.action !== "reset") {
       return NextResponse.json({ message: "Aksi tidak valid." }, { status: 400 });
