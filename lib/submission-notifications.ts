@@ -1,7 +1,7 @@
 // lib/submission-notifications.ts
 import type { RowDataPacket } from "mysql2/promise";
 import { db } from "@/lib/db";
-import { sendWhatsAppMessage } from "@/lib/fonnte";
+import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { sendEmail } from "@/lib/email";
 import type { SubmissionType } from "@/lib/submission-config";
 
@@ -80,7 +80,7 @@ function buildEmailHtml(params: {
   const { type, status, nama, noRegistrasi, note } = params;
   const label = typeLabel[type];
   const baseUrl = appBaseUrl();
-  const logoUrl = `${baseUrl || "http://localhost:3000"}/logo-si-parik-preloader.png`;
+  const logoUrl = "https://i.ibb.co.com/pjVjqBMp/logo-si-parik-preloader-compressed.png";
   const regLine = noRegistrasi ? `No. Registrasi: ${noRegistrasi}` : null;
 
   const isApproved = status === "Disetujui";
@@ -152,7 +152,7 @@ function buildEmailHtml(params: {
 }
 
 function isWhatsAppDisabled(): boolean {
-  return process.env.DISABLE_FONTTE_NOTIFICATIONS === "true"
+  return process.env.DISABLE_WHATSAPP_NOTIFICATIONS === "true"
     || process.env.NOTIF_CHANNEL === "email";
 }
 

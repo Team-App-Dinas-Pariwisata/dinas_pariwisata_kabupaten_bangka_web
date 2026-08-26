@@ -162,7 +162,7 @@ export async function PATCH(request: NextRequest) {
     await connection.commit();
 
     // Notifikasi WhatsApp dikirim SETELAH commit, dan best-effort saja:
-    // kegagalan kirim WA (nomor kosong, token Fonnte salah, dsb) tidak boleh
+    // kegagalan kirim WA (nomor kosong, service belum siap, dsb) tidak boleh
     // membuat proses verifikasi yang sudah tersimpan terlihat gagal ke petugas.
     await notifySubmissionDecision({ type: type as SubmissionType, id, status, note });
 
