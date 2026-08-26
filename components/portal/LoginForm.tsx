@@ -1,8 +1,11 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 export function LoginForm() {
+  const router = useRouter();
   const [role, setRole] = useState<"admin" | "pengguna">("pengguna");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,7 +24,7 @@ export function LoginForm() {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || "Login gagal.");
-      window.location.href = result.redirectTo;
+      router.replace(result.redirectTo);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login gagal.");
     } finally {
@@ -46,7 +49,7 @@ export function LoginForm() {
 
       {error && <div className="auth-error">{error}</div>}
       <button className="auth-submit" type="submit" disabled={loading}>{loading ? "Memeriksa..." : `Masuk sebagai ${role === "admin" ? "Admin" : "Pengguna"}`}</button>
-      <a className="auth-home-link" href="/">← Kembali ke halaman utama</a>
+      <Link className="auth-home-link" href="/">← Kembali ke halaman utama</Link>
     </form>
   );
 }

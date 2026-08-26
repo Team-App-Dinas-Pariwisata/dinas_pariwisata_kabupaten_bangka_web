@@ -38,3 +38,7 @@ next-env.d.ts
 
 fla
 inspiration
+
+# whatsapp-web.js local session/cache (production uses Railway Volume)
+/whatsapp-service/.wwebjs_auth/
+/whatsapp-service/.wwebjs_cache/

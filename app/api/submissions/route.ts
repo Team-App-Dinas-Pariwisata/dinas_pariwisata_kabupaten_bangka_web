@@ -2,6 +2,7 @@ import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { NextRequest, NextResponse } from "next/server";
 import { requireRequestRole } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { notifySubmissionDecision } from "@/lib/submission-notifications";
 import type { SubmissionType } from "@/lib/submission-config";
 
 const listQueries: Record<SubmissionType, string> = {
@@ -97,7 +98,7 @@ export async function PATCH(request: NextRequest) {
   const connection = await db().getConnection();
   try {
     await connection.beginTransaction();
-    const status = action === "approve" ? "Disetujui" : "Ditolak";
+    const status: "Disetujui" | "Ditolak" = action === "approve" ? "Disetujui" : "Ditolak";
 
     if (type === "ekraf") {
       const [result] = await connection.execute<ResultSetHeader>(
@@ -159,6 +160,12 @@ export async function PATCH(request: NextRequest) {
     }
 
     await connection.commit();
+
+    // Notifikasi WhatsApp dikirim SETELAH commit, dan best-effort saja:
+    // kegagalan kirim WA (nomor kosong, service belum siap, dsb) tidak boleh
+    // membuat proses verifikasi yang sudah tersimpan terlihat gagal ke petugas.
+    await notifySubmissionDecision({ type: type as SubmissionType, id, status, note });
+
     return NextResponse.json({ message: action === "approve" ? "Pengajuan berhasil disetujui." : "Pengajuan berhasil ditolak." });
   } catch (error) {
     await connection.rollback();
