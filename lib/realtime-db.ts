@@ -49,15 +49,24 @@ export async function getTableMap<T extends DbRecord = DbRecord>(table: string):
   const snapshot = await firebaseRealtimeDatabase().ref(table).get();
   const raw = snapshot.val();
   if (!raw || typeof raw !== "object") return {};
-  return raw as Record<string, T>;
+
+  // Firebase Realtime Database dapat mengembalikan node dengan key numerik
+  // sebagai Array. Slot yang tidak ada akan muncul sebagai null. Jangan
+  // teruskan slot kosong tersebut sebagai record database.
+  return Object.fromEntries(
+    Object.entries(raw as Record<string, unknown>).filter(([, value]) => value !== null && value !== undefined),
+  ) as Record<string, T>;
 }
 
 export async function getAll<T extends DbRecord = DbRecord>(table: string): Promise<T[]> {
   const map = await getTableMap<T>(table);
-  return Object.entries(map).map(([key, value]) => {
-    if (value && typeof value === "object" && value.id !== undefined) return value;
+  return Object.entries(map).flatMap(([key, value]) => {
+    // Hanya object record yang valid yang boleh menjadi row. Ini mencegah
+    // hole Array Firebase seperti index 0/2 berubah menjadi { id: 0/2 }.
+    if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+    if (value.id !== undefined) return [value];
     const numeric = Number(key);
-    return { ...(value as T), id: Number.isSafeInteger(numeric) ? numeric : key } as T;
+    return [{ ...value, id: Number.isSafeInteger(numeric) ? numeric : key } as T];
   });
 }
 

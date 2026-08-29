@@ -31,17 +31,30 @@ type ChatMessage = {
 const LIST_POLL_MS = 3000;
 const MESSAGE_POLL_MS = 2500;
 
-function guestLabel(value: string) {
-  return `Pengunjung ${value.replace(/^guest_/, "").slice(-6).toUpperCase()}`;
+function safeText(value: unknown) {
+  return String(value ?? "").trim();
 }
 
-function guestInitial(value: string) {
-  return value.replace(/^guest_/, "").slice(-1).toUpperCase() || "G";
+function guestLabel(value: unknown) {
+  const identifier = safeText(value);
+  if (!identifier) return "Pengunjung";
+  return `Pengunjung ${identifier.replace(/^guest_/, "").slice(-6).toUpperCase()}`;
 }
 
-function formatTime(value: string, detailed = false) {
-  const date = new Date(value.includes("T") ? value : value.replace(" ", "T"));
-  if (Number.isNaN(date.getTime())) return value;
+function guestInitial(value: unknown) {
+  return safeText(value).replace(/^guest_/, "").slice(-1).toUpperCase() || "G";
+}
+
+function guestShortId(value: unknown, length = 8) {
+  const identifier = safeText(value);
+  return identifier ? identifier.replace(/^guest_/, "").slice(-length).toUpperCase() : "-";
+}
+
+function formatTime(value: unknown, detailed = false) {
+  const text = safeText(value);
+  if (!text) return "-";
+  const date = new Date(text.includes("T") ? text : text.replace(" ", "T"));
+  if (Number.isNaN(date.getTime())) return "-";
   return new Intl.DateTimeFormat(
     "id-ID",
     detailed
@@ -72,12 +85,22 @@ export default function StaffFloatingChat() {
       const response = await fetch("/api/chat/staff", { cache: "no-store" });
       const payload = (await response.json()) as { data?: Conversation[]; message?: string };
       if (!response.ok) throw new Error(payload.message || "Daftar chat belum dapat dimuat.");
-      setConversations((payload.data ?? []).map((item) => ({
-        ...item,
-        total_messages: Number(item.total_messages ?? 0),
-        unread_count: Number(item.unread_count ?? 0),
-        last_message_id: item.last_message_id === null ? null : Number(item.last_message_id),
-      })));
+      setConversations((payload.data ?? [])
+        .filter((item) => Number(item?.id) > 0 && Boolean(safeText(item?.guest_identifier)))
+        .map((item) => ({
+          ...item,
+          id: Number(item.id),
+          guest_identifier: safeText(item.guest_identifier),
+          status: item.status === "closed" ? "closed" : "open",
+          created_at: safeText(item.created_at),
+          last_message_at: safeText(item.last_message_at) || safeText(item.created_at),
+          last_message: item.last_message == null ? null : safeText(item.last_message),
+          last_sender_type: item.last_sender_type === "staff" ? "staff" : item.last_sender_type === "guest" ? "guest" : null,
+          last_sender_name: item.last_sender_name == null ? null : safeText(item.last_sender_name),
+          total_messages: Number(item.total_messages ?? 0),
+          unread_count: Number(item.unread_count ?? 0),
+          last_message_id: item.last_message_id == null ? null : Number(item.last_message_id),
+        })));
       setError("");
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Daftar chat belum dapat dimuat.");
@@ -92,7 +115,18 @@ export default function StaffFloatingChat() {
       const response = await fetch(`/api/chat/staff?conversation_id=${conversationId}`, { cache: "no-store" });
       const payload = (await response.json()) as { data?: { messages: ChatMessage[] }; message?: string };
       if (!response.ok) throw new Error(payload.message || "Percakapan belum dapat dimuat.");
-      setMessages(payload.data?.messages ?? []);
+      setMessages((payload.data?.messages ?? [])
+        .filter((message) => Number(message?.id) > 0)
+        .map((message) => ({
+          ...message,
+          id: Number(message.id),
+          conversation_id: Number(message.conversation_id),
+          sender_type: message.sender_type === "staff" ? "staff" : "guest",
+          sender_user_id: message.sender_user_id == null ? null : Number(message.sender_user_id),
+          sender_name_snapshot: message.sender_name_snapshot == null ? null : safeText(message.sender_name_snapshot),
+          message: safeText(message.message),
+          created_at: safeText(message.created_at),
+        })));
       setError("");
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Percakapan belum dapat dimuat.");
@@ -172,7 +206,7 @@ export default function StaffFloatingChat() {
     return conversations.filter((conversation) => {
       const label = guestLabel(conversation.guest_identifier).toLowerCase();
       const preview = (conversation.last_message ?? "").toLowerCase();
-      const identifier = conversation.guest_identifier.toLowerCase();
+      const identifier = safeText(conversation.guest_identifier).toLowerCase();
       return label.includes(keyword) || preview.includes(keyword) || identifier.includes(keyword);
     });
   }, [conversations, query]);
@@ -256,7 +290,7 @@ export default function StaffFloatingChat() {
                 <span className="staff-floating-chat-avatar">{guestInitial(active.guest_identifier)}</span>
                 <div>
                   <strong>{guestLabel(active.guest_identifier)}</strong>
-                  <small>{active.total_messages} pesan · ID {active.guest_identifier.replace(/^guest_/, "").slice(-8).toUpperCase()}</small>
+                  <small>{active.total_messages} pesan · ID {guestShortId(active.guest_identifier, 8)}</small>
                 </div>
               </div>
 

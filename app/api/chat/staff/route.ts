@@ -19,17 +19,49 @@ function normalizeMessage(value: unknown) {
 }
 function readKey(conversationId: number, userId: number) { return `${conversationId}_${userId}`; }
 
+function normalizeConversationRow(row: ConversationRow): ConversationRow | null {
+  const id = Number(row?.id ?? 0);
+  const guestIdentifier = String(row?.guest_identifier ?? "").trim();
+  if (!Number.isSafeInteger(id) || id <= 0 || !guestIdentifier) return null;
+  return {
+    ...row,
+    id,
+    guest_identifier: guestIdentifier,
+    status: row.status === "closed" ? "closed" : "open",
+    created_at: String(row.created_at ?? ""),
+    last_message_at: String(row.last_message_at ?? row.updated_at ?? row.created_at ?? ""),
+  };
+}
+
+function normalizeMessageRow(row: MessageRow): MessageRow | null {
+  const id = Number(row?.id ?? 0);
+  const conversationId = Number(row?.conversation_id ?? 0);
+  if (!Number.isSafeInteger(id) || id <= 0 || !Number.isSafeInteger(conversationId) || conversationId <= 0) return null;
+  return {
+    ...row,
+    id,
+    conversation_id: conversationId,
+    sender_type: row.sender_type === "staff" ? "staff" : "guest",
+    sender_user_id: row.sender_user_id == null ? null : Number(row.sender_user_id),
+    sender_name_snapshot: row.sender_name_snapshot == null ? null : String(row.sender_name_snapshot),
+    message: String(row.message ?? ""),
+    created_at: String(row.created_at ?? ""),
+  };
+}
+
 export async function GET(request: NextRequest) {
   const user = await requireStaff(request);
   if (!user) return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
   try {
     const conversationId = Number(request.nextUrl.searchParams.get("conversation_id") ?? 0);
-    const [conversations, messages] = await Promise.all([getAll<ConversationRow>("chat_conversations"), getAll<MessageRow>("chat_messages")]);
+    const [rawConversations, rawMessages] = await Promise.all([getAll<ConversationRow>("chat_conversations"), getAll<MessageRow>("chat_messages")]);
+    const conversations = rawConversations.map(normalizeConversationRow).filter((row): row is ConversationRow => row !== null);
+    const messages = rawMessages.map(normalizeMessageRow).filter((row): row is MessageRow => row !== null);
     if (conversationId > 0) {
       const conversation = conversations.find((row) => Number(row.id) === conversationId);
       if (!conversation) return NextResponse.json({ message: "Percakapan tidak ditemukan." }, { status: 404 });
       const selected = messages.filter((row) => Number(row.conversation_id) === conversationId).sort((a, b) => Number(a.id) - Number(b.id));
-      return NextResponse.json({ data: { conversation, messages: selected } });
+      return NextResponse.json({ data: { conversation, messages: selected } }, { headers: { "Cache-Control": "no-store, max-age=0" } });
     }
 
     const reads = await getTableMap("chat_staff_reads");
@@ -55,7 +87,7 @@ export async function GET(request: NextRequest) {
         unread_count: bucket.filter((m) => m.sender_type === "guest" && Number(m.id) > lastRead).length,
       };
     }).sort((a, b) => String(b.last_message_at ?? "").localeCompare(String(a.last_message_at ?? "")) || Number(b.id) - Number(a.id));
-    return NextResponse.json({ data: rows });
+    return NextResponse.json({ data: rows }, { headers: { "Cache-Control": "no-store, max-age=0" } });
   } catch (error) {
     console.error("[chat/staff GET]", error);
     return NextResponse.json({ message: "Data chat belum dapat dimuat." }, { status: 500 });
