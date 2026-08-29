@@ -59,6 +59,7 @@ export function SubmissionManager({ type }: Props) {
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [featureSavingId, setFeatureSavingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [page, setPage] = useState(1);
@@ -165,6 +166,30 @@ export function SubmissionManager({ type }: Props) {
     }
   }
 
+  async function deleteSubmission(row: Row) {
+    const identity = identityFor(type, row);
+    const ok = window.confirm(`Hapus pengajuan ${identity.title}? Record Firebase dan seluruh file pengajuan yang dikelola Cloudflare R2 akan dihapus permanen.`);
+    if (!ok) return;
+
+    setDeletingId(row.id);
+    setError("");
+    try {
+      const response = await fetch("/api/submissions", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type, id: row.id }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.message || "Pengajuan gagal dihapus.");
+      if (selected?.id === row.id) setSelected(null);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Pengajuan gagal dihapus.");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   async function verify(action: "approve" | "reject") {
     if (!selected) return;
     if (action === "reject" && !note.trim()) {
@@ -235,7 +260,7 @@ export function SubmissionManager({ type }: Props) {
                 <td data-label="Status"><span className={`portal-status ${statusClass(currentStatus)}`}>{currentStatus}</span></td>
                 {type === "ekraf" && <td data-label="Unggulan">{currentStatus === "Disetujui" ? <button className={`featured-toggle ${Number(row.unggulan) === 1 ? "active" : ""}`} type="button" disabled={featureSavingId === row.id} onClick={() => void toggleFeatured(row)} title={Number(row.unggulan) === 1 ? "Hapus dari Pelaku Unggulan" : "Jadikan Pelaku Unggulan"}><PortalIcon name="star" />{featureSavingId === row.id ? "Menyimpan" : Number(row.unggulan) === 1 ? "Unggulan" : "Jadikan unggulan"}</button> : <span className="featured-disabled">Setujui dulu</span>}</td>}
                 <td data-label="Tanggal">{formatDate(row.created_at, true)}</td>
-                <td data-label="Aksi"><button className="review-button" type="button" onClick={() => openReview(row)}><PortalIcon name="eye" />Tinjau</button></td>
+                <td data-label="Aksi"><div className="submission-action-buttons"><button className="review-button" type="button" onClick={() => openReview(row)}><PortalIcon name="eye" />Tinjau</button><button className="delete-button" type="button" disabled={deletingId === row.id} onClick={() => void deleteSubmission(row)}><PortalIcon name="trash" />{deletingId === row.id ? "Menghapus…" : "Hapus"}</button></div></td>
               </tr>;
             })}
           </tbody>
@@ -278,8 +303,9 @@ export function SubmissionManager({ type }: Props) {
               <label className="portal-field full"><span>Catatan Verifikasi / Alasan Penolakan</span><textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Tambahkan catatan. Wajib diisi apabila pengajuan ditolak." /></label>
               {error && <div className="portal-alert error">{error}</div>}
               <div className="verification-actions">
-                <button className="verify-reject" type="button" disabled={saving} onClick={() => void verify("reject")}><PortalIcon name="x" />Tolak Pengajuan</button>
-                <button className="verify-approve" type="button" disabled={saving} onClick={() => void verify("approve")}><PortalIcon name="check" />{saving ? "Menyimpan…" : "Setujui Pengajuan"}</button>
+                <button className="delete-button danger" type="button" disabled={saving || deletingId === selected.id} onClick={() => void deleteSubmission(selected)}><PortalIcon name="trash" />{deletingId === selected.id ? "Menghapus…" : "Hapus Permanen"}</button>
+                <button className="verify-reject" type="button" disabled={saving || deletingId === selected.id} onClick={() => void verify("reject")}><PortalIcon name="x" />Tolak Pengajuan</button>
+                <button className="verify-approve" type="button" disabled={saving || deletingId === selected.id} onClick={() => void verify("approve")}><PortalIcon name="check" />{saving ? "Menyimpan…" : "Setujui Pengajuan"}</button>
               </div>
             </div>
           </div>

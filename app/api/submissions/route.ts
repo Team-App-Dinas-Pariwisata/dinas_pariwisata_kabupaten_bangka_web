@@ -3,6 +3,7 @@ import { requireRequestRole } from "@/lib/auth";
 import { notifySubmissionDecision } from "@/lib/submission-notifications";
 import type { SubmissionType } from "@/lib/submission-config";
 import { byNumericId, createNumeric, dbNow, getAll, getById, isTruthyDb, updateById, type DbRecord } from "@/lib/realtime-db";
+import { deleteSubmissionWithFiles } from "@/lib/staff-record-cleanup";
 
 function validType(value: string | null): value is SubmissionType {
   return value === "ekraf" || value === "sdm" || value === "komunitas";
@@ -154,5 +155,31 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     console.error("Submission verify error:", error);
     return NextResponse.json({ message: "Verifikasi gagal disimpan ke Firebase Realtime Database." }, { status: 500 });
+  }
+}
+
+
+export async function DELETE(request: NextRequest) {
+  const user = await requireRequestRole(request, "pengguna");
+  if (!user) return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+
+  try {
+    const body = await request.json() as { type?: string; id?: number | string };
+    const type = String(body.type ?? "");
+    const id = Number(body.id);
+    if (!validType(type) || !Number.isSafeInteger(id) || id <= 0) {
+      return NextResponse.json({ message: "Jenis atau ID pengajuan tidak valid." }, { status: 400 });
+    }
+
+    const result = await deleteSubmissionWithFiles(type, id);
+    return NextResponse.json({
+      message: `Pengajuan berhasil dihapus. ${result.deletedFiles} file Cloudflare R2 ikut dihapus.`,
+      data: result,
+    });
+  } catch (error) {
+    console.error("Submission delete error:", error);
+    const message = error instanceof Error ? error.message : "Pengajuan gagal dihapus.";
+    const status = message.includes("tidak ditemukan") ? 404 : 500;
+    return NextResponse.json({ message }, { status });
   }
 }

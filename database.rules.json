@@ -1,6 +1,151 @@
 {
   "rules": {
     ".read": false,
-    ".write": false
+    ".write": false,
+
+    "pengguna": {
+      "$id": {
+        ".read": "auth != null && (auth.token.db_id == $id || auth.token.role == 'admin')",
+        ".write": false
+      }
+    },
+
+    "master_kategori_berita": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')"
+    },
+    "master_kategori_acara": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')"
+    },
+    "master_kategori_wisata": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')"
+    },
+    "master_kategori_kuliner": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')"
+    },
+    "master_jenis_hotel": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')"
+    },
+    "master_kecamatan": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')"
+    },
+    "master_kelurahan": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')"
+    },
+    "master_status_konservasi": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')"
+    },
+    "master_subsektor_ekraf": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')"
+    },
+    "master_komunitas": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')"
+    },
+
+    "berita": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')",
+      ".indexOn": ["dipublikasikan", "aktif", "tanggal_publikasi"]
+    },
+    "acara": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')",
+      ".indexOn": ["dipublikasikan", "aktif", "tanggal_publikasi", "tanggal_mulai"]
+    },
+    "tempat_wisata": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')",
+      ".indexOn": ["dipublikasikan", "aktif", "tanggal_publikasi", "kategori_wisata_id", "kecamatan_id"]
+    },
+    "hotel": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')",
+      ".indexOn": ["dipublikasikan", "aktif", "tanggal_publikasi", "jenis_hotel_id", "kecamatan_id"]
+    },
+    "kuliner": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')",
+      ".indexOn": ["dipublikasikan", "aktif", "tanggal_publikasi", "kategori_kuliner_id", "kecamatan_id"]
+    },
+    "satwa_endemik": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')",
+      ".indexOn": ["dipublikasikan", "aktif", "tanggal_publikasi", "status_konservasi_id"]
+    },
+
+    "satwa_endemik_lokasi": {
+      ".read": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')",
+      ".write": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')",
+      ".indexOn": ["satwa_endemik_id", "aktif", "tingkat_sensitivitas"]
+    },
+    "public_satwa_locations": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')"
+    },
+    "public_directory": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')"
+    },
+
+    "pengajuan_ekraf": {
+      ".read": "auth != null && ((auth.token.role == 'admin' || auth.token.role == 'pengguna') || (query.orderByChild == 'created_by_uid' && query.equalTo == auth.uid))",
+      ".indexOn": ["created_by_uid", "status", "created_at"],
+      "$id": {
+        ".read": "auth != null && ((auth.token.role == 'admin' || auth.token.role == 'pengguna') || data.child('created_by_uid').val() == auth.uid)",
+        ".write": "auth != null && ((auth.token.role == 'admin' || auth.token.role == 'pengguna') || ((!data.exists() && newData.child('created_by_uid').val() == auth.uid && newData.child('status').val() == 'Menunggu') || (data.exists() && data.child('created_by_uid').val() == auth.uid && newData.child('created_by_uid').val() == auth.uid && newData.child('status').val() == 'Menunggu')))"
+      }
+    },
+    "pengajuan_sdm_pariwisata": {
+      ".read": "auth != null && ((auth.token.role == 'admin' || auth.token.role == 'pengguna') || (query.orderByChild == 'created_by_uid' && query.equalTo == auth.uid))",
+      ".indexOn": ["created_by_uid", "status_pengajuan", "created_at"],
+      "$id": {
+        ".read": "auth != null && ((auth.token.role == 'admin' || auth.token.role == 'pengguna') || data.child('created_by_uid').val() == auth.uid)",
+        ".write": "auth != null && ((auth.token.role == 'admin' || auth.token.role == 'pengguna') || ((!data.exists() && newData.child('created_by_uid').val() == auth.uid && newData.child('status_pengajuan').val() == 'Menunggu') || (data.exists() && data.child('created_by_uid').val() == auth.uid && newData.child('created_by_uid').val() == auth.uid && newData.child('status_pengajuan').val() == 'Menunggu')))"
+      }
+    },
+    "pengajuan_komunitas_asosiasi": {
+      ".read": "auth != null && ((auth.token.role == 'admin' || auth.token.role == 'pengguna') || (query.orderByChild == 'created_by_uid' && query.equalTo == auth.uid))",
+      ".indexOn": ["created_by_uid", "status_pengajuan", "created_at"],
+      "$id": {
+        ".read": "auth != null && ((auth.token.role == 'admin' || auth.token.role == 'pengguna') || data.child('created_by_uid').val() == auth.uid)",
+        ".write": "auth != null && ((auth.token.role == 'admin' || auth.token.role == 'pengguna') || ((!data.exists() && newData.child('created_by_uid').val() == auth.uid && newData.child('status_pengajuan').val() == 'Menunggu') || (data.exists() && data.child('created_by_uid').val() == auth.uid && newData.child('created_by_uid').val() == auth.uid && newData.child('status_pengajuan').val() == 'Menunggu')))"
+      }
+    },
+
+    "laporan_deteksi": {
+      ".read": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')",
+      ".indexOn": ["reporter_uid", "created_at", "lokasi_id", "lokasi_jenis", "lokasi_nama", "deteksi_utama"],
+      "$id": {
+        ".write": "auth != null && ((auth.token.role == 'admin' || auth.token.role == 'pengguna') || (!data.exists() && newData.child('reporter_uid').val() == auth.uid))"
+      }
+    },
+
+    "mobile_chat_conversations": {
+      ".read": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')",
+      ".indexOn": ["last_message_at", "status"],
+      "$uid": {
+        ".read": "auth != null && (auth.uid == $uid || auth.token.role == 'admin' || auth.token.role == 'pengguna')",
+        ".write": "auth != null && (auth.uid == $uid || auth.token.role == 'admin' || auth.token.role == 'pengguna')"
+      }
+    },
+    "mobile_chat_messages": {
+      ".read": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')",
+      "$uid": {
+        ".read": "auth != null && (auth.uid == $uid || auth.token.role == 'admin' || auth.token.role == 'pengguna')",
+        ".indexOn": ["created_at", "read_by_staff", "sender_type"],
+        "$messageId": {
+          ".write": "auth != null && (auth.uid == $uid || auth.token.role == 'admin' || auth.token.role == 'pengguna')"
+        }
+      }
+    }
   }
 }

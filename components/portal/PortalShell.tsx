@@ -39,6 +39,7 @@ const userMenu: MenuItem[] = [
   { key: "hotel", href: "/dashboard/wisata/hotel", label: "Hotel", icon: "box" },
   { key: "kuliner", href: "/dashboard/wisata/kuliner", label: "Kuliner", icon: "tag" },
   { key: "satwa-endemik", href: "/dashboard/wisata/satwa-endemik", label: "Satwa Endemik", icon: "eye" },
+  { key: "monitoring-deteksi", href: "/dashboard/monitoring-deteksi", label: "Monitoring Deteksi Sampah", icon: "report" },
   { key: "laporan", href: "/dashboard/laporan", label: "Laporan", icon: "report" },
   { key: "pengaturan", href: "/dashboard/pengaturan", label: "Pengaturan", icon: "settings" },
 ];

@@ -262,15 +262,35 @@ export function keyFromR2SubmissionStorageReference(value: string | undefined | 
 
   try {
     const parsed = new URL(trimmed, "http://local.invalid");
-    if (trimmed.startsWith("/") && parsed.pathname === SUBMISSION_PROXY_PATH) {
+    if (parsed.pathname === SUBMISSION_PROXY_PATH) {
       const key = parsed.searchParams.get("key");
       return key && isManagedR2SubmissionKey(key) ? key : null;
     }
+
+    const hostname = parsed.hostname.toLowerCase();
+    if (hostname === "r2.dev" || hostname.endsWith(".r2.dev")) {
+      const encodedKey = parsed.pathname.replace(/^\/+/, "");
+      const key = encodedKey.split("/").map((part) => decodeURIComponent(part)).join("/");
+      return isManagedR2SubmissionKey(key) ? key : null;
+    }
   } catch {
-    return null;
+    // Nilai bisa berupa raw object key, lanjutkan ke pengecekan di bawah.
   }
 
-  return isManagedR2SubmissionKey(trimmed) ? trimmed : null;
+  if (isManagedR2SubmissionKey(trimmed)) return trimmed;
+
+  const base = publicBaseUrl();
+  if (base && trimmed.startsWith(`${base}/`)) {
+    try {
+      const encodedKey = trimmed.slice(base.length + 1);
+      const key = encodedKey.split("/").map((part) => decodeURIComponent(part)).join("/");
+      return isManagedR2SubmissionKey(key) ? key : null;
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
 }
 
 export function keyFromR2StorageReference(value: string | undefined | null) {
@@ -282,7 +302,7 @@ export function keyFromR2StorageReference(value: string | undefined | null) {
     const parsed = new URL(trimmed, "http://local.invalid");
 
     // Proxy internal aplikasi.
-    if (trimmed.startsWith("/") && parsed.pathname === PROXY_PATH) {
+    if (parsed.pathname === PROXY_PATH) {
       const key = parsed.searchParams.get("key");
       return key && isManagedR2ImageKey(key) ? key : null;
     }

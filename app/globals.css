@@ -11713,3 +11713,41 @@ body {
     font-size: 0.8rem;
   }
 }
+
+/* Petugas: penghapusan pengajuan + monitoring deteksi */
+.submission-action-buttons { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.delete-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 8px 11px; border: 1px solid #e3a5a5; border-radius: 9px; background: #fff7f7; color: #a32f2f; font: inherit; font-size: 13px; font-weight: 750; cursor: pointer; }
+.delete-button:hover:not(:disabled) { background: #fdeaea; border-color: #d98989; }
+.delete-button:disabled { opacity: .55; cursor: not-allowed; }
+.delete-button svg { width: 16px; height: 16px; }
+.delete-button.danger { margin-right: auto; }
+
+.detection-toolbar { display: grid; grid-template-columns: minmax(240px, 1fr) auto; gap: 12px; align-items: center; margin: 16px 0; }
+.detection-search { display: flex; align-items: center; gap: 9px; border: 1px solid #d7e2e6; border-radius: 11px; background: #fff; padding: 0 12px; }
+.detection-search svg { width: 18px; height: 18px; color: #6f818b; }
+.detection-search input { width: 100%; min-height: 42px; border: 0; outline: 0; background: transparent; font: inherit; }
+.detection-monitor-grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: 14px; margin-bottom: 16px; }
+.detection-panel { background: #fff; border: 1px solid #e0e8eb; border-radius: 14px; padding: 16px; box-shadow: 0 5px 18px rgba(21, 50, 67, .045); }
+.detection-panel h2 { margin: 0; color: #18364c; font-size: 16px; }
+.detection-panel > p { margin: 4px 0 14px; color: #72858f; font-size: 13px; }
+.detection-bars { height: 190px; display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; align-items: end; }
+.detection-bar-item { min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: end; align-items: center; gap: 6px; }
+.detection-bar-value { font-size: 11px; font-weight: 800; color: #506873; }
+.detection-bar-track { width: min(32px, 75%); height: 135px; display: flex; align-items: end; border-radius: 8px 8px 3px 3px; background: #edf4f6; overflow: hidden; }
+.detection-bar-fill { width: 100%; min-height: 2px; border-radius: 8px 8px 0 0; background: #5e8b9d; }
+.detection-bar-label { font-size: 10.5px; color: #71838d; white-space: nowrap; }
+.detection-ranking { display: grid; gap: 10px; }
+.detection-ranking-row { display: grid; grid-template-columns: 28px minmax(0,1fr) auto; gap: 9px; align-items: center; }
+.detection-ranking-row > span:first-child { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: #e8f1f4; color: #18364c; font-size: 12px; font-weight: 900; }
+.detection-ranking-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.detection-ranking-row small { font-weight: 850; color: #5e8b9d; }
+.detection-image-thumb { width: 98px; height: 76px; object-fit: cover; border-radius: 9px; border: 1px solid #dce7ea; background: #edf4f6; }
+.detection-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.detection-tag { display: inline-flex; padding: 4px 7px; border-radius: 999px; background: #eaf2f4; color: #254b60; font-size: 11px; font-weight: 750; }
+.detection-modal-image { display: block; width: 100%; max-height: 430px; object-fit: contain; border-radius: 12px; background: #eef4f6; }
+.detection-detail-list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px 16px; margin-top: 15px; }
+.detection-detail-list > div { min-width: 0; }
+.detection-detail-list span { display: block; color: #7b8c95; font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.detection-detail-list strong { display: block; margin-top: 3px; color: #1a3444; font-size: 13.5px; overflow-wrap: anywhere; }
+@media (max-width: 900px) { .detection-monitor-grid { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { .detection-toolbar { grid-template-columns: 1fr; } .detection-detail-list { grid-template-columns: 1fr; } .detection-image-thumb { width: 78px; height: 64px; } }
