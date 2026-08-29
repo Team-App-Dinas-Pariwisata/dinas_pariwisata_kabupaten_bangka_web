@@ -8,6 +8,9 @@ const SEEN_KEY = "si_parik_guest_chat_seen_v1";
 const GUEST_POLL_MS = 4000;
 const PRESENCE_POLL_MS = 15000;
 
+// AI chat is allowed on local development/runtime only. On a deployed
+// production hostname (including Vercel), the widget becomes staff-only.
+
 type ChatTab = "staff" | "ai";
 
 type ChatMessage = {
@@ -70,9 +73,10 @@ export default function GuestSupportChat() {
   const pathname = usePathname();
   const hidden = ["/dashboard", "/admin", "/petugas", "/login", "/akun"].some((prefix) => pathname.startsWith(prefix));
 
+  const [aiChatEnabled, setAiChatEnabled] = useState<boolean | null>(null);
   const [guestId, setGuestId] = useState("");
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<ChatTab>("ai");
+  const [activeTab, setActiveTab] = useState<ChatTab>("staff");
   const [onlineStaffCount, setOnlineStaffCount] = useState<number | null>(null);
   const presenceResolvedRef = useRef(false);
 
@@ -94,6 +98,19 @@ export default function GuestSupportChat() {
   ]);
 
   useEffect(() => {
+    const hostname = window.location.hostname.toLowerCase();
+    const localHostname =
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "::1" ||
+      hostname.endsWith(".localhost");
+
+    // Development builds remain AI-enabled, including access through a LAN IP.
+    // Production builds only keep AI when they are actually opened on localhost.
+    setAiChatEnabled(process.env.NODE_ENV !== "production" || localHostname);
+  }, []);
+
+  useEffect(() => {
     if (hidden) return;
     let value = window.localStorage.getItem(STORAGE_KEY) ?? "";
     if (!/^guest_[a-zA-Z0-9_-]{20,80}$/.test(value)) {
@@ -105,7 +122,7 @@ export default function GuestSupportChat() {
   }, [hidden]);
 
   const checkPresence = useCallback(async () => {
-    if (hidden) return;
+    if (hidden || aiChatEnabled === null) return;
     try {
       const response = await fetch("/api/chat/presence", { cache: "no-store" });
       const payload = await response.json() as { data?: { online_count?: number } };
@@ -114,23 +131,23 @@ export default function GuestSupportChat() {
 
       if (!presenceResolvedRef.current) {
         presenceResolvedRef.current = true;
-        setActiveTab(count > 0 ? "staff" : "ai");
+        setActiveTab(count > 0 || !aiChatEnabled ? "staff" : "ai");
       }
     } catch {
       setOnlineStaffCount(0);
       if (!presenceResolvedRef.current) {
         presenceResolvedRef.current = true;
-        setActiveTab("ai");
+        setActiveTab(aiChatEnabled ? "ai" : "staff");
       }
     }
-  }, [hidden]);
+  }, [hidden, aiChatEnabled]);
 
   useEffect(() => {
-    if (hidden) return;
+    if (hidden || aiChatEnabled === null) return;
     void checkPresence();
     const timer = window.setInterval(() => void checkPresence(), PRESENCE_POLL_MS);
     return () => window.clearInterval(timer);
-  }, [checkPresence, hidden]);
+  }, [checkPresence, hidden, aiChatEnabled]);
 
   const loadMessages = useCallback(async () => {
     if (!guestId) return;
@@ -167,7 +184,7 @@ export default function GuestSupportChat() {
 
   function openPanel() {
     setIsOpen(true);
-    setActiveTab(staffOnline ? "staff" : "ai");
+    setActiveTab(staffOnline || !aiChatEnabled ? "staff" : "ai");
     void checkPresence();
   }
 
@@ -276,7 +293,7 @@ export default function GuestSupportChat() {
   const latestAssistant = [...aiMessages].reverse().find((message) => message.role === "assistant" && message.suggestions?.length);
   const aiSuggestions = latestAssistant?.suggestions ?? aiExamples;
 
-  if (hidden) return null;
+  if (hidden || aiChatEnabled === null) return null;
 
   return (
     <>
@@ -295,42 +312,46 @@ export default function GuestSupportChat() {
         <section className="ai-panel unified-chat-panel" role="dialog" aria-label="Pojok Bincang">
           <header className="ai-panel-head unified-chat-head">
             <div>
-              <span className={`ai-status ${staffOnline ? "is-staff-online" : "is-ai-online"}`}>
+              <span className={`ai-status ${staffOnline ? "is-staff-online" : aiChatEnabled ? "is-ai-online" : ""}`}>
                 <i />
                 {staffOnline
                   ? `${onlineStaffCount} PETUGAS ONLINE`
-                  : onlineStaffCount === null ? "MENGECEK PETUGAS" : "AI ONLINE · PETUGAS OFFLINE"}
+                  : onlineStaffCount === null
+                    ? "MENGECEK PETUGAS"
+                    : aiChatEnabled ? "AI ONLINE · PETUGAS OFFLINE" : "PETUGAS OFFLINE"}
               </span>
               <strong>POJOK BINCANG</strong>
-              <small>Asisten pengajuan, ekraf &amp; pariwisata</small>
+              <small>{aiChatEnabled ? "Asisten pengajuan, ekraf & pariwisata" : "Chat langsung dengan petugas"}</small>
             </div>
             <button type="button" onClick={() => setIsOpen(false)} aria-label="Tutup Pojok Bincang">×</button>
           </header>
 
-          <div className="unified-chat-tabs" role="tablist" aria-label="Pilihan layanan chat">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === "staff"}
-              className={activeTab === "staff" ? "active" : ""}
-              onClick={() => setActiveTab("staff")}
-            >
-              <span>Chat dengan Petugas</span>
-              <small>{staffOnline ? `${onlineStaffCount} online` : onlineStaffCount === null ? "Mengecek..." : "Offline · tetap bisa kirim"}</small>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === "ai"}
-              className={activeTab === "ai" ? "active" : ""}
-              onClick={() => setActiveTab("ai")}
-            >
-              <span>Chat dengan AI</span>
-              <small>Siap digunakan</small>
-            </button>
-          </div>
+          {aiChatEnabled && (
+            <div className="unified-chat-tabs" role="tablist" aria-label="Pilihan layanan chat">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "staff"}
+                className={activeTab === "staff" ? "active" : ""}
+                onClick={() => setActiveTab("staff")}
+              >
+                <span>Chat dengan Petugas</span>
+                <small>{staffOnline ? `${onlineStaffCount} online` : onlineStaffCount === null ? "Mengecek..." : "Offline · tetap bisa kirim"}</small>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "ai"}
+                className={activeTab === "ai" ? "active" : ""}
+                onClick={() => setActiveTab("ai")}
+              >
+                <span>Chat dengan AI</span>
+                <small>Siap digunakan</small>
+              </button>
+            </div>
+          )}
 
-          {activeTab === "staff" ? (
+          {activeTab === "staff" || !aiChatEnabled ? (
             <div className="unified-staff-chat" role="tabpanel">
               <div className="support-chat-meta">ID Pengunjung: <strong>{guestId ? shortGuestId(guestId) : "..."}</strong></div>
 
