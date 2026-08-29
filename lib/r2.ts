@@ -26,7 +26,7 @@ const SUBMISSION_EXTENSIONS: Record<string, string> = {
 const DEFAULT_MAX_SUBMISSION_BYTES = 5 * 1024 * 1024;
 const SUBMISSION_PROXY_PATH = "/api/uploads/r2/submission";
 
-type R2Resource = "berita" | "acara" | "tempat-wisata" | "hotel" | "kuliner" | "satwa-endemik";
+type R2Resource = "berita" | "acara" | "tempat-wisata" | "hotel" | "kuliner" | "satwa-endemik" | "deteksi";
 export type R2SubmissionType = "ekraf" | "sdm" | "komunitas";
 
 type R2Config = {
@@ -227,7 +227,7 @@ export function isManagedR2ImageKey(key: string) {
   }
 
   const prefix = configuredPrefix();
-  return ["berita", "acara", "tempat-wisata", "hotel", "kuliner", "satwa-endemik"]
+  return ["berita", "acara", "tempat-wisata", "hotel", "kuliner", "satwa-endemik", "deteksi"]
     .some((resource) => key.startsWith(`${prefix}/${resource}/`));
 }
 
@@ -426,7 +426,7 @@ function cloudflareS3Error(error: unknown, action: string) {
 }
 
 export async function uploadImageToR2(file: File, resource: string): Promise<R2UploadResult> {
-  const allowedResources: R2Resource[] = ["berita", "acara", "tempat-wisata", "hotel", "kuliner", "satwa-endemik"];
+  const allowedResources: R2Resource[] = ["berita", "acara", "tempat-wisata", "hotel", "kuliner", "satwa-endemik", "deteksi"];
   if (!allowedResources.includes(resource as R2Resource)) {
     throw new Error("Resource upload R2 tidak valid.");
   }

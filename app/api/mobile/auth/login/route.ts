@@ -3,6 +3,7 @@ import { normalizeDbRole } from "@/lib/auth";
 import { dbNow, findOne, updateById } from "@/lib/realtime-db";
 import { verifyPassword } from "@/lib/password";
 import { createSessionToken, SESSION_COOKIE, sessionCookieOptions, type AppRole } from "@/lib/session";
+import { createFirebaseCustomToken } from "@/lib/firebase-custom-token";
 
 type LoginRow = Record<string, unknown> & { id:number; role:string; name:string; email:string; phone:string|null; avatar_url:string|null; password:string; status:"active"|"inactive" };
 
@@ -22,8 +23,9 @@ export async function POST(request: NextRequest) {
     }
     await updateById("pengguna", row.id, { last_login_at: dbNow() });
     const token = createSessionToken({uid:Number(row.id),role});
+    const firebaseCustomToken = createFirebaseCustomToken({ userId: Number(row.id), role });
     const response = NextResponse.json({
-      message:"Login berhasil.", token,
+      message:"Login berhasil.", token, firebaseCustomToken,
       user:{id:Number(row.id),role,name:row.name,email:row.email,phone:row.phone ?? null,avatarUrl:row.avatar_url ?? null},
     });
     response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");

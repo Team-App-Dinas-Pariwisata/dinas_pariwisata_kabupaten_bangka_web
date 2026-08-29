@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createNumeric, dbNow, getAll, updateById } from "@/lib/realtime-db";
 import { createSessionToken, SESSION_COOKIE, sessionCookieOptions } from "@/lib/session";
+import { createFirebaseCustomToken } from "@/lib/firebase-custom-token";
 
 export const runtime = "nodejs";
 type GoogleTokenInfo = { sub?:string; email?:string; email_verified?:string|boolean; name?:string; picture?:string; aud?:string; error_description?:string };
@@ -60,7 +61,8 @@ export async function POST(request: NextRequest) {
     }
 
     const token = createSessionToken({uid:userId,role:"pengaju"});
-    const response = NextResponse.json({message:"Login Google berhasil.",token,user:{id:userId,role:"pengaju",name:profile.name?.trim() || email.split("@")[0],email,phone:null,avatarUrl:profile.picture || null}});
+    const firebaseCustomToken = createFirebaseCustomToken({ userId, role: "pengaju" });
+    const response = NextResponse.json({message:"Login Google berhasil.",token,firebaseCustomToken,user:{id:userId,role:"pengaju",name:profile.name?.trim() || email.split("@")[0],email,phone:null,avatarUrl:profile.picture || null}});
     response.cookies.set(SESSION_COOKIE,token,sessionCookieOptions());
     return response;
   } catch (error) {
