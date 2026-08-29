@@ -1,60 +1,66 @@
-import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { NextRequest, NextResponse } from "next/server";
 import { requireRequestRole } from "@/lib/auth";
-import { db } from "@/lib/db";
 import { notifySubmissionDecision } from "@/lib/submission-notifications";
 import type { SubmissionType } from "@/lib/submission-config";
-
-const listQueries: Record<SubmissionType, string> = {
-  ekraf: `
-    SELECT p.*,
-      COALESCE(p.status, 'Menunggu') AS status_label,
-      s.nama_subsektor AS subsektor_label,
-      kd.nama_kecamatan AS kecamatan_label,
-      ld.nama_kelurahan AS kelurahan_label,
-      ku.nama_komunitas AS komunitas_label,
-      ku2.nama_kecamatan AS kecamatan_usaha_label,
-      lu2.nama_kelurahan AS kelurahan_usaha_label
-    FROM pengajuan_ekraf p
-    LEFT JOIN master_subsektor_ekraf s ON s.id = p.subsektor_id
-    LEFT JOIN master_kecamatan kd ON kd.id = p.kecamatan_id
-    LEFT JOIN master_kelurahan ld ON ld.id = p.kelurahan_id
-    LEFT JOIN master_komunitas ku ON ku.id = p.komunitas_id
-    LEFT JOIN master_kecamatan ku2 ON ku2.id = p.kecamatan_usaha_id
-    LEFT JOIN master_kelurahan lu2 ON lu2.id = p.kelurahan_usaha_id
-    ORDER BY p.created_at DESC`,
-  sdm: `
-    SELECT p.*, p.status_pengajuan AS status_label
-    FROM pengajuan_sdm_pariwisata p
-    ORDER BY p.created_at DESC`,
-  komunitas: `
-    SELECT p.*, p.status_pengajuan AS status_label,
-      s.nama_subsektor AS subsektor_label,
-      k.nama_kecamatan AS kecamatan_label,
-      l.nama_kelurahan AS kelurahan_label
-    FROM pengajuan_komunitas_asosiasi p
-    LEFT JOIN master_subsektor_ekraf s ON s.id = p.subsektor_id
-    LEFT JOIN master_kecamatan k ON k.id = p.kecamatan_id
-    LEFT JOIN master_kelurahan l ON l.id = p.kelurahan_id
-    ORDER BY p.created_at DESC`,
-};
+import { byNumericId, createNumeric, dbNow, getAll, getById, isTruthyDb, updateById, type DbRecord } from "@/lib/realtime-db";
 
 function validType(value: string | null): value is SubmissionType {
   return value === "ekraf" || value === "sdm" || value === "komunitas";
 }
 
-export async function GET(request: NextRequest) {
-  if (!(await requireRequestRole(request, "pengguna"))) {
-    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+const tableByType: Record<SubmissionType, string> = {
+  ekraf: "pengajuan_ekraf",
+  sdm: "pengajuan_sdm_pariwisata",
+  komunitas: "pengajuan_komunitas_asosiasi",
+};
+
+function sortNewest<T extends DbRecord>(rows: T[]) {
+  return rows.sort((a, b) => String(b.created_at ?? "").localeCompare(String(a.created_at ?? "")) || Number(b.id ?? 0) - Number(a.id ?? 0));
+}
+
+async function listRows(type: SubmissionType) {
+  const rows = await getAll(tableByType[type]);
+  if (type === "sdm") return sortNewest(rows).map((row) => ({ ...row, status_label: row.status_pengajuan ?? "Menunggu" }));
+
+  const [subsectors, districts, villages, communities] = await Promise.all([
+    getAll("master_subsektor_ekraf"), getAll("master_kecamatan"), getAll("master_kelurahan"), getAll("master_komunitas"),
+  ]);
+  const s = byNumericId(subsectors);
+  const k = byNumericId(districts);
+  const l = byNumericId(villages);
+  const c = byNumericId(communities);
+
+  if (type === "ekraf") {
+    return sortNewest(rows).map((row) => ({
+      ...row,
+      status_label: row.status ?? "Menunggu",
+      subsektor_label: s.get(Number(row.subsektor_id))?.nama_subsektor ?? null,
+      kecamatan_label: k.get(Number(row.kecamatan_id))?.nama_kecamatan ?? null,
+      kelurahan_label: l.get(Number(row.kelurahan_id))?.nama_kelurahan ?? null,
+      komunitas_label: c.get(Number(row.komunitas_id))?.nama_komunitas ?? null,
+      kecamatan_usaha_label: k.get(Number(row.kecamatan_usaha_id))?.nama_kecamatan ?? null,
+      kelurahan_usaha_label: l.get(Number(row.kelurahan_usaha_id))?.nama_kelurahan ?? null,
+    }));
   }
+
+  return sortNewest(rows).map((row) => ({
+    ...row,
+    status_label: row.status_pengajuan ?? "Menunggu",
+    subsektor_label: s.get(Number(row.subsektor_id))?.nama_subsektor ?? null,
+    kecamatan_label: k.get(Number(row.kecamatan_id))?.nama_kecamatan ?? null,
+    kelurahan_label: l.get(Number(row.kelurahan_id))?.nama_kelurahan ?? null,
+  }));
+}
+
+export async function GET(request: NextRequest) {
+  if (!(await requireRequestRole(request, "pengguna"))) return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
   const type = request.nextUrl.searchParams.get("type");
   if (!validType(type)) return NextResponse.json({ message: "Jenis pengajuan tidak valid." }, { status: 400 });
   try {
-    const [rows] = await db().query<RowDataPacket[]>(listQueries[type]);
-    return NextResponse.json({ data: rows });
+    return NextResponse.json({ data: await listRows(type) });
   } catch (error) {
     console.error("Submission list error:", error);
-    return NextResponse.json({ message: "Data pengajuan gagal dimuat dari database." }, { status: 500 });
+    return NextResponse.json({ message: "Data pengajuan gagal dimuat dari Firebase Realtime Database." }, { status: 500 });
   }
 }
 
@@ -69,112 +75,84 @@ export async function PATCH(request: NextRequest) {
   const note = String(body.note ?? "").trim();
 
   if (action === "feature") {
-    if (type !== "ekraf" || !id) {
-      return NextResponse.json({ message: "Permintaan unggulan tidak valid." }, { status: 400 });
-    }
-    const unggulan = Number(body.unggulan) === 1 ? 1 : 0;
+    if (type !== "ekraf" || !id) return NextResponse.json({ message: "Permintaan unggulan tidak valid." }, { status: 400 });
     try {
-      const [result] = await db().execute<ResultSetHeader>(
-        "UPDATE pengajuan_ekraf SET unggulan = ?, updated_by = ? WHERE id = ? AND status = 'Disetujui'",
-        [unggulan, user.id, id],
-      );
-      if (!result.affectedRows) {
+      const current = await getById("pengajuan_ekraf", id);
+      if (!current || String(current.status) !== "Disetujui") {
         return NextResponse.json({ message: "Hanya Pelaku Ekraf yang sudah disetujui yang dapat ditandai sebagai unggulan." }, { status: 400 });
       }
+      const unggulan = Number(body.unggulan) === 1 ? 1 : 0;
+      await updateById("pengajuan_ekraf", id, { unggulan, updated_by: user.id });
       return NextResponse.json({ message: unggulan ? "Pelaku Ekraf ditandai sebagai unggulan." : "Status unggulan Pelaku Ekraf dihapus." });
     } catch (error) {
       console.error("Submission feature error:", error);
-      return NextResponse.json({ message: "Status unggulan gagal disimpan ke database." }, { status: 500 });
+      return NextResponse.json({ message: "Status unggulan gagal disimpan ke Firebase Realtime Database." }, { status: 500 });
     }
   }
 
-  if (!validType(type) || !id || !["approve", "reject"].includes(action)) {
-    return NextResponse.json({ message: "Permintaan verifikasi tidak valid." }, { status: 400 });
-  }
-  if (action === "reject" && !note) {
-    return NextResponse.json({ message: "Alasan penolakan wajib diisi." }, { status: 400 });
-  }
+  if (!validType(type) || !id || !["approve", "reject"].includes(action)) return NextResponse.json({ message: "Permintaan verifikasi tidak valid." }, { status: 400 });
+  if (action === "reject" && !note) return NextResponse.json({ message: "Alasan penolakan wajib diisi." }, { status: 400 });
 
-  const connection = await db().getConnection();
   try {
-    await connection.beginTransaction();
+    const table = tableByType[type];
+    const current = await getById(table, id);
+    if (!current) return NextResponse.json({ message: "Pengajuan tidak ditemukan." }, { status: 404 });
+
     const status: "Disetujui" | "Ditolak" = action === "approve" ? "Disetujui" : "Ditolak";
+    const now = dbNow();
 
     if (type === "ekraf") {
-      const [result] = await connection.execute<ResultSetHeader>(
-        `UPDATE pengajuan_ekraf
-         SET status = ?, catatan_verifikasi = ?, diverifikasi_oleh = ?, tanggal_verifikasi = NOW(), updated_by = ?,
-             unggulan = CASE WHEN ? = 'Disetujui' THEN unggulan ELSE 0 END
-         WHERE id = ?`,
-        [status, note || null, user.id, user.id, status, id],
-      );
-      if (!result.affectedRows) throw new Error("NOT_FOUND");
-    }
-
-    if (type === "sdm") {
-      const [result] = await connection.execute<ResultSetHeader>(
-        `UPDATE pengajuan_sdm_pariwisata
-         SET status_pengajuan = ?, catatan_verifikasi = ?, alasan_penolakan = ?, diverifikasi_oleh = ?, tanggal_verifikasi = NOW(), updated_by = ?,
-             dipublikasikan = CASE WHEN ? = 'Disetujui' AND persetujuan_publikasi = 1 THEN 1 ELSE 0 END,
-             tanggal_publikasi = CASE WHEN ? = 'Disetujui' AND persetujuan_publikasi = 1 THEN COALESCE(tanggal_publikasi, NOW()) ELSE NULL END
-         WHERE id = ?`,
-        [status, note || null, action === "reject" ? note : null, user.id, user.id, status, status, id],
-      );
-      if (!result.affectedRows) throw new Error("NOT_FOUND");
-    }
-
-    if (type === "komunitas") {
-      const [rows] = await connection.execute<(RowDataPacket & {
-        master_komunitas_id: number | null;
-        nama_organisasi: string;
-        nama_ketua: string;
-        no_hp_ketua: string;
-        email: string;
-        alamat: string;
-        rincian: string | null;
-      })[]>(
-        "SELECT master_komunitas_id, nama_organisasi, nama_ketua, no_hp_ketua, email, alamat, rincian FROM pengajuan_komunitas_asosiasi WHERE id = ? FOR UPDATE",
-        [id],
-      );
-      const current = rows[0];
-      if (!current) throw new Error("NOT_FOUND");
-
-      let masterId = current.master_komunitas_id;
+      await updateById(table, id, {
+        status,
+        catatan_verifikasi: note || null,
+        diverifikasi_oleh: user.id,
+        tanggal_verifikasi: now,
+        updated_by: user.id,
+        unggulan: status === "Disetujui" ? Number(current.unggulan ?? 0) : 0,
+      });
+    } else if (type === "sdm") {
+      const publish = status === "Disetujui" && isTruthyDb(current.persetujuan_publikasi);
+      await updateById(table, id, {
+        status_pengajuan: status,
+        catatan_verifikasi: note || null,
+        alasan_penolakan: action === "reject" ? note : null,
+        diverifikasi_oleh: user.id,
+        tanggal_verifikasi: now,
+        updated_by: user.id,
+        dipublikasikan: publish ? 1 : 0,
+        tanggal_publikasi: publish ? (current.tanggal_publikasi ?? now) : null,
+      });
+    } else {
+      let masterId = current.master_komunitas_id == null ? null : Number(current.master_komunitas_id);
       if (action === "approve" && !masterId) {
-        const [master] = await connection.execute<ResultSetHeader>(
-          "INSERT INTO master_komunitas (nama_komunitas, ketua, no_hp, email, alamat, keterangan, aktif) VALUES (?, ?, ?, ?, ?, ?, 1)",
-          [current.nama_organisasi, current.nama_ketua, current.no_hp_ketua, current.email, current.alamat, current.rincian],
-        );
-        masterId = master.insertId;
+        masterId = await createNumeric("master_komunitas", {
+          nama_komunitas: current.nama_organisasi ?? "Komunitas",
+          ketua: current.nama_ketua ?? null,
+          no_hp: current.no_hp_ketua ?? null,
+          email: current.email ?? null,
+          alamat: current.alamat ?? null,
+          keterangan: current.rincian ?? null,
+          aktif: 1,
+        });
       }
-
-      await connection.execute(
-        `UPDATE pengajuan_komunitas_asosiasi
-         SET status_pengajuan = ?, catatan_verifikasi = ?, alasan_penolakan = ?, diverifikasi_oleh = ?, tanggal_verifikasi = NOW(), updated_by = ?,
-             master_komunitas_id = ?,
-             dipublikasikan = CASE WHEN ? = 'Disetujui' AND persetujuan_publikasi = 1 THEN 1 ELSE 0 END,
-             tanggal_publikasi = CASE WHEN ? = 'Disetujui' AND persetujuan_publikasi = 1 THEN COALESCE(tanggal_publikasi, NOW()) ELSE NULL END
-         WHERE id = ?`,
-        [status, note || null, action === "reject" ? note : null, user.id, user.id, masterId, status, status, id],
-      );
+      const publish = status === "Disetujui" && isTruthyDb(current.persetujuan_publikasi);
+      await updateById(table, id, {
+        status_pengajuan: status,
+        catatan_verifikasi: note || null,
+        alasan_penolakan: action === "reject" ? note : null,
+        diverifikasi_oleh: user.id,
+        tanggal_verifikasi: now,
+        updated_by: user.id,
+        master_komunitas_id: masterId,
+        dipublikasikan: publish ? 1 : 0,
+        tanggal_publikasi: publish ? (current.tanggal_publikasi ?? now) : null,
+      });
     }
 
-    await connection.commit();
-
-    // Notifikasi WhatsApp dikirim SETELAH commit, dan best-effort saja:
-    // kegagalan kirim WA (nomor kosong, service belum siap, dsb) tidak boleh
-    // membuat proses verifikasi yang sudah tersimpan terlihat gagal ke petugas.
-    await notifySubmissionDecision({ type: type as SubmissionType, id, status, note });
-
+    await notifySubmissionDecision({ type, id, status, note });
     return NextResponse.json({ message: action === "approve" ? "Pengajuan berhasil disetujui." : "Pengajuan berhasil ditolak." });
   } catch (error) {
-    await connection.rollback();
     console.error("Submission verify error:", error);
-    if (error instanceof Error && error.message === "NOT_FOUND") {
-      return NextResponse.json({ message: "Pengajuan tidak ditemukan." }, { status: 404 });
-    }
-    return NextResponse.json({ message: "Verifikasi gagal disimpan ke database." }, { status: 500 });
-  } finally {
-    connection.release();
+    return NextResponse.json({ message: "Verifikasi gagal disimpan ke Firebase Realtime Database." }, { status: 500 });
   }
 }

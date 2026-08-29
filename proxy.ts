@@ -1,29 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
-import {
-  createSessionToken,
-  SESSION_COOKIE,
-  sessionCookieOptions,
-  verifySessionToken,
-} from "@/lib/session";
+import { NextResponse } from "next/server";
 
 /**
- * Sliding session untuk admin, petugas, dan pengaju.
- * Setiap kali pengguna kembali mengakses portal dengan sesi yang masih valid,
- * masa cookie diperpanjang lagi. Logout tetap menghapus cookie melalui route logout.
+ * Proxy sengaja tidak lagi memperpanjang cookie sesi pada setiap request.
+ * Masa sesi sudah persisten dari saat login. Menulis ulang cookie dari request
+ * biasa dapat menimpa cookie login baru atau menghidupkan kembali sesi lama
+ * ketika response lama selesai sesudah proses logout.
  */
-export function proxy(request: NextRequest) {
-  const response = NextResponse.next();
-
-  // Jangan pernah memperpanjang cookie ketika pengguna sedang logout.
-  if (request.nextUrl.pathname === "/api/auth/logout") return response;
-
-  const currentToken = request.cookies.get(SESSION_COOKIE)?.value;
-  const payload = verifySessionToken(currentToken);
-  if (!payload) return response;
-
-  const refreshedToken = createSessionToken({ uid: payload.uid, role: payload.role });
-  response.cookies.set(SESSION_COOKIE, refreshedToken, sessionCookieOptions());
-  return response;
+export function proxy() {
+  return NextResponse.next();
 }
 
 export const config = {

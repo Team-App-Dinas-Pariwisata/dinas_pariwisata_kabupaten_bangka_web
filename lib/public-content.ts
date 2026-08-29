@@ -1,259 +1,92 @@
-import type { RowDataPacket } from "mysql2/promise";
-import { db } from "@/lib/db";
+import { getAll, isPublishedRecord, isTruthyDb, toTime, type DbRecord } from "@/lib/realtime-db";
 import { browserSafeR2ImageUrl } from "@/lib/r2";
 
 export type PublicNewsItem = {
-  id: number;
-  slug: string;
-  judul: string;
-  subjudul: string | null;
-  ringkasan: string | null;
-  isi: string;
-  penulis_tampil: string | null;
-  sumber_nama: string | null;
-  sumber_url: string | null;
-  foto_utama: string | null;
-  foto_keterangan: string | null;
-  foto_alt: string | null;
-  headline: number;
-  tanggal_publikasi: string | null;
-  nama_kategori: string | null;
+  id: number; slug: string; judul: string; subjudul: string | null; ringkasan: string | null; isi: string;
+  penulis_tampil: string | null; sumber_nama: string | null; sumber_url: string | null; foto_utama: string | null;
+  foto_keterangan: string | null; foto_alt: string | null; headline: number; tanggal_publikasi: string | null; nama_kategori: string | null;
 };
 
 export type PublicEventItem = {
-  id: number;
-  slug: string;
-  nama_acara: string;
-  ringkasan: string | null;
-  deskripsi: string;
-  tanggal_mulai: string;
-  tanggal_selesai: string;
-  sepanjang_hari: number;
-  status_acara: string;
-  jenis_pelaksanaan: string;
-  nama_lokasi: string | null;
-  alamat: string | null;
-  tautan_daring: string | null;
-  penyelenggara: string | null;
-  narahubung_nama: string | null;
-  narahubung_telepon: string | null;
-  narahubung_email: string | null;
-  memerlukan_pendaftaran: number;
-  tautan_pendaftaran: string | null;
-  kuota: number | null;
-  gratis: number;
-  harga_mulai: number | null;
-  harga_sampai: number | null;
-  syarat_ketentuan: string | null;
-  foto_utama: string | null;
-  foto_alt: string | null;
-  unggulan: number;
-  tanggal_publikasi: string | null;
-  nama_kategori: string | null;
+  id: number; slug: string; nama_acara: string; ringkasan: string | null; deskripsi: string; tanggal_mulai: string; tanggal_selesai: string;
+  sepanjang_hari: number; status_acara: string; jenis_pelaksanaan: string; nama_lokasi: string | null; alamat: string | null;
+  tautan_daring: string | null; penyelenggara: string | null; narahubung_nama: string | null; narahubung_telepon: string | null;
+  narahubung_email: string | null; memerlukan_pendaftaran: number; tautan_pendaftaran: string | null; kuota: number | null; gratis: number;
+  harga_mulai: number | null; harga_sampai: number | null; syarat_ketentuan: string | null; foto_utama: string | null; foto_alt: string | null;
+  unggulan: number; tanggal_publikasi: string | null; nama_kategori: string | null;
 };
 
-type CountRow = RowDataPacket & { total: number };
-type NewsRow = RowDataPacket & PublicNewsItem;
-type EventRow = RowDataPacket & PublicEventItem;
+function normalizePage(page: number) { return Number.isFinite(page) && page > 0 ? Math.floor(page) : 1; }
+function textOrNull(value: unknown) { return value == null || String(value).trim() === "" ? null : String(value); }
+function numberOrNull(value: unknown) { const n=Number(value); return value == null || value === "" || !Number.isFinite(n) ? null : n; }
 
-function normalizePage(page: number) {
-  return Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
+async function publicNewsRows(): Promise<PublicNewsItem[]> {
+  const [news, categories] = await Promise.all([getAll<DbRecord>("berita"), getAll<DbRecord>("master_kategori_berita")]);
+  const categoryMap = new Map(categories.filter((row)=>isTruthyDb(row.aktif)).map((row)=>[Number(row.id), String(row.nama_kategori ?? "")]));
+  return news
+    .filter((row)=>isPublishedRecord(row) && categoryMap.has(Number(row.kategori_berita_id)))
+    .map((row)=>({
+      id:Number(row.id), slug:String(row.slug ?? ""), judul:String(row.judul ?? ""), subjudul:textOrNull(row.subjudul), ringkasan:textOrNull(row.ringkasan), isi:String(row.isi ?? ""),
+      penulis_tampil:textOrNull(row.penulis_tampil), sumber_nama:textOrNull(row.sumber_nama), sumber_url:textOrNull(row.sumber_url), foto_utama:textOrNull(row.foto_utama),
+      foto_keterangan:textOrNull(row.foto_keterangan), foto_alt:textOrNull(row.foto_alt), headline:Number(row.headline ?? 0), tanggal_publikasi:textOrNull(row.tanggal_publikasi),
+      nama_kategori:categoryMap.get(Number(row.kategori_berita_id)) ?? null,
+    }))
+    .sort((a,b)=>b.headline-a.headline || toTime(b.tanggal_publikasi)-toTime(a.tanggal_publikasi) || b.id-a.id);
+}
+
+async function publicEventRows(): Promise<PublicEventItem[]> {
+  const [events, categories] = await Promise.all([getAll<DbRecord>("acara"), getAll<DbRecord>("master_kategori_acara")]);
+  const categoryMap = new Map(categories.filter((row)=>isTruthyDb(row.aktif)).map((row)=>[Number(row.id), String(row.nama_kategori ?? "")]));
+  const now = Date.now();
+  return events
+    .filter((row)=>isPublishedRecord(row, now) && String(row.status_acara ?? "") !== "Dibatalkan" && categoryMap.has(Number(row.kategori_acara_id)))
+    .map((row)=>({
+      id:Number(row.id), slug:String(row.slug ?? ""), nama_acara:String(row.nama_acara ?? ""), ringkasan:textOrNull(row.ringkasan), deskripsi:String(row.deskripsi ?? ""),
+      tanggal_mulai:String(row.tanggal_mulai ?? ""), tanggal_selesai:String(row.tanggal_selesai ?? ""), sepanjang_hari:Number(row.sepanjang_hari ?? 0), status_acara:String(row.status_acara ?? ""),
+      jenis_pelaksanaan:String(row.jenis_pelaksanaan ?? ""), nama_lokasi:textOrNull(row.nama_lokasi), alamat:textOrNull(row.alamat), tautan_daring:textOrNull(row.tautan_daring),
+      penyelenggara:textOrNull(row.penyelenggara), narahubung_nama:textOrNull(row.narahubung_nama), narahubung_telepon:textOrNull(row.narahubung_telepon), narahubung_email:textOrNull(row.narahubung_email),
+      memerlukan_pendaftaran:Number(row.memerlukan_pendaftaran ?? 0), tautan_pendaftaran:textOrNull(row.tautan_pendaftaran), kuota:numberOrNull(row.kuota), gratis:Number(row.gratis ?? 0),
+      harga_mulai:numberOrNull(row.harga_mulai), harga_sampai:numberOrNull(row.harga_sampai), syarat_ketentuan:textOrNull(row.syarat_ketentuan), foto_utama:textOrNull(row.foto_utama), foto_alt:textOrNull(row.foto_alt),
+      unggulan:Number(row.unggulan ?? 0), tanggal_publikasi:textOrNull(row.tanggal_publikasi), nama_kategori:categoryMap.get(Number(row.kategori_acara_id)) ?? null,
+    }))
+    .sort((a,b)=>{
+      const aUpcoming=toTime(a.tanggal_selesai)>=now?0:1, bUpcoming=toTime(b.tanggal_selesai)>=now?0:1;
+      if(aUpcoming!==bUpcoming)return aUpcoming-bUpcoming;
+      if(b.unggulan!==a.unggulan)return b.unggulan-a.unggulan;
+      if(aUpcoming===0){const diff=toTime(a.tanggal_mulai)-toTime(b.tanggal_mulai);if(diff)return diff;}
+      else {const diff=toTime(b.tanggal_mulai)-toTime(a.tanggal_mulai);if(diff)return diff;}
+      return b.id-a.id;
+    });
 }
 
 export async function getPublicNewsList(page = 1, pageSize = 9) {
-  const safePage = normalizePage(page);
-  const safeSize = Math.min(Math.max(Math.floor(pageSize), 1), 24);
-  const offset = (safePage - 1) * safeSize;
-
-  const [countRows] = await db().query<CountRow[]>(`
-    SELECT COUNT(*) AS total
-    FROM berita b
-    INNER JOIN master_kategori_berita mkb ON mkb.id = b.kategori_berita_id
-    WHERE b.aktif = 1
-      AND b.dipublikasikan = 1
-      AND b.tanggal_publikasi IS NOT NULL
-      AND b.tanggal_publikasi <= NOW()
-      AND mkb.aktif = 1
-  `);
-
-  const [rows] = await db().query<NewsRow[]>(`
-    SELECT
-      b.id, b.slug, b.judul, b.subjudul, b.ringkasan, b.isi,
-      b.penulis_tampil, b.sumber_nama, b.sumber_url,
-      b.foto_utama, b.foto_keterangan, b.foto_alt,
-      b.headline, b.tanggal_publikasi, mkb.nama_kategori
-    FROM berita b
-    INNER JOIN master_kategori_berita mkb ON mkb.id = b.kategori_berita_id
-    WHERE b.aktif = 1
-      AND b.dipublikasikan = 1
-      AND b.tanggal_publikasi IS NOT NULL
-      AND b.tanggal_publikasi <= NOW()
-      AND mkb.aktif = 1
-    ORDER BY b.headline DESC, b.tanggal_publikasi DESC, b.id DESC
-    LIMIT ? OFFSET ?
-  `, [safeSize, offset]);
-
-  const total = Number(countRows[0]?.total ?? 0);
-  return {
-    items: rows.map((row) => ({ ...row, foto_utama: browserSafeR2ImageUrl(row.foto_utama) })),
-    total,
-    page: safePage,
-    pageSize: safeSize,
-    totalPages: Math.max(1, Math.ceil(total / safeSize)),
-  };
+  const safePage=normalizePage(page), safeSize=Math.min(Math.max(Math.floor(pageSize),1),24), offset=(safePage-1)*safeSize;
+  const rows=await publicNewsRows();
+  return {items:rows.slice(offset,offset+safeSize).map((row)=>({...row,foto_utama:browserSafeR2ImageUrl(row.foto_utama)})),total:rows.length,page:safePage,pageSize:safeSize,totalPages:Math.max(1,Math.ceil(rows.length/safeSize))};
 }
 
 export async function getPublicNewsBySlug(slug: string) {
-  const [rows] = await db().query<NewsRow[]>(`
-    SELECT
-      b.id, b.slug, b.judul, b.subjudul, b.ringkasan, b.isi,
-      b.penulis_tampil, b.sumber_nama, b.sumber_url,
-      b.foto_utama, b.foto_keterangan, b.foto_alt,
-      b.headline, b.tanggal_publikasi, mkb.nama_kategori
-    FROM berita b
-    INNER JOIN master_kategori_berita mkb ON mkb.id = b.kategori_berita_id
-    WHERE b.slug = ?
-      AND b.aktif = 1
-      AND b.dipublikasikan = 1
-      AND b.tanggal_publikasi IS NOT NULL
-      AND b.tanggal_publikasi <= NOW()
-      AND mkb.aktif = 1
-    LIMIT 1
-  `, [slug]);
-
-  const row = rows[0];
-  return row ? { ...row, foto_utama: browserSafeR2ImageUrl(row.foto_utama) } : null;
+  const row=(await publicNewsRows()).find((item)=>item.slug===slug);
+  return row?{...row,foto_utama:browserSafeR2ImageUrl(row.foto_utama)}:null;
 }
 
 export async function getRelatedNews(excludeId: number, limit = 3) {
-  const safeLimit = Math.min(Math.max(Math.floor(limit), 1), 6);
-  const [rows] = await db().query<NewsRow[]>(`
-    SELECT
-      b.id, b.slug, b.judul, b.subjudul, b.ringkasan, b.isi,
-      b.penulis_tampil, b.sumber_nama, b.sumber_url,
-      b.foto_utama, b.foto_keterangan, b.foto_alt,
-      b.headline, b.tanggal_publikasi, mkb.nama_kategori
-    FROM berita b
-    INNER JOIN master_kategori_berita mkb ON mkb.id = b.kategori_berita_id
-    WHERE b.id <> ?
-      AND b.aktif = 1
-      AND b.dipublikasikan = 1
-      AND b.tanggal_publikasi IS NOT NULL
-      AND b.tanggal_publikasi <= NOW()
-      AND mkb.aktif = 1
-    ORDER BY b.tanggal_publikasi DESC, b.id DESC
-    LIMIT ?
-  `, [excludeId, safeLimit]);
-  return rows.map((row) => ({ ...row, foto_utama: browserSafeR2ImageUrl(row.foto_utama) }));
+  const safeLimit=Math.min(Math.max(Math.floor(limit),1),6);
+  return (await publicNewsRows()).filter((row)=>row.id!==excludeId).sort((a,b)=>toTime(b.tanggal_publikasi)-toTime(a.tanggal_publikasi)||b.id-a.id).slice(0,safeLimit).map((row)=>({...row,foto_utama:browserSafeR2ImageUrl(row.foto_utama)}));
 }
 
 export async function getPublicEventList(page = 1, pageSize = 9) {
-  const safePage = normalizePage(page);
-  const safeSize = Math.min(Math.max(Math.floor(pageSize), 1), 24);
-  const offset = (safePage - 1) * safeSize;
-
-  const [countRows] = await db().query<CountRow[]>(`
-    SELECT COUNT(*) AS total
-    FROM acara a
-    INNER JOIN master_kategori_acara mka ON mka.id = a.kategori_acara_id
-    WHERE a.aktif = 1
-      AND a.dipublikasikan = 1
-      AND a.tanggal_publikasi IS NOT NULL
-      AND a.tanggal_publikasi <= NOW()
-      AND a.status_acara <> 'Dibatalkan'
-      AND mka.aktif = 1
-  `);
-
-  const [rows] = await db().query<EventRow[]>(`
-    SELECT
-      a.id, a.slug, a.nama_acara, a.ringkasan, a.deskripsi,
-      a.tanggal_mulai, a.tanggal_selesai, a.sepanjang_hari,
-      a.status_acara, a.jenis_pelaksanaan, a.nama_lokasi, a.alamat,
-      a.tautan_daring, a.penyelenggara, a.narahubung_nama,
-      a.narahubung_telepon, a.narahubung_email,
-      a.memerlukan_pendaftaran, a.tautan_pendaftaran, a.kuota,
-      a.gratis, a.harga_mulai, a.harga_sampai, a.syarat_ketentuan,
-      a.foto_utama, a.foto_alt, a.unggulan, a.tanggal_publikasi,
-      mka.nama_kategori
-    FROM acara a
-    INNER JOIN master_kategori_acara mka ON mka.id = a.kategori_acara_id
-    WHERE a.aktif = 1
-      AND a.dipublikasikan = 1
-      AND a.tanggal_publikasi IS NOT NULL
-      AND a.tanggal_publikasi <= NOW()
-      AND a.status_acara <> 'Dibatalkan'
-      AND mka.aktif = 1
-    ORDER BY
-      CASE WHEN a.tanggal_selesai >= NOW() THEN 0 ELSE 1 END ASC,
-      a.unggulan DESC,
-      CASE WHEN a.tanggal_selesai >= NOW() THEN a.tanggal_mulai END ASC,
-      a.tanggal_mulai DESC,
-      a.id DESC
-    LIMIT ? OFFSET ?
-  `, [safeSize, offset]);
-
-  const total = Number(countRows[0]?.total ?? 0);
-  return {
-    items: rows.map((row) => ({ ...row, foto_utama: browserSafeR2ImageUrl(row.foto_utama) })),
-    total,
-    page: safePage,
-    pageSize: safeSize,
-    totalPages: Math.max(1, Math.ceil(total / safeSize)),
-  };
+  const safePage=normalizePage(page), safeSize=Math.min(Math.max(Math.floor(pageSize),1),24), offset=(safePage-1)*safeSize;
+  const rows=await publicEventRows();
+  return {items:rows.slice(offset,offset+safeSize).map((row)=>({...row,foto_utama:browserSafeR2ImageUrl(row.foto_utama)})),total:rows.length,page:safePage,pageSize:safeSize,totalPages:Math.max(1,Math.ceil(rows.length/safeSize))};
 }
 
 export async function getPublicEventBySlug(slug: string) {
-  const [rows] = await db().query<EventRow[]>(`
-    SELECT
-      a.id, a.slug, a.nama_acara, a.ringkasan, a.deskripsi,
-      a.tanggal_mulai, a.tanggal_selesai, a.sepanjang_hari,
-      a.status_acara, a.jenis_pelaksanaan, a.nama_lokasi, a.alamat,
-      a.tautan_daring, a.penyelenggara, a.narahubung_nama,
-      a.narahubung_telepon, a.narahubung_email,
-      a.memerlukan_pendaftaran, a.tautan_pendaftaran, a.kuota,
-      a.gratis, a.harga_mulai, a.harga_sampai, a.syarat_ketentuan,
-      a.foto_utama, a.foto_alt, a.unggulan, a.tanggal_publikasi,
-      mka.nama_kategori
-    FROM acara a
-    INNER JOIN master_kategori_acara mka ON mka.id = a.kategori_acara_id
-    WHERE a.slug = ?
-      AND a.aktif = 1
-      AND a.dipublikasikan = 1
-      AND a.tanggal_publikasi IS NOT NULL
-      AND a.tanggal_publikasi <= NOW()
-      AND a.status_acara <> 'Dibatalkan'
-      AND mka.aktif = 1
-    LIMIT 1
-  `, [slug]);
-
-  const row = rows[0];
-  return row ? { ...row, foto_utama: browserSafeR2ImageUrl(row.foto_utama) } : null;
+  const row=(await publicEventRows()).find((item)=>item.slug===slug);
+  return row?{...row,foto_utama:browserSafeR2ImageUrl(row.foto_utama)}:null;
 }
 
 export async function getRelatedEvents(excludeId: number, limit = 3) {
-  const safeLimit = Math.min(Math.max(Math.floor(limit), 1), 6);
-  const [rows] = await db().query<EventRow[]>(`
-    SELECT
-      a.id, a.slug, a.nama_acara, a.ringkasan, a.deskripsi,
-      a.tanggal_mulai, a.tanggal_selesai, a.sepanjang_hari,
-      a.status_acara, a.jenis_pelaksanaan, a.nama_lokasi, a.alamat,
-      a.tautan_daring, a.penyelenggara, a.narahubung_nama,
-      a.narahubung_telepon, a.narahubung_email,
-      a.memerlukan_pendaftaran, a.tautan_pendaftaran, a.kuota,
-      a.gratis, a.harga_mulai, a.harga_sampai, a.syarat_ketentuan,
-      a.foto_utama, a.foto_alt, a.unggulan, a.tanggal_publikasi,
-      mka.nama_kategori
-    FROM acara a
-    INNER JOIN master_kategori_acara mka ON mka.id = a.kategori_acara_id
-    WHERE a.id <> ?
-      AND a.aktif = 1
-      AND a.dipublikasikan = 1
-      AND a.tanggal_publikasi IS NOT NULL
-      AND a.tanggal_publikasi <= NOW()
-      AND a.status_acara <> 'Dibatalkan'
-      AND mka.aktif = 1
-    ORDER BY CASE WHEN a.tanggal_selesai >= NOW() THEN 0 ELSE 1 END, a.tanggal_mulai ASC, a.id DESC
-    LIMIT ?
-  `, [excludeId, safeLimit]);
-  return rows.map((row) => ({ ...row, foto_utama: browserSafeR2ImageUrl(row.foto_utama) }));
+  const safeLimit=Math.min(Math.max(Math.floor(limit),1),6);
+  return (await publicEventRows()).filter((row)=>row.id!==excludeId).slice(0,safeLimit).map((row)=>({...row,foto_utama:browserSafeR2ImageUrl(row.foto_utama)}));
 }

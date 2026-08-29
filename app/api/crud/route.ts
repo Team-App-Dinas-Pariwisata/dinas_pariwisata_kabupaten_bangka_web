@@ -1,7 +1,7 @@
-import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { NextRequest, NextResponse } from "next/server";
 import { requireRequestRole } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { createNumeric, deleteById, dbNow, updateById } from "@/lib/realtime-db";
+import { loadResourceRows } from "@/lib/resource-data";
 import { resourceConfigs, type ResourceConfig } from "@/lib/resources";
 import { browserSafeR2ImageUrl } from "@/lib/r2";
 
@@ -14,15 +14,11 @@ function slugify(value: string) {
   return slug || "item";
 }
 
-function toMysqlDate(value: unknown) {
+function toDatabaseDate(value: unknown) {
   if (!value) return null;
   const text = String(value);
   if (text.includes("T")) return text.replace("T", " ") + (text.length <= 16 ? ":00" : "");
   return text;
-}
-
-function nowMysql() {
-  return new Date().toISOString().slice(0, 19).replace("T", " ");
 }
 
 type DatabaseValue = string | number | boolean | null;
@@ -42,7 +38,7 @@ function normalizeData(config: ResourceConfig, raw: Record<string, unknown>): Re
         value = numberValue;
       }
     }
-    else if (field?.type === "datetime-local") value = toMysqlDate(value);
+    else if (field?.type === "datetime-local") value = toDatabaseDate(value);
     else if (typeof value === "string") value = value.trim() || null;
     else if (value === undefined) value = null;
     else if (value !== null && typeof value !== "number" && typeof value !== "boolean") {
@@ -58,11 +54,6 @@ function validateRequired(config: ResourceConfig, data: Record<string, DatabaseV
 }
 
 function errorMessage(error: unknown) {
-  const code = (error as { code?: string })?.code;
-  if (code === "ER_DUP_ENTRY") return "Data duplikat terdeteksi. Periksa judul atau data unik lainnya.";
-  if (code === "ER_NO_REFERENCED_ROW_2") return "Data referensi tidak ditemukan. Periksa kategori yang dipilih.";
-  if (code === "ER_ROW_IS_REFERENCED_2") return "Data masih digunakan oleh data lain dan tidak dapat dihapus.";
-  if (code === "ER_CHECK_CONSTRAINT_VIOLATED") return "Data tidak memenuhi aturan yang berlaku.";
   if (error instanceof Error && error.message.startsWith("Nilai ")) return error.message;
   return "Permintaan belum dapat diproses.";
 }
@@ -76,13 +67,9 @@ export async function GET(request: NextRequest) {
   const config = configFor(request.nextUrl.searchParams.get("resource"));
   if (!config) return NextResponse.json({ message: "Resource tidak tersedia." }, { status: 404 });
 
-  const [rows] = await db().execute<RowDataPacket[]>(
-    `SELECT ${config.select.join(", ")} FROM ${config.table} ORDER BY ${config.orderBy}`,
-  );
+  const rows = await loadResourceRows(config);
   const data = rows.map((row) => {
-    if ("foto_utama" in row) {
-      return { ...row, foto_utama: browserSafeR2ImageUrl(row.foto_utama as string | null) };
-    }
+    if ("foto_utama" in row) return { ...row, foto_utama: browserSafeR2ImageUrl(row.foto_utama as string | null) };
     return row;
   });
   return NextResponse.json({ data });
@@ -107,19 +94,12 @@ export async function POST(request: NextRequest) {
       config.table === "kuliner" ? data.nama_usaha :
       config.table === "satwa_endemik" ? data.nama_umum : null;
     if (slugSource) data.slug = `${slugify(String(slugSource))}-${Date.now().toString().slice(-7)}`;
-    if ("dipublikasikan" in data && Number(data.dipublikasikan) === 1 && !data.tanggal_publikasi) {
-      data.tanggal_publikasi = nowMysql();
-    }
+    if ("dipublikasikan" in data && Number(data.dipublikasikan) === 1 && !data.tanggal_publikasi) data.tanggal_publikasi = dbNow();
     data.created_by = user.id;
     data.updated_by = user.id;
 
-    const keys = Object.keys(data);
-    const placeholders = keys.map(() => "?").join(", ");
-    const [result] = await db().execute<ResultSetHeader>(
-      `INSERT INTO ${config.table} (${keys.join(", ")}) VALUES (${placeholders})`,
-      keys.map((key) => data[key]),
-    );
-    return NextResponse.json({ message: `${config.label} berhasil ditambahkan.`, id: result.insertId }, { status: 201 });
+    const id = await createNumeric(config.table, data);
+    return NextResponse.json({ message: `${config.label} berhasil ditambahkan.`, id }, { status: 201 });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ message: errorMessage(error) }, { status: 400 });
@@ -137,14 +117,11 @@ export async function PATCH(request: NextRequest) {
     const data = normalizeData(config, body.data ?? {});
     const missing = validateRequired(config, data);
     if (missing) return NextResponse.json({ message: `Field ${missing} wajib diisi.` }, { status: 400 });
-    if (Number(data.dipublikasikan) === 1 && !data.tanggal_publikasi) data.tanggal_publikasi = nowMysql();
+    if (Number(data.dipublikasikan) === 1 && !data.tanggal_publikasi) data.tanggal_publikasi = dbNow();
     data.updated_by = user.id;
-    const keys = Object.keys(data);
-    if (!keys.length) return NextResponse.json({ message: "Tidak ada data yang diubah." }, { status: 400 });
-    await db().execute(
-      `UPDATE ${config.table} SET ${keys.map((key) => `${key} = ?`).join(", ")} WHERE id = ?`,
-      [...keys.map((key) => data[key]), id],
-    );
+    if (!Object.keys(data).length) return NextResponse.json({ message: "Tidak ada data yang diubah." }, { status: 400 });
+    const updated = await updateById(config.table, id, data);
+    if (!updated) return NextResponse.json({ message: "Data tidak ditemukan." }, { status: 404 });
     return NextResponse.json({ message: `${config.label} berhasil diperbarui.` });
   } catch (error) {
     console.error(error);
@@ -159,10 +136,11 @@ export async function DELETE(request: NextRequest) {
     const config = configFor(body.resource);
     const id = Number(body.id);
     if (!config || !id) return NextResponse.json({ message: "Resource atau ID tidak valid." }, { status: 400 });
-    const [result] = await db().execute<ResultSetHeader>(`DELETE FROM ${config.table} WHERE id = ?`, [id]);
-    if (!result.affectedRows) return NextResponse.json({ message: "Data tidak ditemukan." }, { status: 404 });
+    const removed = await deleteById(config.table, id);
+    if (!removed) return NextResponse.json({ message: "Data tidak ditemukan." }, { status: 404 });
     return NextResponse.json({ message: `${config.label} berhasil dihapus.` });
   } catch (error) {
+    console.error(error);
     return NextResponse.json({ message: errorMessage(error) }, { status: 409 });
   }
 }

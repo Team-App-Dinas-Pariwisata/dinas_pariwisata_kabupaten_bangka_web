@@ -1,5 +1,4 @@
-import type { RowDataPacket } from "mysql2/promise";
-import { db } from "@/lib/db";
+import { byNumericId, getAll, isPublishedRecord, isTruthyDb, type DbRecord } from "@/lib/realtime-db";
 import { browserSafeR2ImageUrl } from "@/lib/r2";
 
 export type RecommendationKind = "tempat-wisata" | "kuliner" | "hotel" | "satwa-endemik";
@@ -70,7 +69,7 @@ export type RecommendationItem = {
   reasons: string[];
 };
 
-type CriterionRow = RowDataPacket & {
+type CriterionRow = DbRecord & {
   kode: string;
   nama_kriteria: string;
   deskripsi: string | null;
@@ -81,7 +80,7 @@ type CriterionRow = RowDataPacket & {
   bobot: number | null;
 };
 
-type CandidateRow = RowDataPacket & {
+type CandidateRow = DbRecord & {
   id: number;
   slug: string;
   title: string;
@@ -231,29 +230,26 @@ function criterionFromRow(kind: RecommendationKind, row: CriterionRow): SawCrite
 
 export async function getSawCriteria(kind: RecommendationKind): Promise<SawCriterion[]> {
   try {
-    const [rows] = await db().query<CriterionRow[]>(`
-      SELECT
-        sk.kode,
-        sk.nama_kriteria,
-        sk.deskripsi,
-        sk.tipe_kriteria,
-        sk.sumber_data,
-        sk.satuan,
-        sk.wajib,
-        sb.bobot
-      FROM spk_kriteria sk
-      LEFT JOIN spk_bobot sb
-        ON sb.kriteria_id = sk.id
-       AND sb.aktif = 1
-      WHERE sk.jenis_objek = ?
-        AND sk.aktif = 1
-      ORDER BY sk.urutan ASC, sk.id ASC
-    `, [dbKind[kind]]);
+    const [criteriaRows, weightRows] = await Promise.all([
+      getAll<CriterionRow>("spk_kriteria"),
+      getAll<DbRecord>("spk_bobot"),
+    ]);
+    const weights = new Map<number, number>();
+    for (const row of weightRows) {
+      if (!isTruthyDb(row.aktif)) continue;
+      const criterionId = Number(row.kriteria_id);
+      const weight = Number(row.bobot);
+      if (Number.isFinite(criterionId) && Number.isFinite(weight)) weights.set(criterionId, weight);
+    }
+    const rows = criteriaRows
+      .filter((row) => String(row.jenis_objek ?? "") === dbKind[kind] && isTruthyDb(row.aktif))
+      .sort((a, b) => Number(a.urutan ?? 0) - Number(b.urutan ?? 0) || Number(a.id ?? 0) - Number(b.id ?? 0))
+      .map((row) => ({ ...row, bobot: weights.get(Number(row.id)) ?? null } as CriterionRow));
 
     const mapped = rows.map((row) => criterionFromRow(kind, row)).filter((item): item is SawCriterion => Boolean(item));
     if (mapped.length > 0) return mapped;
   } catch (error) {
-    console.warn("Konfigurasi SPK database belum dapat dibaca; memakai konfigurasi fallback.", error);
+    console.warn("Konfigurasi SPK Firebase belum dapat dibaca; memakai konfigurasi fallback.", error);
   }
   return fallbackCriteria[kind];
 }
@@ -293,115 +289,215 @@ function endemisitasScore(value: unknown) {
   }
 }
 
-async function fetchCandidateRows(kind: RecommendationKind): Promise<CandidateRow[]> {
-  switch (kind) {
-    case "tempat-wisata": {
-      const [rows] = await db().query<CandidateRow[]>(`
-        SELECT
-          v.*,
-          t.nama_tempat AS title,
-          v.kategori_wisata AS category,
-          t.deskripsi_singkat AS summary,
-          t.foto_utama AS image,
-          t.alamat AS address,
-          t.unggulan AS unggulan,
-          t.harga_tiket_domestik_dewasa AS price_from,
-          COALESCE(t.harga_tiket_mancanegara, t.harga_tiket_domestik_anak) AS price_to,
-          t.harga_tiket_domestik_dewasa AS source_price_adult,
-          t.harga_tiket_domestik_anak AS source_price_child,
-          t.harga_tiket_mancanegara AS source_price_foreign
-        FROM vw_spk_tempat_wisata v
-        INNER JOIN tempat_wisata t ON t.id = v.id
-        INNER JOIN master_kategori_wisata mk ON mk.id = t.kategori_wisata_id
-        WHERE t.dipublikasikan = 1
-          AND t.aktif = 1
-          AND mk.aktif = 1
-          AND t.tanggal_publikasi IS NOT NULL
-          AND t.tanggal_publikasi <= NOW()
-        ORDER BY t.unggulan DESC, t.urutan_tampil ASC, t.id DESC
-        LIMIT 500
-      `);
-      return rows;
-    }
-    case "kuliner": {
-      const [rows] = await db().query<CandidateRow[]>(`
-        SELECT
-          v.*,
-          t.nama_usaha AS title,
-          v.kategori_kuliner AS category,
-          t.deskripsi_singkat AS summary,
-          t.foto_utama AS image,
-          t.alamat AS address,
-          t.unggulan AS unggulan,
-          t.harga_mulai AS price_from,
-          t.harga_sampai AS price_to,
-          t.harga_mulai AS source_price_from,
-          t.harga_sampai AS source_price_to,
-          t.tersedia_delivery AS tersedia_delivery
-        FROM vw_spk_kuliner v
-        INNER JOIN kuliner t ON t.id = v.id
-        INNER JOIN master_kategori_kuliner mk ON mk.id = t.kategori_kuliner_id
-        WHERE t.dipublikasikan = 1
-          AND t.aktif = 1
-          AND mk.aktif = 1
-          AND t.tanggal_publikasi IS NOT NULL
-          AND t.tanggal_publikasi <= NOW()
-        ORDER BY t.unggulan DESC, t.urutan_tampil ASC, t.id DESC
-        LIMIT 500
-      `);
-      return rows;
-    }
-    case "hotel": {
-      const [rows] = await db().query<CandidateRow[]>(`
-        SELECT
-          v.*,
-          t.nama_hotel AS title,
-          v.jenis_hotel AS category,
-          t.deskripsi_singkat AS summary,
-          t.foto_utama AS image,
-          t.alamat AS address,
-          t.unggulan AS unggulan,
-          t.harga_mulai AS price_from,
-          t.harga_sampai AS price_to,
-          t.harga_mulai AS source_price_from,
-          t.harga_sampai AS source_price_to
-        FROM vw_spk_hotel v
-        INNER JOIN hotel t ON t.id = v.id
-        INNER JOIN master_jenis_hotel mjh ON mjh.id = t.jenis_hotel_id
-        WHERE t.dipublikasikan = 1
-          AND t.aktif = 1
-          AND mjh.aktif = 1
-          AND t.tanggal_publikasi IS NOT NULL
-          AND t.tanggal_publikasi <= NOW()
-        ORDER BY t.unggulan DESC, t.urutan_tampil ASC, t.id DESC
-        LIMIT 500
-      `);
-      return rows;
-    }
-    case "satwa-endemik": {
-      const [rows] = await db().query<CandidateRow[]>(`
-        SELECT
-          v.*,
-          t.nama_umum AS title,
-          t.status_endemisitas AS category,
-          t.deskripsi_singkat AS summary,
-          t.foto_utama AS image,
-          t.wilayah_endemik AS address,
-          t.unggulan AS unggulan,
-          NULL AS price_from,
-          NULL AS price_to
-        FROM vw_spk_satwa_endemik v
-        INNER JOIN satwa_endemik t ON t.id = v.id
-        WHERE t.dipublikasikan = 1
-          AND t.aktif = 1
-          AND t.tanggal_publikasi IS NOT NULL
-          AND t.tanggal_publikasi <= NOW()
-        ORDER BY t.unggulan DESC, t.urutan_tampil ASC, t.id DESC
-        LIMIT 500
-      `);
-      return rows;
-    }
+function accessScore(value: unknown) {
+  switch (String(value ?? "")) {
+    case "Sangat Mudah": return 5;
+    case "Mudah": return 4;
+    case "Sedang": return 3;
+    case "Sulit": return 2;
+    case "Sangat Sulit": return 1;
+    default: return 0;
   }
+}
+
+function referenceAverage(from: unknown, to: unknown) {
+  const a = toNumber(from);
+  const b = toNumber(to);
+  if (a !== null && b !== null) return (a + b) / 2;
+  return a ?? b ?? 0;
+}
+
+function featuredSort(a: DbRecord, b: DbRecord) {
+  return Number(b.unggulan ?? 0) - Number(a.unggulan ?? 0)
+    || Number(a.urutan_tampil ?? 0) - Number(b.urutan_tampil ?? 0)
+    || Number(b.id ?? 0) - Number(a.id ?? 0);
+}
+
+function relationRowsByOwner(rows: DbRecord[], ownerField: string) {
+  const map = new Map<number, DbRecord[]>();
+  for (const row of rows) {
+    const ownerId = Number(row[ownerField]);
+    if (!Number.isFinite(ownerId)) continue;
+    const bucket = map.get(ownerId) ?? [];
+    bucket.push(row);
+    map.set(ownerId, bucket);
+  }
+  return map;
+}
+
+async function fetchCandidateRows(kind: RecommendationKind): Promise<CandidateRow[]> {
+  if (kind === "tempat-wisata") {
+    const [places, categories, facilityRelations, facilities, activities] = await Promise.all([
+      getAll<DbRecord>("tempat_wisata"),
+      getAll<DbRecord>("master_kategori_wisata"),
+      getAll<DbRecord>("tempat_wisata_fasilitas"),
+      getAll<DbRecord>("master_fasilitas"),
+      getAll<DbRecord>("tempat_wisata_aktivitas"),
+    ]);
+    const categoryMap = byNumericId(categories);
+    const facilityMap = byNumericId(facilities);
+    const relByOwner = relationRowsByOwner(facilityRelations, "tempat_wisata_id");
+    const actByOwner = relationRowsByOwner(activities, "tempat_wisata_id");
+    return places
+      .filter((row) => isPublishedRecord(row) && isTruthyDb(categoryMap.get(Number(row.kategori_wisata_id))?.aktif))
+      .sort(featuredSort)
+      .slice(0, 500)
+      .map((row) => {
+        const rels = relByOwner.get(Number(row.id)) ?? [];
+        const codes = new Set(rels.map((rel) => facilityMap.get(Number(rel.fasilitas_id))).filter((f) => f && isTruthyDb(f.aktif)).map((f) => String(f?.kode ?? "")));
+        const adult = toNumber(row.harga_tiket_domestik_dewasa);
+        const child = toNumber(row.harga_tiket_domestik_anak);
+        const foreign = toNumber(row.harga_tiket_mancanegara);
+        return {
+          ...row,
+          id: Number(row.id),
+          slug: String(row.slug ?? ""),
+          unggulan: Number(row.unggulan ?? 0),
+          title: String(row.nama_tempat ?? ""),
+          category: String(categoryMap.get(Number(row.kategori_wisata_id))?.nama_kategori ?? "") || null,
+          summary: row.deskripsi_singkat == null ? null : String(row.deskripsi_singkat),
+          image: row.foto_utama == null ? null : String(row.foto_utama),
+          address: row.alamat == null ? null : String(row.alamat),
+          price_from: adult,
+          price_to: foreign ?? child,
+          source_price_adult: adult,
+          source_price_child: child,
+          source_price_foreign: foreign,
+          harga_tiket_referensi: adult ?? child ?? foreign ?? 0,
+          skor_kesesuaian_pengunjung: Number(row.cocok_anak ?? 0) + Number(row.cocok_keluarga ?? 0) + Number(row.ramah_lansia ?? 0),
+          skor_aksesibilitas: accessScore(row.tingkat_kesulitan_akses),
+          jumlah_fasilitas: rels.length,
+          jumlah_aktivitas: (actByOwner.get(Number(row.id)) ?? []).filter((item) => isTruthyDb(item.aktif)).length,
+          memiliki_parkir: codes.has("PARKIR") ? 1 : 0,
+          memiliki_musala: codes.has("MUSALA") ? 1 : 0,
+        } as CandidateRow;
+      });
+  }
+
+  if (kind === "kuliner") {
+    const [businesses, categories, facilityRelations, facilities] = await Promise.all([
+      getAll<DbRecord>("kuliner"),
+      getAll<DbRecord>("master_kategori_kuliner"),
+      getAll<DbRecord>("kuliner_fasilitas"),
+      getAll<DbRecord>("master_fasilitas"),
+    ]);
+    const categoryMap = byNumericId(categories);
+    const facilityMap = byNumericId(facilities);
+    const relByOwner = relationRowsByOwner(facilityRelations, "kuliner_id");
+    const halalScore = (status: unknown) => ({ "Halal Bersertifikat": 5, "Klaim Halal": 4, "Proses Sertifikasi": 3, "Belum Diketahui": 1, "Tidak Halal": 0 }[String(status ?? "")] ?? 0);
+    return businesses
+      .filter((row) => isPublishedRecord(row) && isTruthyDb(categoryMap.get(Number(row.kategori_kuliner_id))?.aktif))
+      .sort(featuredSort)
+      .slice(0, 500)
+      .map((row) => {
+        const rels = relByOwner.get(Number(row.id)) ?? [];
+        const codes = new Set(rels.map((rel) => facilityMap.get(Number(rel.fasilitas_id))).filter((f) => f && isTruthyDb(f.aktif)).map((f) => String(f?.kode ?? "")));
+        return {
+          ...row,
+          id: Number(row.id),
+          slug: String(row.slug ?? ""),
+          unggulan: Number(row.unggulan ?? 0),
+          title: String(row.nama_usaha ?? ""),
+          category: String(categoryMap.get(Number(row.kategori_kuliner_id))?.nama_kategori ?? "") || null,
+          summary: row.deskripsi_singkat == null ? null : String(row.deskripsi_singkat),
+          image: row.foto_utama == null ? null : String(row.foto_utama),
+          address: row.alamat == null ? null : String(row.alamat),
+          price_from: toNumber(row.harga_mulai),
+          price_to: toNumber(row.harga_sampai),
+          source_price_from: toNumber(row.harga_mulai),
+          source_price_to: toNumber(row.harga_sampai),
+          harga_referensi: referenceAverage(row.harga_mulai, row.harga_sampai),
+          skor_halal: halalScore(row.status_halal),
+          jumlah_layanan: Number(row.tersedia_dine_in ?? 0) + Number(row.tersedia_takeaway ?? 0) + Number(row.tersedia_delivery ?? 0) + Number(row.menerima_reservasi ?? 0),
+          jumlah_fasilitas: rels.length,
+          memiliki_parkir: codes.has("PARKIR") ? 1 : 0,
+          memiliki_musala: codes.has("MUSALA") ? 1 : 0,
+        } as CandidateRow;
+      });
+  }
+
+  if (kind === "hotel") {
+    const [hotels, types, facilityRelations, facilities] = await Promise.all([
+      getAll<DbRecord>("hotel"),
+      getAll<DbRecord>("master_jenis_hotel"),
+      getAll<DbRecord>("hotel_fasilitas"),
+      getAll<DbRecord>("master_fasilitas"),
+    ]);
+    const typeMap = byNumericId(types);
+    const facilityMap = byNumericId(facilities);
+    const relByOwner = relationRowsByOwner(facilityRelations, "hotel_id");
+    return hotels
+      .filter((row) => isPublishedRecord(row) && isTruthyDb(typeMap.get(Number(row.jenis_hotel_id))?.aktif))
+      .sort(featuredSort)
+      .slice(0, 500)
+      .map((row) => {
+        const rels = relByOwner.get(Number(row.id)) ?? [];
+        const codes = new Set(rels.map((rel) => facilityMap.get(Number(rel.fasilitas_id))).filter((f) => f && isTruthyDb(f.aktif)).map((f) => String(f?.kode ?? "")));
+        return {
+          ...row,
+          id: Number(row.id),
+          slug: String(row.slug ?? ""),
+          unggulan: Number(row.unggulan ?? 0),
+          title: String(row.nama_hotel ?? ""),
+          category: String(typeMap.get(Number(row.jenis_hotel_id))?.nama_jenis ?? "") || null,
+          summary: row.deskripsi_singkat == null ? null : String(row.deskripsi_singkat),
+          image: row.foto_utama == null ? null : String(row.foto_utama),
+          address: row.alamat == null ? null : String(row.alamat),
+          price_from: toNumber(row.harga_mulai),
+          price_to: toNumber(row.harga_sampai),
+          source_price_from: toNumber(row.harga_mulai),
+          source_price_to: toNumber(row.harga_sampai),
+          harga_referensi: referenceAverage(row.harga_mulai, row.harga_sampai),
+          jumlah_fasilitas: rels.length,
+          memiliki_parkir: codes.has("PARKIR") ? 1 : 0,
+          memiliki_musala: codes.has("MUSALA") ? 1 : 0,
+          skor_aksesibilitas: ["DIFABEL", "KURSI_RODA", "LIFT", "PARKIR"].filter((code) => codes.has(code)).length,
+        } as CandidateRow;
+      });
+  }
+
+  const [animals, statuses, locations] = await Promise.all([
+    getAll<DbRecord>("satwa_endemik"),
+    getAll<DbRecord>("master_status_konservasi"),
+    getAll<DbRecord>("satwa_endemik_lokasi"),
+  ]);
+  const statusMap = byNumericId(statuses);
+  const locationsByAnimal = relationRowsByOwner(locations, "satwa_endemik_id");
+  return animals
+    .filter((row) => isPublishedRecord(row))
+    .sort(featuredSort)
+    .slice(0, 500)
+    .map((row) => {
+      const allLocations = (locationsByAnimal.get(Number(row.id)) ?? []).filter((item) => isTruthyDb(item.aktif));
+      const publicLocations = allLocations.filter((item) => String(item.tingkat_sensitivitas ?? "") !== "Rahasia");
+      const observation = publicLocations.filter((item) => isTruthyDb(item.pengamatan_diizinkan));
+      const education = allLocations.filter((item) => ["Pusat Konservasi", "Wisata Edukasi", "Penangkaran"].includes(String(item.jenis_lokasi ?? "")));
+      const lats = publicLocations.map((item) => toNumber(item.latitude_publik)).filter((v): v is number => v !== null);
+      const lons = publicLocations.map((item) => toNumber(item.longitude_publik)).filter((v): v is number => v !== null);
+      const status = statusMap.get(Number(row.status_konservasi_id));
+      return {
+        ...row,
+        id: Number(row.id),
+        slug: String(row.slug ?? ""),
+        unggulan: Number(row.unggulan ?? 0),
+        title: String(row.nama_umum ?? ""),
+        category: row.status_endemisitas == null ? null : String(row.status_endemisitas),
+        summary: row.deskripsi_singkat == null ? null : String(row.deskripsi_singkat),
+        image: row.foto_utama == null ? null : String(row.foto_utama),
+        address: row.wilayah_endemik == null ? null : String(row.wilayah_endemik),
+        price_from: null,
+        price_to: null,
+        kode_status_konservasi: status?.kode ?? null,
+        status_konservasi: status?.nama_status ?? null,
+        skor_prioritas_konservasi: Number(status?.urutan_prioritas ?? 0),
+        latitude: lats.length ? lats.reduce((sum, v) => sum + v, 0) / lats.length : null,
+        longitude: lons.length ? lons.reduce((sum, v) => sum + v, 0) / lons.length : null,
+        jumlah_lokasi: allLocations.length,
+        jumlah_lokasi_pengamatan: observation.length,
+        jumlah_lokasi_edukasi: education.length,
+        skor_kemudahan_pengamatan: observation.reduce((max, item) => Math.max(max, accessScore(item.tingkat_akses)), 0),
+      } as CandidateRow;
+    });
 }
 
 function hasKnownPrice(kind: RecommendationKind, row: CandidateRow) {

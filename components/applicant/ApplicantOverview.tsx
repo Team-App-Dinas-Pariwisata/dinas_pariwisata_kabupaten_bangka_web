@@ -1,6 +1,5 @@
 import Link from "next/link";
-import type { RowDataPacket } from "mysql2/promise";
-import { db } from "@/lib/db";
+import { getAll, type DbRecord } from "@/lib/realtime-db";
 import { PortalIcon } from "@/components/portal/PortalIcon";
 
 type SubmissionItem = {
@@ -14,12 +13,17 @@ type SubmissionItem = {
   canEdit: boolean;
 };
 
-type Row = RowDataPacket & {
+type Row = DbRecord & {
   id: number;
-  no_registrasi: string | null;
-  status_label: string | null;
-  title_label: string | null;
-  created_at: string;
+  no_registrasi?: string | null;
+  status?: string | null;
+  status_pengajuan?: string | null;
+  nama_usaha?: string | null;
+  tempat_bertugas?: string | null;
+  nama_lengkap?: string | null;
+  nama_organisasi?: string | null;
+  created_at?: string | null;
+  created_by?: number | null;
 };
 
 function formatDate(value: string) {
@@ -46,16 +50,17 @@ function editHref(type: SubmissionItem["type"], id: number) {
 }
 
 export async function ApplicantOverview({ userId, userName }: { userId: number; userName: string }) {
-  const [ekrafResult, sdmResult, komunitasResult] = await Promise.all([
-    db().execute<Row[]>(`SELECT id, no_registrasi, COALESCE(status, 'Menunggu') status_label, nama_usaha title_label, created_at FROM pengajuan_ekraf WHERE created_by = ? ORDER BY created_at DESC`, [userId]),
-    db().execute<Row[]>(`SELECT id, no_registrasi, COALESCE(status_pengajuan, 'Menunggu') status_label, COALESCE(tempat_bertugas, nama_lengkap) title_label, created_at FROM pengajuan_sdm_pariwisata WHERE created_by = ? ORDER BY created_at DESC`, [userId]),
-    db().execute<Row[]>(`SELECT id, no_registrasi, COALESCE(status_pengajuan, 'Menunggu') status_label, nama_organisasi title_label, created_at FROM pengajuan_komunitas_asosiasi WHERE created_by = ? ORDER BY created_at DESC`, [userId]),
+  const [ekrafRows, sdmRows, komunitasRows] = await Promise.all([
+    getAll<Row>("pengajuan_ekraf"),
+    getAll<Row>("pengajuan_sdm_pariwisata"),
+    getAll<Row>("pengajuan_komunitas_asosiasi"),
   ]);
 
+  const mine = (rows: Row[]) => rows.filter((row) => Number(row.created_by) === userId);
   const items: SubmissionItem[] = [
-    ...ekrafResult[0].map((row) => { const status = row.status_label || "Menunggu"; return { id: row.id, type: "ekraf" as const, typeLabel: "Pelaku Ekraf", title: row.title_label || "Pengajuan Ekraf", noRegistrasi: row.no_registrasi || "—", status, createdAt: row.created_at, canEdit: canEditStatus(status) }; }),
-    ...sdmResult[0].map((row) => { const status = row.status_label || "Menunggu"; return { id: row.id, type: "sdm" as const, typeLabel: "SDM Pariwisata", title: row.title_label || "Pengajuan SDM", noRegistrasi: row.no_registrasi || "—", status, createdAt: row.created_at, canEdit: canEditStatus(status) }; }),
-    ...komunitasResult[0].map((row) => { const status = row.status_label || "Menunggu"; return { id: row.id, type: "komunitas" as const, typeLabel: "Komunitas", title: row.title_label || "Pengajuan Komunitas", noRegistrasi: row.no_registrasi || "—", status, createdAt: row.created_at, canEdit: canEditStatus(status) }; }),
+    ...mine(ekrafRows).map((row) => { const status = row.status || "Menunggu"; return { id: Number(row.id), type: "ekraf" as const, typeLabel: "Pelaku Ekraf", title: row.nama_usaha || "Pengajuan Ekraf", noRegistrasi: row.no_registrasi || "—", status, createdAt: String(row.created_at ?? ""), canEdit: canEditStatus(status) }; }),
+    ...mine(sdmRows).map((row) => { const status = row.status_pengajuan || "Menunggu"; return { id: Number(row.id), type: "sdm" as const, typeLabel: "SDM Pariwisata", title: row.tempat_bertugas || row.nama_lengkap || "Pengajuan SDM", noRegistrasi: row.no_registrasi || "—", status, createdAt: String(row.created_at ?? ""), canEdit: canEditStatus(status) }; }),
+    ...mine(komunitasRows).map((row) => { const status = row.status_pengajuan || "Menunggu"; return { id: Number(row.id), type: "komunitas" as const, typeLabel: "Komunitas", title: row.nama_organisasi || "Pengajuan Komunitas", noRegistrasi: row.no_registrasi || "—", status, createdAt: String(row.created_at ?? ""), canEdit: canEditStatus(status) }; }),
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const approved = items.filter((item) => item.status === "Disetujui").length;

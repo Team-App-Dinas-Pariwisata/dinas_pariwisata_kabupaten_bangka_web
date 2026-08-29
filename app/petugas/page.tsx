@@ -2,11 +2,13 @@ import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/portal/LoginForm";
 import { getPageUser } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function LoginPage() {
   const user = await getPageUser();
   if (user?.role === "admin") redirect("/admin/pengguna");
   if (user?.role === "pengguna") redirect("/dashboard");
-  if (user?.role === "pengaju") redirect("/akun");
 
   return (
     <main className="auth-page">

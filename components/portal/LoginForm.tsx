@@ -1,11 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 export function LoginForm() {
-  const router = useRouter();
   const [role, setRole] = useState<"admin" | "pengguna">("pengguna");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,10 +19,12 @@ export function LoginForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role, email, password }),
+        cache: "no-store",
+        credentials: "same-origin",
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || "Login gagal.");
-      router.replace(result.redirectTo);
+      window.location.replace(result.redirectTo);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login gagal.");
     } finally {

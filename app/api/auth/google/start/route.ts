@@ -6,6 +6,7 @@ import {
   googleOAuthReady,
   googleRedirectUri,
 } from "@/lib/google-oauth";
+import { SESSION_COOKIE, sessionCookieOptions } from "@/lib/session";
 
 export const runtime = "nodejs";
 
@@ -17,6 +18,12 @@ export async function GET(request: NextRequest) {
   const state = createOAuthState();
   const redirectUri = googleRedirectUri(request.nextUrl.origin);
   const response = NextResponse.redirect(buildGoogleAuthorizationUrl(redirectUri, state));
+  response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+  response.cookies.set(SESSION_COOKIE, "", {
+    ...sessionCookieOptions(),
+    maxAge: 0,
+    expires: new Date(0),
+  });
   response.cookies.set(GOOGLE_OAUTH_STATE_COOKIE, state, {
     httpOnly: true,
     sameSite: "lax",

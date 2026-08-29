@@ -2,8 +2,8 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 export const SESSION_COOKIE = "appekraf_session";
 
-// Cookie dibuat persisten dan menggunakan sliding session.
-// Selama pengguna masih memakai portal, proxy akan memperpanjang masa sesi.
+// Cookie dibuat persisten sejak login. Proxy tidak menulis ulang cookie pada setiap request
+// agar sesi lama tidak dapat muncul kembali akibat response yang selesai setelah logout.
 export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
 export type AppRole = "admin" | "pengguna" | "pengaju";

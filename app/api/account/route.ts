@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRequestRole } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { getById, updateById } from "@/lib/realtime-db";
 import { hashPassword, verifyPassword } from "@/lib/password";
-import type { RowDataPacket } from "mysql2/promise";
 
 export async function GET(request: NextRequest) {
   const user = await requireRequestRole(request, "pengguna");
@@ -22,11 +21,11 @@ export async function PATCH(request: NextRequest) {
 
   if (newPassword) {
     if (newPassword.length < 8) return NextResponse.json({ message: "Kata sandi baru minimal 8 karakter." }, { status: 400 });
-    const [rows] = await db().execute<(RowDataPacket & { password: string })[]>("SELECT password FROM pengguna WHERE id = ? LIMIT 1", [user.id]);
-    if (!rows[0] || !verifyPassword(currentPassword, rows[0].password)) return NextResponse.json({ message: "Kata sandi saat ini tidak sesuai." }, { status: 400 });
-    await db().execute("UPDATE pengguna SET name = ?, phone = ?, password = ? WHERE id = ?", [name, phone, hashPassword(newPassword), user.id]);
+    const row = await getById<Record<string, unknown> & { password?: string }>("pengguna", user.id);
+    if (!row?.password || !verifyPassword(currentPassword, row.password)) return NextResponse.json({ message: "Kata sandi saat ini tidak sesuai." }, { status: 400 });
+    await updateById("pengguna", user.id, { name, phone, password: hashPassword(newPassword) });
   } else {
-    await db().execute("UPDATE pengguna SET name = ?, phone = ? WHERE id = ?", [name, phone, user.id]);
+    await updateById("pengguna", user.id, { name, phone });
   }
   return NextResponse.json({ message: "Pengaturan berhasil disimpan." });
 }

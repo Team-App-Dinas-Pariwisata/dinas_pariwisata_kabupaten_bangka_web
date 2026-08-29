@@ -1,6 +1,5 @@
-import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { createNumeric, dbNow, getAll, updateById } from "@/lib/realtime-db";
 import {
   GOOGLE_OAUTH_STATE_COOKIE,
   exchangeGoogleCode,
@@ -12,17 +11,37 @@ import { createSessionToken, SESSION_COOKIE, sessionCookieOptions } from "@/lib/
 
 export const runtime = "nodejs";
 
-type ExistingUser = RowDataPacket & {
+type ExistingUser = Record<string, unknown> & {
   id: number;
   role: string;
+  email: string;
   status: "active" | "inactive";
   google_sub: string | null;
 };
 
 function errorRedirect(request: NextRequest, code: string) {
   const response = NextResponse.redirect(new URL(`/akun/masuk?error=${encodeURIComponent(code)}`, request.url));
-  response.cookies.set(GOOGLE_OAUTH_STATE_COOKIE, "", { path: "/", maxAge: 0, httpOnly: true, sameSite: "lax" });
+  response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+  response.cookies.set(SESSION_COOKIE, "", {
+    ...sessionCookieOptions(),
+    maxAge: 0,
+    expires: new Date(0),
+  });
+  response.cookies.set(GOOGLE_OAUTH_STATE_COOKIE, "", {
+    path: "/",
+    maxAge: 0,
+    expires: new Date(0),
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
   return response;
+}
+
+function locateGoogleUser(users: ExistingUser[], googleSub: string, email: string) {
+  return users.find((item) => item.google_sub === googleSub)
+    ?? users.find((item) => String(item.email ?? "").trim().toLowerCase() === email)
+    ?? null;
 }
 
 export async function GET(request: NextRequest) {
@@ -44,48 +63,42 @@ export async function GET(request: NextRequest) {
 
     if (!profile.email_verified) return errorRedirect(request, "unverified_email");
 
-    const connection = await db().getConnection();
+    const users = await getAll<ExistingUser>("pengguna");
+    const existing = locateGoogleUser(users, profile.sub, email);
     let userId = 0;
-    try {
-      await connection.beginTransaction();
-      const [rows] = await connection.execute<ExistingUser[]>(
-        "SELECT id, role, status, google_sub FROM pengguna WHERE google_sub = ? OR email = ? ORDER BY google_sub = ? DESC LIMIT 1 FOR UPDATE",
-        [profile.sub, email, profile.sub],
-      );
-      const existing = rows[0];
 
-      if (existing) {
-        if (existing.role !== "pengaju") throw new Error("EMAIL_INTERNAL");
-        if (existing.status !== "active") throw new Error("ACCOUNT_INACTIVE");
-        if (existing.google_sub && existing.google_sub !== profile.sub) throw new Error("GOOGLE_ACCOUNT_MISMATCH");
+    if (existing) {
+      if (existing.role !== "pengaju") throw new Error("EMAIL_INTERNAL");
+      if (existing.status !== "active") throw new Error("ACCOUNT_INACTIVE");
+      if (existing.google_sub && existing.google_sub !== profile.sub) throw new Error("GOOGLE_ACCOUNT_MISMATCH");
 
-        await connection.execute(
-          `UPDATE pengguna
-           SET name = ?, avatar_url = ?, google_sub = ?, auth_provider = 'google', email_verified = 1, last_login_at = NOW()
-           WHERE id = ?`,
-          [profile.name?.trim() || email.split("@")[0], profile.picture || null, profile.sub, existing.id],
-        );
-        userId = existing.id;
-      } else {
-        const [result] = await connection.execute<ResultSetHeader>(
-          `INSERT INTO pengguna
-           (role, name, email, password, avatar_url, status, auth_provider, google_sub, email_verified, last_login_at)
-           VALUES ('pengaju', ?, ?, 'oauth:google', ?, 'active', 'google', ?, 1, NOW())`,
-          [profile.name?.trim() || email.split("@")[0], email, profile.picture || null, profile.sub],
-        );
-        userId = result.insertId;
-      }
-
-      await connection.commit();
-    } catch (error) {
-      await connection.rollback();
-      throw error;
-    } finally {
-      connection.release();
+      await updateById("pengguna", existing.id, {
+        name: profile.name?.trim() || email.split("@")[0],
+        avatar_url: profile.picture || null,
+        google_sub: profile.sub,
+        auth_provider: "google",
+        email_verified: 1,
+        last_login_at: dbNow(),
+      });
+      userId = Number(existing.id);
+    } else {
+      userId = await createNumeric("pengguna", {
+        role: "pengaju",
+        name: profile.name?.trim() || email.split("@")[0],
+        email,
+        password: "oauth:google",
+        avatar_url: profile.picture || null,
+        status: "active",
+        auth_provider: "google",
+        google_sub: profile.sub,
+        email_verified: 1,
+        last_login_at: dbNow(),
+      });
     }
 
     const token = createSessionToken({ uid: userId, role: "pengaju" });
     const response = NextResponse.redirect(new URL("/akun", request.url));
+    response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
     response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions());
     response.cookies.set(GOOGLE_OAUTH_STATE_COOKIE, "", { path: "/", maxAge: 0, httpOnly: true, sameSite: "lax" });
     return response;

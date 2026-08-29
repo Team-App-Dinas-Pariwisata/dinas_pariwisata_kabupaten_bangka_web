@@ -11648,3 +11648,50 @@ body {
   .dm-pagination-summary > span { white-space: normal; }
   .dm-pagination-pages button { min-width: 32px; height: 32px; }
 }
+
+
+/* ========================================================================== 
+   V38 — Mobile safe spacing
+   Memberi ruang horizontal yang konsisten pada seluruh area konten utama
+   tanpa menghilangkan section/background yang memang full-bleed.
+   ========================================================================== */
+@media (max-width: 760px) {
+  :root {
+    --mobile-page-gutter: 20px;
+  }
+
+  .page-container,
+  .public-container,
+  .topbar-wrap,
+  .submission-shell {
+    width: min(calc(100% - (var(--mobile-page-gutter) * 2)), 680px);
+  }
+
+  .portal-content,
+  .applicant-content {
+    padding-left: var(--mobile-page-gutter);
+    padding-right: var(--mobile-page-gutter);
+  }
+
+  .portal-topbar,
+  .applicant-topbar {
+    padding-left: var(--mobile-page-gutter);
+    padding-right: var(--mobile-page-gutter);
+  }
+
+  .auth-card,
+  .applicant-auth-card {
+    width: calc(100% - (var(--mobile-page-gutter) * 2));
+  }
+
+  .portal-modal-layer {
+    padding-left: var(--mobile-page-gutter);
+    padding-right: var(--mobile-page-gutter);
+  }
+}
+
+@media (max-width: 420px) {
+  :root {
+    --mobile-page-gutter: 18px;
+  }
+}

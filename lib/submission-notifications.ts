@@ -1,13 +1,12 @@
 // lib/submission-notifications.ts
-import type { RowDataPacket } from "mysql2/promise";
-import { db } from "@/lib/db";
+import { getById, type DbRecord } from "@/lib/realtime-db";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { sendEmail } from "@/lib/email";
 import type { SubmissionType } from "@/lib/submission-config";
 
 export type SubmissionDecisionStatus = "Disetujui" | "Ditolak";
 
-type NotificationRow = RowDataPacket & {
+type NotificationRow = DbRecord & {
   no_hp: string | null;
   email: string | null;
   nama: string;
@@ -20,10 +19,10 @@ const typeLabel: Record<SubmissionType, string> = {
   komunitas: "Komunitas/Asosiasi",
 };
 
-const notificationQueries: Record<SubmissionType, string> = {
-  ekraf: "SELECT no_hp, email, nama_lengkap AS nama, no_registrasi FROM pengajuan_ekraf WHERE id = ? LIMIT 1",
-  sdm: "SELECT no_hp, email, nama_lengkap AS nama, no_registrasi FROM pengajuan_sdm_pariwisata WHERE id = ? LIMIT 1",
-  komunitas: "SELECT no_hp_ketua AS no_hp, email, nama_ketua AS nama, no_registrasi FROM pengajuan_komunitas_asosiasi WHERE id = ? LIMIT 1",
+const notificationSource: Record<SubmissionType, { table: string; phone: string; name: string }> = {
+  ekraf: { table: "pengajuan_ekraf", phone: "no_hp", name: "nama_lengkap" },
+  sdm: { table: "pengajuan_sdm_pariwisata", phone: "no_hp", name: "nama_lengkap" },
+  komunitas: { table: "pengajuan_komunitas_asosiasi", phone: "no_hp_ketua", name: "nama_ketua" },
 };
 
 function appBaseUrl(): string | null {
@@ -63,7 +62,7 @@ function buildPlainText(params: {
     regLine,
     `Alasan: ${note || "Tidak disertakan alasan spesifik oleh petugas."}`,
     baseUrl
-      ? `Anda dapat memperbaiki dan mengajukan kembali melalui ${baseUrl}/akun.`
+      ? `Anda dapat memperbaiki dan mengajukan kembali melalui portal Si Parik.`
       : "Anda dapat memperbaiki dan mengajukan kembali melalui portal Si Parik.",
     "",
     "Terima kasih atas pengertiannya.",
@@ -167,8 +166,15 @@ export async function notifySubmissionDecision(params: {
   note: string;
 }): Promise<void> {
   try {
-    const [rows] = await db().query<NotificationRow[]>(notificationQueries[params.type], [params.id]);
-    const row = rows[0];
+    const source = notificationSource[params.type];
+    const raw = await getById<DbRecord>(source.table, params.id);
+    const row: NotificationRow | null = raw ? {
+      ...raw,
+      no_hp: raw[source.phone] == null ? null : String(raw[source.phone]),
+      email: raw.email == null ? null : String(raw.email),
+      nama: String(raw[source.name] ?? "Pemohon"),
+      no_registrasi: raw.no_registrasi == null ? null : String(raw.no_registrasi),
+    } : null;
 
     if (!row) {
       console.warn(`[notif] Data pengajuan ${params.type}#${params.id} tidak ditemukan.`);

@@ -1,59 +1,39 @@
-import type { RowDataPacket } from "mysql2/promise";
 import { NextRequest, NextResponse } from "next/server";
 import { requireRequestRole } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { getAll, isTruthyDb, type DbRecord } from "@/lib/realtime-db";
+
+function active(rows: DbRecord[]) {
+  return rows.filter((row) => isTruthyDb(row.aktif));
+}
+
+function alpha(a: unknown, b: unknown) {
+  return String(a ?? "").localeCompare(String(b ?? ""), "id", { sensitivity: "base" });
+}
 
 export async function GET(request: NextRequest) {
   if (!(await requireRequestRole(request, "pengguna"))) {
     return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
   }
 
-  const [
-    [kategoriBerita],
-    [kategoriAcara],
-    [kategoriWisata],
-    [kategoriKuliner],
-    [jenisHotel],
-    [kecamatan],
-    [kelurahan],
-    [statusKonservasi],
-  ] = await Promise.all([
-    db().execute<RowDataPacket[]>(
-      "SELECT id value, nama_kategori label FROM master_kategori_berita WHERE aktif = 1 ORDER BY urutan, nama_kategori",
-    ),
-    db().execute<RowDataPacket[]>(
-      "SELECT id value, nama_kategori label FROM master_kategori_acara WHERE aktif = 1 ORDER BY urutan, nama_kategori",
-    ),
-    db().execute<RowDataPacket[]>(
-      "SELECT id value, nama_kategori label FROM master_kategori_wisata WHERE aktif = 1 ORDER BY nama_kategori",
-    ),
-    db().execute<RowDataPacket[]>(
-      "SELECT id value, nama_kategori label FROM master_kategori_kuliner WHERE aktif = 1 ORDER BY nama_kategori",
-    ),
-    db().execute<RowDataPacket[]>(
-      "SELECT id value, nama_jenis label FROM master_jenis_hotel WHERE aktif = 1 ORDER BY nama_jenis",
-    ),
-    db().execute<RowDataPacket[]>(
-      "SELECT id value, nama_kecamatan label FROM master_kecamatan WHERE aktif = 1 ORDER BY nama_kecamatan",
-    ),
-    db().execute<RowDataPacket[]>(
-      "SELECT id value, CONCAT(jenis, ' ', nama_kelurahan) label, kecamatan_id parentValue FROM master_kelurahan ORDER BY nama_kelurahan",
-    ),
-    db().execute<RowDataPacket[]>(
-      "SELECT id value, CONCAT(kode, ' - ', nama_status) label FROM master_status_konservasi WHERE aktif = 1 ORDER BY urutan_prioritas, nama_status",
-    ),
+  const [kategoriBeritaRaw, kategoriAcaraRaw, kategoriWisataRaw, kategoriKulinerRaw, jenisHotelRaw, kecamatanRaw, kelurahanRaw, statusKonservasiRaw] = await Promise.all([
+    getAll("master_kategori_berita"),
+    getAll("master_kategori_acara"),
+    getAll("master_kategori_wisata"),
+    getAll("master_kategori_kuliner"),
+    getAll("master_jenis_hotel"),
+    getAll("master_kecamatan"),
+    getAll("master_kelurahan"),
+    getAll("master_status_konservasi"),
   ]);
 
-  return NextResponse.json({
-    data: {
-      "kategori-berita": kategoriBerita,
-      "kategori-acara": kategoriAcara,
-      "kategori-wisata": kategoriWisata,
-      "kategori-kuliner": kategoriKuliner,
-      "jenis-hotel": jenisHotel,
-      kecamatan,
-      kelurahan,
-      "status-konservasi": statusKonservasi,
-    },
-  });
+  const kategoriBerita = active(kategoriBeritaRaw).sort((a,b) => Number(a.urutan ?? 0) - Number(b.urutan ?? 0) || alpha(a.nama_kategori,b.nama_kategori)).map((r) => ({value:Number(r.id),label:r.nama_kategori}));
+  const kategoriAcara = active(kategoriAcaraRaw).sort((a,b) => Number(a.urutan ?? 0) - Number(b.urutan ?? 0) || alpha(a.nama_kategori,b.nama_kategori)).map((r) => ({value:Number(r.id),label:r.nama_kategori}));
+  const kategoriWisata = active(kategoriWisataRaw).sort((a,b) => alpha(a.nama_kategori,b.nama_kategori)).map((r) => ({value:Number(r.id),label:r.nama_kategori}));
+  const kategoriKuliner = active(kategoriKulinerRaw).sort((a,b) => alpha(a.nama_kategori,b.nama_kategori)).map((r) => ({value:Number(r.id),label:r.nama_kategori}));
+  const jenisHotel = active(jenisHotelRaw).sort((a,b) => alpha(a.nama_jenis,b.nama_jenis)).map((r) => ({value:Number(r.id),label:r.nama_jenis}));
+  const kecamatan = active(kecamatanRaw).sort((a,b) => alpha(a.nama_kecamatan,b.nama_kecamatan)).map((r) => ({value:Number(r.id),label:r.nama_kecamatan}));
+  const kelurahan = [...kelurahanRaw].sort((a,b) => alpha(a.nama_kelurahan,b.nama_kelurahan)).map((r) => ({value:Number(r.id),label:`${r.jenis ?? ""} ${r.nama_kelurahan ?? ""}`.trim(),parentValue:Number(r.kecamatan_id)}));
+  const statusKonservasi = active(statusKonservasiRaw).sort((a,b) => Number(a.urutan_prioritas ?? 0) - Number(b.urutan_prioritas ?? 0) || alpha(a.nama_status,b.nama_status)).map((r) => ({value:Number(r.id),label:`${r.kode ?? ""} - ${r.nama_status ?? ""}`.trim()}));
+
+  return NextResponse.json({ data: { "kategori-berita": kategoriBerita, "kategori-acara": kategoriAcara, "kategori-wisata": kategoriWisata, "kategori-kuliner": kategoriKuliner, "jenis-hotel": jenisHotel, kecamatan, kelurahan, "status-konservasi": statusKonservasi } });
 }

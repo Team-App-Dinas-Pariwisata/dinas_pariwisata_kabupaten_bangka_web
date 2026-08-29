@@ -4,12 +4,12 @@ import { getPageUser } from "@/lib/auth";
 import { googleOAuthReady } from "@/lib/google-oauth";
 
 export const metadata = { title: "Buat Akun Pengaju | SI PARIK BANGKA" };
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function ApplicantLoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const user = await getPageUser();
   if (user?.role === "pengaju") redirect("/akun");
-  if (user?.role === "admin") redirect("/admin/pengguna");
-  if (user?.role === "pengguna") redirect("/dashboard");
   const params = await searchParams;
 
   return (

@@ -1,4 +1,8 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
+const nextConfig = {
+  allowedDevOrigins: [
+    '192.168.73.45',
+  ],
+}
 
-export default nextConfig;
+export default nextConfig

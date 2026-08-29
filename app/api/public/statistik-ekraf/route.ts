@@ -1,73 +1,12 @@
-import type { RowDataPacket } from "mysql2/promise";
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-
-export const runtime = "nodejs";
-
-type StatistikItem = {
-  id: number;
-  label: string;
-  total: number;
-};
-
-export async function GET() {
-  try {
-    const [kecamatanRows, subsektorRows, totalRows] = await Promise.all([
-      db().query<RowDataPacket[]>(`
-        SELECT
-          k.id,
-          k.nama_kecamatan AS label,
-          COUNT(p.id) AS total
-        FROM master_kecamatan k
-        LEFT JOIN pengajuan_ekraf p
-          ON k.id = COALESCE(p.kecamatan_usaha_id, p.kecamatan_id)
-          AND p.status = 'Disetujui'
-        WHERE k.aktif = 1
-        GROUP BY k.id, k.nama_kecamatan
-        ORDER BY total DESC, k.nama_kecamatan ASC
-      `),
-      db().query<RowDataPacket[]>(`
-        SELECT
-          s.id,
-          s.nama_subsektor AS label,
-          COUNT(p.id) AS total
-        FROM master_subsektor_ekraf s
-        LEFT JOIN pengajuan_ekraf p
-          ON s.id = p.subsektor_id
-          AND p.status = 'Disetujui'
-        WHERE s.aktif = 1
-        GROUP BY s.id, s.nama_subsektor
-        ORDER BY total DESC, s.nama_subsektor ASC
-      `),
-      db().query<RowDataPacket[]>(`
-        SELECT COUNT(*) AS total
-        FROM pengajuan_ekraf
-        WHERE status = 'Disetujui'
-      `),
-    ]);
-
-    const [kecamatan] = kecamatanRows;
-    const [subsektor] = subsektorRows;
-    const [total] = totalRows;
-
-    return NextResponse.json({
-      total: Number(total[0]?.total ?? 0),
-      kecamatan: kecamatan.map((row) => ({
-        id: Number(row.id),
-        label: String(row.label ?? ""),
-        total: Number(row.total ?? 0),
-      })) as StatistikItem[],
-      subsektor: subsektor.map((row) => ({
-        id: Number(row.id),
-        label: String(row.label ?? ""),
-        total: Number(row.total ?? 0),
-      })) as StatistikItem[],
-    });
-  } catch (error) {
-    console.error("Public ekraf statistics error:", error);
-    return NextResponse.json(
-      { message: "Statistik Pelaku Ekraf belum dapat dimuat." },
-      { status: 500 },
-    );
-  }
+import { getAll, isTruthyDb, type DbRecord } from "@/lib/realtime-db";
+export const runtime="nodejs";
+export async function GET(){
+ try{
+  const [kecamatanRaw,subsektorRaw,ekraf]=await Promise.all([getAll<DbRecord>("master_kecamatan"),getAll<DbRecord>("master_subsektor_ekraf"),getAll<DbRecord>("pengajuan_ekraf")]);
+  const approved=ekraf.filter((p)=>String(p.status??"")==="Disetujui");
+  const kecamatan=kecamatanRaw.filter((k)=>isTruthyDb(k.aktif)).map((k)=>({id:Number(k.id),label:String(k.nama_kecamatan??""),total:approved.filter((p)=>Number(p.kecamatan_usaha_id??p.kecamatan_id)===Number(k.id)).length})).sort((a,b)=>b.total-a.total||a.label.localeCompare(b.label,"id"));
+  const subsektor=subsektorRaw.filter((s)=>isTruthyDb(s.aktif)).map((s)=>({id:Number(s.id),label:String(s.nama_subsektor??""),total:approved.filter((p)=>Number(p.subsektor_id)===Number(s.id)).length})).sort((a,b)=>b.total-a.total||a.label.localeCompare(b.label,"id"));
+  return NextResponse.json({total:approved.length,kecamatan,subsektor});
+ }catch(error){console.error("Public ekraf statistics error:",error);return NextResponse.json({message:"Statistik Pelaku Ekraf belum dapat dimuat."},{status:500});}
 }

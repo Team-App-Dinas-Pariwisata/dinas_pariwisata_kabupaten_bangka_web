@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "migrate:firebase": "node --env-file=.env.local scripts/migrate-mysql-to-firebase.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1097.0",

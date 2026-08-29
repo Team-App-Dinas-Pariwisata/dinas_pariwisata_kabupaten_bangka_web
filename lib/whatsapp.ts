@@ -1,34 +1,29 @@
 const REQUEST_TIMEOUT_MS = 30_000;
-const FONNTE_DEFAULT_API_BASE_URL = "https://api.fonnte.com";
+const FLAZHOST_DEFAULT_API_BASE_URL = "https://flazhost.com/api/wa/v1";
+const MAX_RETRY_ATTEMPTS = 2;
 
-export type WhatsAppProvider = "webjs" | "fonnte";
+export type WhatsAppProvider = "flazhost";
 
 export type WhatsAppSendResult =
   | { ok: true; detail?: string; messageId?: string }
-  | { ok: false; reason: string };
+  | { ok: false; reason: string; status?: number; code?: string };
 
 export type WhatsAppConnectionState =
   | "unconfigured"
-  | "idle"
-  | "starting"
-  | "qr"
-  | "authenticated"
   | "ready"
   | "disconnected"
-  | "auth_failure"
+  | "qr"
   | "error"
   | "stopped";
 
 export type WhatsAppServiceStatus = {
   provider: WhatsAppProvider;
   providerLabel: string;
-  supportsSessionControl: boolean;
+  supportsSessionControl: false;
   configured: boolean;
   state: WhatsAppConnectionState;
   ready: boolean;
   message: string;
-  qrDataUrl: string | null;
-  qrGeneratedAt: string | null;
   account: {
     wid: string | null;
     phone: string | null;
@@ -36,353 +31,336 @@ export type WhatsAppServiceStatus = {
     platform: string | null;
   } | null;
   providerDetails: {
-    packageName: string | null;
-    quota: string | null;
-    expired: string | null;
+    deviceId: string | null;
+    remoteStatus: string | null;
+    apiBaseUrl: string;
   } | null;
-  lastEventAt: string | null;
-  lastReadyAt: string | null;
   lastError: string | null;
-  reconnectAttempt: number;
 };
 
-type ServiceResponse<T> = {
-  ok?: boolean;
+type FlazHostConfig = {
+  apiBaseUrl: string;
+  apiKey: string;
+  deviceId: string;
+};
+
+type FlazHostErrorResponse = {
+  error?: string;
   message?: string;
-  status?: T;
-  messageId?: string;
 };
 
-type FonnteResponseBase = {
-  status?: boolean;
-  Status?: boolean;
-  reason?: string;
-  detail?: string;
-  requestid?: string | number;
+type FlazHostDeviceStatusResponse = FlazHostErrorResponse & {
+  status?: string;
 };
 
-type FonnteDeviceResponse = FonnteResponseBase & {
-  device?: string;
-  device_status?: string;
-  expired?: string;
-  messages?: number;
-  name?: string;
-  package?: string;
-  quota?: string | number;
+type FlazHostSendResponse = FlazHostErrorResponse & {
+  id?: string | number;
+  message_id?: string | number;
+  data?: {
+    id?: string | number;
+    message_id?: string | number;
+  };
 };
 
-type FonnteSendResponse = FonnteResponseBase & {
-  id?: Array<string | number> | string | number;
-  process?: string;
-  target?: string[];
-};
+function flazHostConfig(): FlazHostConfig | null {
+  const apiKey = process.env.FLAZHOST_WA_KEY?.trim();
+  const deviceId = process.env.FLAZHOST_WA_DEVICE_ID?.trim();
+  if (!apiKey || !deviceId) return null;
 
-function providerLabel(provider: WhatsAppProvider): string {
-  return provider === "fonnte" ? "Fonnte" : "Node.js (whatsapp-web.js)";
+  const apiBaseUrl = (
+    process.env.FLAZHOST_WA_BASE_URL?.trim() || FLAZHOST_DEFAULT_API_BASE_URL
+  ).replace(/\/+$/, "");
+
+  return { apiBaseUrl, apiKey, deviceId };
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function extractErrorMessage(
+  data: FlazHostErrorResponse | null,
+  fallback: string,
+): string {
+  return data?.message || data?.error || fallback;
+}
+
+function extractMessageId(data: FlazHostSendResponse | null): string | undefined {
+  const raw = data?.message_id ?? data?.id ?? data?.data?.message_id ?? data?.data?.id;
+  return raw === undefined || raw === null ? undefined : String(raw);
 }
 
 /**
- * Provider dipilih dari environment tanpa perlu mengubah source code.
- * Alias "fonte" dan "nodejs" diterima untuk memudahkan konfigurasi lama.
+ * Menormalkan nomor WhatsApp Indonesia ke format E.164 tanpa tanda "+",
+ * sesuai contoh FlazHost: 628123456789.
  */
-export function getWhatsAppProvider(): WhatsAppProvider {
-  const value = (process.env.WHATSAPP_PROVIDER || process.env.WA_PROVIDER || "webjs")
-    .trim()
-    .toLowerCase();
+export function normalizeIndonesianPhone(
+  raw: string | null | undefined,
+): string | null {
+  if (!raw) return null;
+  const digits = raw.replace(/\D+/g, "");
+  if (!digits) return null;
 
-  if (["webjs", "nodejs", "whatsapp-webjs", "whatsapp-web.js"].includes(value)) {
-    return "webjs";
+  let normalized = digits;
+  if (normalized.startsWith("620")) {
+    normalized = `62${normalized.slice(3)}`;
+  } else if (normalized.startsWith("0")) {
+    normalized = `62${normalized.slice(1)}`;
+  } else if (normalized.startsWith("8")) {
+    normalized = `62${normalized}`;
   }
-  if (["fonnte", "fonte"].includes(value)) return "fonnte";
 
-  throw new Error(
-    `WHATSAPP_PROVIDER tidak valid: "${value}". Gunakan "webjs" atau "fonnte".`,
-  );
+  if (!normalized.startsWith("62")) return null;
+  if (normalized.length < 10 || normalized.length > 15) return null;
+  return normalized;
 }
 
-function webJsConfig(): { baseUrl: string; apiKey: string } | null {
-  const baseUrl = process.env.WA_SERVICE_URL?.trim().replace(/\/+$/, "");
-  const apiKey = process.env.WA_SERVICE_API_KEY?.trim();
-  if (!baseUrl || !apiKey) return null;
-  return { baseUrl, apiKey };
-}
+async function flazHostRequest<T extends FlazHostErrorResponse>(
+  path: string,
+  init: RequestInit = {},
+  options: { retryTransient?: boolean } = {},
+): Promise<{ response: Response; data: T | null }> {
+  const config = flazHostConfig();
+  if (!config) {
+    throw new Error(
+      "FLAZHOST_WA_KEY atau FLAZHOST_WA_DEVICE_ID belum dikonfigurasi.",
+    );
+  }
 
-function fonnteConfig(): { apiBaseUrl: string; token: string; countryCode: string } | null {
-  const token = process.env.FONNTE_TOKEN?.trim();
-  if (!token) return null;
+  const retryTransient = options.retryTransient === true;
+  const attempts = retryTransient ? MAX_RETRY_ATTEMPTS + 1 : 1;
 
-  const apiBaseUrl = (
-    process.env.FONNTE_API_BASE_URL?.trim() || FONNTE_DEFAULT_API_BASE_URL
-  ).replace(/\/+$/, "");
-  const countryCode = process.env.FONNTE_COUNTRY_CODE?.trim() || "62";
-  return { apiBaseUrl, token, countryCode };
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+    try {
+      const response = await fetch(`${config.apiBaseUrl}${path}`, {
+        ...init,
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${config.apiKey}`,
+          ...(init.body ? { "Content-Type": "application/json" } : {}),
+          ...init.headers,
+        },
+        cache: "no-store",
+        signal: controller.signal,
+      });
+
+      const data = (await response.json().catch(() => null)) as T | null;
+
+      // Dokumentasi FlazHost menyarankan retry/backoff untuk HTTP 429 dan 500.
+      const transient = response.status === 429 || response.status === 500;
+      if (!response.ok && retryTransient && transient && attempt < attempts - 1) {
+        const waitMs = 1_000 * (2 ** attempt);
+        clearTimeout(timeout);
+        await sleep(waitMs);
+        continue;
+      }
+
+      return { response, data };
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        if (retryTransient && attempt < attempts - 1) {
+          clearTimeout(timeout);
+          await sleep(1_000 * (2 ** attempt));
+          continue;
+        }
+        throw new Error("Waktu tunggu ke FlazHost WhatsApp Gateway habis.");
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  throw new Error("FlazHost WhatsApp Gateway tidak dapat dihubungi.");
 }
 
 function baseStatus(
-  provider: WhatsAppProvider,
   overrides: Partial<WhatsAppServiceStatus> = {},
 ): WhatsAppServiceStatus {
+  const config = flazHostConfig();
+  const apiBaseUrl = (
+    process.env.FLAZHOST_WA_BASE_URL?.trim() || FLAZHOST_DEFAULT_API_BASE_URL
+  ).replace(/\/+$/, "");
+
   return {
-    provider,
-    providerLabel: providerLabel(provider),
-    supportsSessionControl: provider === "webjs",
-    configured: false,
-    state: "unconfigured",
+    provider: "flazhost",
+    providerLabel: "FlazHost WhatsApp Gateway",
+    supportsSessionControl: false,
+    configured: Boolean(config),
+    state: config ? "disconnected" : "unconfigured",
     ready: false,
-    message: provider === "fonnte"
-      ? "FONNTE_TOKEN belum dikonfigurasi."
-      : "WA_SERVICE_URL atau WA_SERVICE_API_KEY belum dikonfigurasi.",
-    qrDataUrl: null,
-    qrGeneratedAt: null,
-    account: null,
-    providerDetails: null,
-    lastEventAt: null,
-    lastReadyAt: null,
+    message: config
+      ? "Memeriksa status perangkat FlazHost."
+      : "FLAZHOST_WA_KEY atau FLAZHOST_WA_DEVICE_ID belum dikonfigurasi.",
+    account: config
+      ? {
+          wid: config.deviceId,
+          phone: null,
+          name: "Perangkat FlazHost",
+          platform: "FlazHost",
+        }
+      : null,
+    providerDetails: {
+      deviceId: config?.deviceId || null,
+      remoteStatus: null,
+      apiBaseUrl,
+    },
     lastError: null,
-    reconnectAttempt: 0,
     ...overrides,
   };
 }
 
-async function requestWebJsService<T>(path: string, init?: RequestInit): Promise<T> {
-  const config = webJsConfig();
-  if (!config) throw new Error("Service WhatsApp Node.js belum dikonfigurasi.");
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
-  try {
-    const response = await fetch(`${config.baseUrl}${path}`, {
-      ...init,
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${config.apiKey}`,
-        ...(init?.body ? { "Content-Type": "application/json" } : {}),
-        ...init?.headers,
-      },
-      cache: "no-store",
-      signal: controller.signal,
-    });
-
-    const data = (await response.json().catch(() => null)) as ServiceResponse<T> | null;
-    if (!response.ok) {
-      throw new Error(data?.message || `Service WhatsApp merespons HTTP ${response.status}.`);
-    }
-    return data as T;
-  } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("Waktu tunggu ke service WhatsApp Node.js habis.");
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-async function requestFonnte<T extends FonnteResponseBase>(
-  path: string,
-  body?: FormData,
-): Promise<T> {
-  const config = fonnteConfig();
-  if (!config) throw new Error("FONNTE_TOKEN belum dikonfigurasi.");
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
-  try {
-    const response = await fetch(`${config.apiBaseUrl}${path}`, {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        Authorization: config.token,
-      },
-      body,
-      cache: "no-store",
-      signal: controller.signal,
-    });
-
-    const data = (await response.json().catch(() => null)) as T | null;
-    if (!response.ok || !data) {
-      throw new Error(
-        data?.reason || data?.detail || `Fonnte merespons HTTP ${response.status}.`,
-      );
-    }
-    return data;
-  } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("Waktu tunggu ke Fonnte habis.");
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-function fonnteSucceeded(data: FonnteResponseBase): boolean {
-  return data.status === true || data.Status === true;
-}
-
-function firstMessageId(data: FonnteSendResponse): string | undefined {
-  const rawId = Array.isArray(data.id) ? data.id[0] : data.id;
-  if (rawId !== undefined && rawId !== null) return String(rawId);
-  if (data.requestid !== undefined && data.requestid !== null) return String(data.requestid);
-  return undefined;
-}
-
-type WebJsStatus = Omit<
-  WhatsAppServiceStatus,
-  "provider" | "providerLabel" | "supportsSessionControl" | "providerDetails"
->;
-
-function withWebJsProvider(status: WebJsStatus): WhatsAppServiceStatus {
-  return {
-    ...baseStatus("webjs"),
-    ...status,
-    provider: "webjs",
-    providerLabel: providerLabel("webjs"),
-    supportsSessionControl: true,
-    configured: true,
-    providerDetails: null,
-  };
-}
-
-async function getWebJsStatus(): Promise<WhatsAppServiceStatus> {
-  if (!webJsConfig()) return baseStatus("webjs");
-
-  const data = await requestWebJsService<{ status: WebJsStatus }>("/api/status");
-  return withWebJsProvider(data.status);
-}
-
-async function getFonnteStatus(): Promise<WhatsAppServiceStatus> {
-  if (!fonnteConfig()) return baseStatus("fonnte");
-
-  const data = await requestFonnte<FonnteDeviceResponse>("/device");
-  if (!fonnteSucceeded(data)) {
-    throw new Error(data.reason || "Fonnte menolak token atau gagal membaca status perangkat.");
-  }
-
-  const connected = data.device_status?.toLowerCase() === "connect";
-  const device = data.device ? String(data.device) : null;
-  return baseStatus("fonnte", {
-    configured: true,
-    state: connected ? "ready" : "disconnected",
-    ready: connected,
-    message: connected
-      ? "Perangkat Fonnte terhubung dan siap mengirim notifikasi."
-      : "Perangkat Fonnte belum terhubung. Hubungkan melalui dashboard Fonnte.",
-    account: {
-      wid: device,
-      phone: device,
-      name: data.name || "Perangkat Fonnte",
-      platform: "Fonnte",
-    },
-    providerDetails: {
-      packageName: data.package ? String(data.package) : null,
-      quota: data.quota !== undefined && data.quota !== null ? String(data.quota) : null,
-      expired: data.expired ? String(data.expired) : null,
-    },
-    lastError: connected ? null : "Status perangkat Fonnte: disconnect",
-  });
-}
-
+/** Membaca status perangkat dari GET /devices/:id/status. */
 export async function getWhatsAppStatus(): Promise<WhatsAppServiceStatus> {
-  return getWhatsAppProvider() === "fonnte" ? getFonnteStatus() : getWebJsStatus();
-}
+  const config = flazHostConfig();
+  if (!config) return baseStatus();
 
-export async function controlWhatsApp(
-  action: "restart" | "reset",
-): Promise<WhatsAppServiceStatus> {
-  if (getWhatsAppProvider() !== "webjs") {
-    throw new Error(
-      "Restart dan reset QR hanya tersedia untuk provider Node.js (whatsapp-web.js).",
+  try {
+    const { response, data } = await flazHostRequest<FlazHostDeviceStatusResponse>(
+      `/devices/${encodeURIComponent(config.deviceId)}/status`,
+      { method: "GET" },
     );
-  }
 
-  const path = action === "reset" ? "/api/session/reset" : "/api/restart";
-  const data = await requestWebJsService<{ status: WebJsStatus }>(path, {
-    method: "POST",
-    body: JSON.stringify(action === "reset" ? { confirmation: "RESET" } : {}),
-  });
-  return withWebJsProvider(data.status);
+    if (!response.ok) {
+      const reason = extractErrorMessage(
+        data,
+        `FlazHost merespons HTTP ${response.status}.`,
+      );
+      return baseStatus({
+        configured: true,
+        state: "error",
+        ready: false,
+        message: reason,
+        providerDetails: {
+          deviceId: config.deviceId,
+          remoteStatus: null,
+          apiBaseUrl: config.apiBaseUrl,
+        },
+        lastError: `${data?.error || `HTTP_${response.status}`}: ${reason}`,
+      });
+    }
+
+    const remoteStatus = String(data?.status || "unknown").toLowerCase();
+    const ready = remoteStatus === "connected";
+
+    let state: WhatsAppConnectionState = "error";
+    let message = `Status perangkat FlazHost: ${remoteStatus}.`;
+
+    if (ready) {
+      state = "ready";
+      message = "Perangkat FlazHost terhubung dan siap mengirim notifikasi WhatsApp.";
+    } else if (remoteStatus === "disconnected") {
+      state = "disconnected";
+      message = "Perangkat FlazHost terputus. Hubungkan kembali dari dashboard FlazHost.";
+    } else if (remoteStatus === "qr_pending") {
+      state = "qr";
+      message = "Perangkat FlazHost menunggu pemindaian QR di dashboard FlazHost.";
+    } else if (remoteStatus === "banned") {
+      state = "stopped";
+      message = "Perangkat FlazHost berstatus banned dan tidak dapat mengirim pesan.";
+    }
+
+    return baseStatus({
+      configured: true,
+      state,
+      ready,
+      message,
+      providerDetails: {
+        deviceId: config.deviceId,
+        remoteStatus,
+        apiBaseUrl: config.apiBaseUrl,
+      },
+      lastError: ready ? null : message,
+    });
+  } catch (error) {
+    const reason = error instanceof Error
+      ? error.message
+      : "FlazHost WhatsApp Gateway tidak dapat dihubungi.";
+
+    return baseStatus({
+      configured: true,
+      state: "error",
+      ready: false,
+      message: reason,
+      providerDetails: {
+        deviceId: config.deviceId,
+        remoteStatus: null,
+        apiBaseUrl: config.apiBaseUrl,
+      },
+      lastError: reason,
+    });
+  }
 }
 
-async function sendViaWebJs(
+/**
+ * Mengirim satu pesan teks melalui POST /messages/send.
+ * Fungsi tidak melempar error agar kegagalan WhatsApp tidak menggagalkan transaksi utama.
+ */
+export async function sendWhatsAppMessage(
   targetPhone: string,
   message: string,
 ): Promise<WhatsAppSendResult> {
-  if (!webJsConfig()) {
-    return { ok: false, reason: "Service WhatsApp Node.js belum dikonfigurasi." };
-  }
-
-  try {
-    const data = await requestWebJsService<{
-      ok: boolean;
-      message?: string;
-      messageId?: string;
-    }>("/api/send", {
-      method: "POST",
-      body: JSON.stringify({ phone: targetPhone, message }),
-    });
-
-    return { ok: true, detail: data.message, messageId: data.messageId };
-  } catch (error) {
+  const config = flazHostConfig();
+  if (!config) {
     return {
       ok: false,
-      reason: error instanceof Error
-        ? error.message
-        : "Gagal menghubungi service WhatsApp Node.js.",
+      reason: "FLAZHOST_WA_KEY atau FLAZHOST_WA_DEVICE_ID belum dikonfigurasi.",
     };
   }
-}
 
-async function sendViaFonnte(
-  targetPhone: string,
-  message: string,
-): Promise<WhatsAppSendResult> {
-  const config = fonnteConfig();
-  if (!config) return { ok: false, reason: "FONNTE_TOKEN belum dikonfigurasi." };
+  const phone = normalizeIndonesianPhone(targetPhone);
+  if (!phone) {
+    return {
+      ok: false,
+      reason: `Nomor WhatsApp tidak valid: "${targetPhone}". Gunakan nomor Indonesia yang aktif.`,
+    };
+  }
+
+  const text = message.trim();
+  if (!text) {
+    return { ok: false, reason: "Isi pesan WhatsApp kosong." };
+  }
 
   try {
-    const body = new FormData();
-    body.append("target", targetPhone);
-    body.append("message", message);
-    body.append("countryCode", config.countryCode);
-    body.append("connectOnly", "true");
+    const { response, data } = await flazHostRequest<FlazHostSendResponse>(
+      "/messages/send",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          device_id: config.deviceId,
+          to: phone,
+          text,
+        }),
+      },
+      { retryTransient: true },
+    );
 
-    const data = await requestFonnte<FonnteSendResponse>("/send", body);
-    if (!fonnteSucceeded(data)) {
+    if (!response.ok) {
       return {
         ok: false,
-        reason: data.reason || data.detail || "Fonnte gagal memproses pesan.",
+        status: response.status,
+        code: data?.error,
+        reason: extractErrorMessage(
+          data,
+          `FlazHost merespons HTTP ${response.status}.`,
+        ),
       };
     }
 
     return {
       ok: true,
-      detail: data.detail || "Pesan diterima oleh antrean Fonnte.",
-      messageId: firstMessageId(data),
+      detail: "Pesan diterima oleh FlazHost WhatsApp Gateway.",
+      messageId: extractMessageId(data),
     };
   } catch (error) {
     return {
       ok: false,
-      reason: error instanceof Error ? error.message : "Gagal menghubungi Fonnte.",
-    };
-  }
-}
-
-/** Mengirim pesan menggunakan provider yang dipilih melalui WHATSAPP_PROVIDER. */
-export async function sendWhatsAppMessage(
-  targetPhone: string,
-  message: string,
-): Promise<WhatsAppSendResult> {
-  try {
-    return getWhatsAppProvider() === "fonnte"
-      ? await sendViaFonnte(targetPhone, message)
-      : await sendViaWebJs(targetPhone, message);
-  } catch (error) {
-    return {
-      ok: false,
-      reason: error instanceof Error ? error.message : "Provider WhatsApp tidak valid.",
+      reason: error instanceof Error
+        ? error.message
+        : "Gagal menghubungi FlazHost WhatsApp Gateway.",
     };
   }
 }

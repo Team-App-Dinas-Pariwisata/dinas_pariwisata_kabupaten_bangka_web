@@ -1,8 +1,7 @@
-import type { ResultSetHeader } from "mysql2/promise";
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
 import { allSubmissionFields, submissionConfigs, type SubmissionField, type SubmissionType } from "@/lib/submission-config";
 import { uploadSubmissionFileToR2 } from "@/lib/r2";
+import { createNumeric } from "@/lib/realtime-db";
 
 export const runtime = "nodejs";
 
@@ -26,7 +25,6 @@ async function saveFile(file: File, type: SubmissionType, key: string, ownerId?:
   return uploaded.storageUrl;
 }
 
-
 function validateFileForField(file: File, field: SubmissionField) {
   const mime = file.type.toLowerCase().split(";", 1)[0].trim();
   const ext = file.name.toLowerCase().split(".").pop() ?? "";
@@ -35,15 +33,10 @@ function validateFileForField(file: File, field: SubmissionField) {
   const isPdf = mime === "application/pdf" || ext === "pdf";
 
   if (field.fileKind === "document") {
-    if (!(isPdf || isJpeg || isPng)) {
-      throw new Error(`${field.label}: format dokumen harus PDF, JPG/JPEG, atau PNG.`);
-    }
+    if (!(isPdf || isJpeg || isPng)) throw new Error(`${field.label}: format dokumen harus PDF, JPG/JPEG, atau PNG.`);
     return;
   }
-
-  if (!(isJpeg || isPng)) {
-    throw new Error(`${field.label}: format gambar harus JPG/JPEG atau PNG.`);
-  }
+  if (!(isJpeg || isPng)) throw new Error(`${field.label}: format gambar harus JPG/JPEG atau PNG.`);
 }
 
 function requiredMissing(form: FormData, field: SubmissionField) {
@@ -57,12 +50,8 @@ function requiredMissing(form: FormData, field: SubmissionField) {
 }
 
 function dbErrorMessage(error: unknown) {
-  const code = (error as { code?: string })?.code;
-  if (code === "ER_DUP_ENTRY") return "Nomor registrasi atau data unik sudah tercatat. Silakan kirim ulang.";
-  if (code === "ER_NO_REFERENCED_ROW_2") return "Kecamatan, kelurahan, subsektor, atau komunitas yang dipilih tidak valid.";
-  if (code === "ER_DATA_TOO_LONG") return "Ada data yang terlalu panjang untuk disimpan.";
   if (error instanceof Error && /(maksimal|format|cloudflare r2|r2|upload)/i.test(error.message)) return error.message;
-  return "Pengajuan belum dapat disimpan. Periksa data dan koneksi database.";
+  return "Pengajuan belum dapat disimpan. Periksa data dan konfigurasi Firebase Realtime Database.";
 }
 
 export async function POST(request: Request) {
@@ -82,7 +71,6 @@ export async function POST(request: Request) {
     }
 
     const data: Record<string, string | number | null> = { no_registrasi: registration(config.registrationPrefix) };
-
     for (const field of fields) {
       if (field.key === "konfirmasi_kebenaran") continue;
       if (field.type === "file") {
@@ -98,25 +86,16 @@ export async function POST(request: Request) {
         continue;
       }
       const value = text(form, field.key);
-      if (!value) {
-        data[field.key] = null;
-        continue;
-      }
-      if (["number", "year"].includes(field.type ?? "")) data[field.key] = Number(value);
-      else data[field.key] = value;
+      data[field.key] = !value ? null : ["number", "year"].includes(field.type ?? "") ? Number(value) : value;
     }
 
     if (type === "sdm" || type === "komunitas") data.status_pengajuan = "Menunggu";
+    if (type === "ekraf") data.status = "Menunggu";
 
-    const keys = Object.keys(data);
-    const [result] = await db().execute<ResultSetHeader>(
-      `INSERT INTO ${config.table} (${keys.join(", ")}) VALUES (${keys.map(() => "?").join(", ")})`,
-      keys.map((key) => data[key]),
-    );
-
+    const id = await createNumeric(config.table, data);
     return NextResponse.json({
       message: "Pengajuan berhasil dikirim dan menunggu verifikasi petugas.",
-      data: { id: result.insertId, no_registrasi: data.no_registrasi },
+      data: { id, no_registrasi: data.no_registrasi },
     }, { status: 201 });
   } catch (error) {
     console.error("Public submission error:", error);
