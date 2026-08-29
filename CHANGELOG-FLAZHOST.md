@@ -23,3 +23,11 @@ FLAZHOST_WA_DEVICE_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 ```
 
 Kemudian restart aplikasi.
+
+## V37 - Global Preloader
+- Preloader SI PARIK aktif pada seluruh route, termasuk dashboard/admin/petugas/akun/login.
+- Navigasi internal, Back/Forward, query navigation, dan native form navigation menampilkan preloader.
+- Proses API berbasis fetch menampilkan preloader bila proses berlangsung lebih dari 110 ms.
+- Polling latar belakang chat/presence dikecualikan agar UI tidak berkedip tanpa aksi pengguna.
+- Label preloader menyesuaikan konteks: menyiapkan aplikasi, memuat halaman, atau memproses data.
+- Ditambahkan safety timeout navigasi agar overlay tidak terkunci bila navigasi gagal/dibatalkan.

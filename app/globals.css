@@ -11695,3 +11695,21 @@ body {
     --mobile-page-gutter: 18px;
   }
 }
+
+/* V37 — label untuk global navigation/process preloader */
+.app-preloader__status-text {
+  margin-top: -8px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.86rem;
+  font-weight: 650;
+  letter-spacing: 0.025em;
+  text-align: center;
+  text-shadow: 0 3px 14px rgba(0, 0, 0, 0.25);
+}
+
+@media (max-width: 640px) {
+  .app-preloader__status-text {
+    max-width: 78vw;
+    font-size: 0.8rem;
+  }
+}
