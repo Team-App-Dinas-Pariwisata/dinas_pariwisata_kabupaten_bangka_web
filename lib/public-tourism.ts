@@ -183,10 +183,11 @@ function normalizeRows(rows: TourismRow[]) {
   return rows.map((row) => ({ ...row, image: browserSafeR2ImageUrl(row.image) }));
 }
 
-export async function getPublicTourismList(kind: TourismKind, page = 1, pageSize = 9) {
+export async function getPublicTourismList(kind: TourismKind, page = 1, pageSize = 9, maxPageSize = 24) {
   const config = configFor(kind);
   const safePage = normalizePage(page);
-  const safeSize = Math.min(Math.max(Math.floor(pageSize), 1), 24);
+  const safeMaxPageSize = Math.min(Math.max(Math.floor(maxPageSize), 1), 500);
+  const safeSize = Math.min(Math.max(Math.floor(pageSize), 1), safeMaxPageSize);
   const offset = (safePage - 1) * safeSize;
 
   const [countRows] = await db().query<CountRow[]>(`SELECT COUNT(*) AS total FROM ${config.table} WHERE ${config.publicWhere}`);
