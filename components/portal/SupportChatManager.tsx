@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { InlineLoader } from "../InlineLoader";
 
 type Conversation = {
   id: number;
@@ -181,7 +182,7 @@ export default function SupportChatManager() {
           </div>
           <div className="staff-chat-list-scroll">
             {loadingList ? (
-              <div className="staff-chat-empty">Memuat percakapan...</div>
+              <div className="staff-chat-empty"><InlineLoader label="Memuat percakapan..." /></div>
             ) : conversations.length === 0 ? (
               <div className="staff-chat-empty">Belum ada chat dari guest.</div>
             ) : conversations.map((conversation) => (
@@ -241,7 +242,7 @@ export default function SupportChatManager() {
                   rows={2}
                   disabled={sending}
                 />
-                <button type="button" onClick={() => void sendReply()} disabled={sending || !input.trim()}>{sending ? "Mengirim..." : "Kirim Balasan"}</button>
+                <button type="button" onClick={() => void sendReply()} disabled={sending || !input.trim()}>{sending ? <InlineLoader label="Mengirim..." compact /> : "Kirim Balasan"}</button>
               </div>
             </>
           ) : (

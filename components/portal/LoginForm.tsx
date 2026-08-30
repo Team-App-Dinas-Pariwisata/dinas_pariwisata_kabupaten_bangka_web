@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
+import { InlineLoader } from "../InlineLoader";
 
 export function LoginForm() {
   const [role, setRole] = useState<"admin" | "pengguna">("pengguna");
@@ -24,6 +25,7 @@ export function LoginForm() {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || "Login gagal.");
+      window.dispatchEvent(new Event("si-parik:navigation-start"));
       window.location.replace(result.redirectTo);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login gagal.");
@@ -48,7 +50,7 @@ export function LoginForm() {
       <label className="auth-field"><span>Kata sandi</span><input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Masukkan kata sandi" required /></label>
 
       {error && <div className="auth-error">{error}</div>}
-      <button className="auth-submit" type="submit" disabled={loading}>{loading ? "Memeriksa..." : `Masuk sebagai ${role === "admin" ? "Admin" : "Pengguna"}`}</button>
+      <button className="auth-submit" type="submit" disabled={loading}>{loading ? <InlineLoader label="Memeriksa..." compact /> : `Masuk sebagai ${role === "admin" ? "Admin" : "Pengguna"}`}</button>
       <Link className="auth-home-link" href="/">← Kembali ke halaman utama</Link>
     </form>
   );

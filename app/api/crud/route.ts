@@ -9,6 +9,19 @@ function configFor(resource: unknown): ResourceConfig | null {
   return resourceConfigs[String(resource ?? "")] ?? null;
 }
 
+const PETUGAS_DELETABLE_RESOURCES = new Set([
+  "berita",
+  "acara",
+  "tempat-wisata",
+  "hotel",
+  "satwa-endemik",
+  "kuliner",
+]);
+
+function petugasCanDelete(resource: unknown) {
+  return PETUGAS_DELETABLE_RESOURCES.has(String(resource ?? ""));
+}
+
 function slugify(value: string) {
   const slug = value.toLowerCase().normalize("NFKD").replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-").replace(/-+/g, "-");
   return slug || "item";
@@ -130,12 +143,16 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  if (!(await userOnly(request))) return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+  const petugas = await userOnly(request);
+  if (!petugas) return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
   try {
     const body = await request.json();
     const config = configFor(body.resource);
     const id = Number(body.id);
     if (!config || !id) return NextResponse.json({ message: "Resource atau ID tidak valid." }, { status: 400 });
+    if (!petugasCanDelete(body.resource)) {
+      return NextResponse.json({ message: "Akun petugas tidak memiliki izin hapus untuk resource ini." }, { status: 403 });
+    }
     const removed = await deleteById(config.table, id);
     if (!removed) return NextResponse.json({ message: "Data tidak ditemukan." }, { status: 404 });
     return NextResponse.json({ message: `${config.label} berhasil dihapus.` });

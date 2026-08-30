@@ -11751,3 +11751,83 @@ body {
 .detection-detail-list strong { display: block; margin-top: 3px; color: #1a3444; font-size: 13.5px; overflow-wrap: anywhere; }
 @media (max-width: 900px) { .detection-monitor-grid { grid-template-columns: 1fr; } }
 @media (max-width: 640px) { .detection-toolbar { grid-template-columns: 1fr; } .detection-detail-list { grid-template-columns: 1fr; } .detection-image-thumb { width: 78px; height: 64px; } }
+
+/* V38 — loader kecil untuk proses yang tetap berada di halaman yang sama */
+.inline-loader {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  color: inherit;
+  font: inherit;
+  vertical-align: middle;
+}
+
+.inline-loader--compact {
+  gap: 6px;
+}
+
+.inline-loader__spinner {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  opacity: .78;
+  animation: inline-loader-spin .72s linear infinite;
+}
+
+.inline-loader--compact .inline-loader__spinner {
+  width: 15px;
+  height: 15px;
+  flex-basis: 15px;
+  border-width: 2px;
+}
+
+.inline-loader__label {
+  min-width: 0;
+}
+
+.dm-empty .inline-loader,
+.staff-chat-empty .inline-loader,
+.staff-floating-chat-state .inline-loader {
+  color: #607681;
+}
+
+.dm-actions button:disabled {
+  cursor: wait;
+  opacity: .62;
+}
+
+.ai-bubble.is-loading .inline-loader {
+  justify-content: flex-start;
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+@keyframes inline-loader-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inline-loader__spinner { animation-duration: 1.6s; }
+}
+.support-chat-loading {
+  display: flex;
+  justify-content: center;
+  padding: 10px 6px;
+  color: #607681;
+  font-size: 12px;
+}

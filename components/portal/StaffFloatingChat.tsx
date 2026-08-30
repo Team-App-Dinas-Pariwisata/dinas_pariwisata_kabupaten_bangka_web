@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { PortalIcon } from "./PortalIcon";
+import { InlineLoader } from "../InlineLoader";
 
 type Conversation = {
   id: number;
@@ -296,7 +297,7 @@ export default function StaffFloatingChat() {
 
               <div className="staff-floating-chat-messages" aria-live="polite">
                 {loadingMessages && messages.length === 0 ? (
-                  <div className="staff-floating-chat-state">Memuat percakapan...</div>
+                  <div className="staff-floating-chat-state"><InlineLoader label="Memuat percakapan..." /></div>
                 ) : messages.length === 0 ? (
                   <div className="staff-floating-chat-state">Belum ada pesan pada percakapan ini.</div>
                 ) : messages.map((message) => (
@@ -335,7 +336,7 @@ export default function StaffFloatingChat() {
                   disabled={sending}
                 />
                 <button type="button" onClick={() => void sendReply()} disabled={sending || !input.trim()} aria-label="Kirim balasan">
-                  {sending ? "…" : "➜"}
+                  {sending ? <InlineLoader compact /> : "➜"}
                 </button>
               </div>
             </div>
@@ -360,7 +361,7 @@ export default function StaffFloatingChat() {
 
               <div className="staff-floating-chat-list-scroll">
                 {loadingList ? (
-                  <div className="staff-floating-chat-state">Memuat semua chat...</div>
+                  <div className="staff-floating-chat-state"><InlineLoader label="Memuat semua chat..." /></div>
                 ) : filteredConversations.length === 0 ? (
                   <div className="staff-floating-chat-state">
                     {conversations.length === 0 ? "Belum ada chat dari guest." : "Percakapan tidak ditemukan."}

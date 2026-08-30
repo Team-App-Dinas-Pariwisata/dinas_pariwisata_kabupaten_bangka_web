@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { InlineLoader } from "@/components/InlineLoader";
 
 const STORAGE_KEY = "si_parik_guest_chat_id_v1";
 const SEEN_KEY = "si_parik_guest_chat_seen_v1";
@@ -81,6 +82,7 @@ export default function GuestSupportChat() {
   const presenceResolvedRef = useRef(false);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(true);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState("");
@@ -159,6 +161,8 @@ export default function GuestSupportChat() {
       setError("");
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Chat belum dapat dimuat.");
+    } finally {
+      setLoadingMessages(false);
     }
   }, [guestId]);
 
@@ -268,7 +272,10 @@ export default function GuestSupportChat() {
       ]);
 
       if (payload.type === "search_redirect" && payload.redirect_url) {
-        window.setTimeout(() => window.location.assign(payload.redirect_url as string), 850);
+        window.setTimeout(() => {
+          window.dispatchEvent(new Event("si-parik:navigation-start"));
+          window.location.assign(payload.redirect_url as string);
+        }, 850);
       }
     } catch (aiError) {
       setAiMessages((current) => [
@@ -361,6 +368,7 @@ export default function GuestSupportChat() {
                     ? "Halo. Petugas sedang online. Silakan tulis pesan Anda. Semua petugas dapat melihat percakapan ini dan petugas lain dapat melanjutkan balasan bila diperlukan."
                     : "Petugas sedang offline. Anda tetap dapat mengirim pesan. Pesan akan disimpan dan dapat dibaca serta dibalas oleh petugas saat mereka aktif kembali."}
                 </div>
+                {loadingMessages && messages.length === 0 ? <div className="support-chat-loading"><InlineLoader label="Memuat percakapan..." /></div> : null}
                 {messages.map((message) => (
                   <div className={`support-chat-message ${message.sender_type === "guest" ? "is-guest" : "is-staff"}`} key={message.id}>
                     {message.sender_type === "staff" && (
@@ -392,7 +400,7 @@ export default function GuestSupportChat() {
                   disabled={isSending}
                 />
                 <button type="button" onClick={() => void sendMessage()} disabled={isSending || !input.trim()} aria-label="Kirim pesan">
-                  {isSending ? "..." : "Kirim"}
+                  {isSending ? <InlineLoader compact /> : "Kirim"}
                 </button>
               </div>
               <div className="support-chat-foot">Percakapan akan disimpan dan dapat dimuat kembali di perangkat ini saat Anda berkunjung lagi.</div>
@@ -413,7 +421,7 @@ export default function GuestSupportChat() {
                     ) : null}
                   </div>
                 ))}
-                {aiSending && <div className="ai-bubble is-loading">Memproses pertanyaan Anda...</div>}
+                {aiSending && <div className="ai-bubble is-loading"><InlineLoader label="Memproses pertanyaan Anda..." /></div>}
               </div>
               <div className="ai-example-label">Contoh / pertanyaan lanjutan</div>
               <div className="ai-chips">

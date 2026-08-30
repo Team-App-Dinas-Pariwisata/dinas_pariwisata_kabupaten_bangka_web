@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import type { ResourceField } from "@/lib/resources";
 import { PortalIcon } from "./PortalIcon";
+import { InlineLoader } from "../InlineLoader";
 import { compareTableValues, SortableTableHeader, TablePagination, type SortDirection } from "./DataTableControls";
 
 type Row = Record<string, unknown> & { id: number };
@@ -139,6 +140,7 @@ export function DataManager({ resource, title, description, label, fields, colum
   const [form, setForm] = useState<Record<string, unknown>>({});
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [lookups, setLookups] = useState<Record<string, LookupOption[]>>({});
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
@@ -300,6 +302,7 @@ export function DataManager({ resource, title, description, label, fields, colum
   async function remove(row: Row) {
     if (!window.confirm(`Hapus ${label.toLowerCase()} ini? Tindakan ini tidak dapat dibatalkan.`)) return;
     setError("");
+    setDeletingId(row.id);
     try {
       const response = await fetch("/api/crud", {
         method: "DELETE",
@@ -312,6 +315,8 @@ export function DataManager({ resource, title, description, label, fields, colum
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Data gagal dihapus.");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -322,7 +327,7 @@ export function DataManager({ resource, title, description, label, fields, colum
       {error && !modalOpen && <div className="portal-alert error">{error}</div>}
       <div className="dm-table-wrap">
         <table className="dm-table"><thead><tr>{columns.map((col) => <SortableTableHeader key={col.key} label={col.label} sortKey={col.key} activeKey={sortKey} direction={sortDirection} onSort={handleSort} />)}<th>Aksi</th></tr></thead><tbody>
-          {loading ? <tr><td colSpan={columns.length + 1} className="dm-empty">Memuat data...</td></tr> : sortedRows.length === 0 ? <tr><td colSpan={columns.length + 1} className="dm-empty">Belum ada data.</td></tr> : pagedRows.map((row) => <tr key={row.id}>{columns.map((col) => <td key={col.key} data-label={col.label}>{col.key === "foto_utama" ? <ImageThumbnail value={row[col.key]} alt={String(row.judul ?? row.nama_acara ?? row.nama_tempat ?? row.nama_hotel ?? row.nama_usaha ?? row.nama_umum ?? label)} /> : col.key === "status" || col.key === "status_acara" ? <span className={`portal-status ${String(row[col.key] ?? "").toLowerCase().replaceAll(" ", "-")}`}>{formatValue(col.key, row[col.key])}</span> : formatValue(col.key, row[col.key])}</td>)}<td className="dm-actions" data-label="Aksi"><button type="button" onClick={() => openEdit(row)} aria-label="Edit"><PortalIcon name="edit" /></button><button className="danger" type="button" onClick={() => void remove(row)} aria-label="Hapus"><PortalIcon name="trash" /></button></td></tr>)}
+          {loading ? <tr><td colSpan={columns.length + 1} className="dm-empty"><InlineLoader label="Memuat data..." /></td></tr> : sortedRows.length === 0 ? <tr><td colSpan={columns.length + 1} className="dm-empty">Belum ada data.</td></tr> : pagedRows.map((row) => <tr key={row.id}>{columns.map((col) => <td key={col.key} data-label={col.label}>{col.key === "foto_utama" ? <ImageThumbnail value={row[col.key]} alt={String(row.judul ?? row.nama_acara ?? row.nama_tempat ?? row.nama_hotel ?? row.nama_usaha ?? row.nama_umum ?? label)} /> : col.key === "status" || col.key === "status_acara" ? <span className={`portal-status ${String(row[col.key] ?? "").toLowerCase().replaceAll(" ", "-")}`}>{formatValue(col.key, row[col.key])}</span> : formatValue(col.key, row[col.key])}</td>)}<td className="dm-actions" data-label="Aksi"><button type="button" onClick={() => openEdit(row)} aria-label="Edit"><PortalIcon name="edit" /></button><button className="danger" type="button" onClick={() => void remove(row)} aria-label="Hapus" disabled={deletingId !== null}>{deletingId === row.id ? <InlineLoader compact /> : <PortalIcon name="trash" />}</button></td></tr>)}
         </tbody></table>
       </div>
       {!loading && sortedRows.length > 0 && <TablePagination totalItems={sortedRows.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={handlePageSize} />}
@@ -333,7 +338,7 @@ export function DataManager({ resource, title, description, label, fields, colum
           fields.filter((candidate) => candidate.dependsOn === field.key).forEach((candidate) => { next[candidate.key] = ""; });
           return next;
         })} required={field.required}><option value="">{field.required ? `Pilih ${field.label.toLowerCase()}` : `Tidak dipilih`}</option>{optionsFor(field).map((option) => <option key={String(option.value)} value={option.value}>{option.label}</option>)}</select> : field.type === "checkbox" ? <input className="portal-checkbox" type="checkbox" checked={Boolean(form[field.key])} onChange={(e) => setForm((old) => ({ ...old, [field.key]: e.target.checked }))} /> : field.type === "image" ? <ImageField value={form[field.key]} onChange={(value) => setForm((old) => ({ ...old, [field.key]: value }))} disabled={saving} /> : <input type={field.type ?? "text"} value={String(form[field.key] ?? "")} onChange={(e) => setForm((old) => ({ ...old, [field.key]: e.target.value }))} required={field.required} placeholder={field.placeholder} min={field.min} max={field.max} step={field.type === "number" ? (field.step ?? "any") : undefined} />}</div>)}
-      </div>{error && <div className="portal-alert error">{error}</div>}<div className="portal-modal-actions"><button type="button" className="portal-secondary" onClick={() => setModalOpen(false)}>Batal</button><button type="submit" className="portal-primary" disabled={saving}>{saving ? "Mengunggah & Menyimpan..." : "Simpan Data"}</button></div></form></div>}
+      </div>{error && <div className="portal-alert error">{error}</div>}<div className="portal-modal-actions"><button type="button" className="portal-secondary" onClick={() => setModalOpen(false)}>Batal</button><button type="submit" className="portal-primary" disabled={saving}>{saving ? <InlineLoader label="Mengunggah & Menyimpan..." compact /> : "Simpan Data"}</button></div></form></div>}
     </section>
   );
 }
