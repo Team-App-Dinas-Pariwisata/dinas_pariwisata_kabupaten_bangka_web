@@ -46,7 +46,7 @@ const userMenu: MenuItem[] = [
 
 const adminMenu: MenuItem[] = [
   { key: "pengguna", href: "/admin/pengguna", label: "Kelola Pengguna", icon: "users" },
-  { key: "whatsapp", href: "/admin/whatsapp", label: "WhatsApp FlazHost", icon: "whatsapp" },
+  // { key: "whatsapp", href: "/admin/whatsapp", label: "WhatsApp FlazHost", icon: "whatsapp" },
 ];
 
 export function PortalShell({ children, role, userName }: Props) {
