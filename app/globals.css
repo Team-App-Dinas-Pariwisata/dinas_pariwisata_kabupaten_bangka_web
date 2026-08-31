@@ -11648,3 +11648,13 @@ body {
   .dm-pagination-summary > span { white-space: normal; }
   .dm-pagination-pages button { min-width: 32px; height: 32px; }
 }
+
+.portal-multicheck { grid-column: 1 / -1; border: 1px solid #d6e1e5; border-radius: 16px; padding: 14px; background: #fbfdfd; }
+.portal-multicheck-group + .portal-multicheck-group { margin-top: 14px; padding-top: 14px; border-top: 1px solid #e5edef; }
+.portal-multicheck-group > strong { display: block; margin-bottom: 9px; color: #315f75; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+.portal-multicheck-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.portal-multicheck-options label { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border: 1px solid #e0e9ec; border-radius: 11px; background: #fff; cursor: pointer; font-size: 13px; color: #425d69; }
+.portal-multicheck-options label:hover { border-color: #9fc2c9; background: #f3fafa; }
+.portal-multicheck-options input { width: 17px; height: 17px; margin: 0; accent-color: #315f75; flex: 0 0 auto; }
+@media (max-width: 900px) { .portal-multicheck-options { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .portal-multicheck-options { grid-template-columns: 1fr; } }

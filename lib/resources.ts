@@ -6,12 +6,15 @@ export type LookupName =
   | "jenis-hotel"
   | "kecamatan"
   | "kelurahan"
-  | "status-konservasi";
+  | "status-konservasi"
+  | "fasilitas-hotel"
+  | "fasilitas-kuliner"
+  | "fasilitas-wisata";
 
 export type ResourceField = {
   key: string;
   label: string;
-  type?: "text" | "email" | "url" | "number" | "date" | "time" | "datetime-local" | "textarea" | "select" | "checkbox" | "image";
+  type?: "text" | "email" | "url" | "number" | "date" | "time" | "datetime-local" | "textarea" | "select" | "checkbox" | "multicheck" | "image";
   required?: boolean;
   placeholder?: string;
   options?: { label: string; value: string | number }[];
@@ -187,6 +190,7 @@ export const resourceConfigs: Record<string, ResourceConfig> = {
       { key: "sejarah", label: "Sejarah", type: "textarea" },
       { key: "daya_tarik_utama", label: "Daya Tarik Utama", type: "textarea" },
       { key: "alamat", label: "Alamat", type: "textarea", required: true },
+      { key: "fasilitas_ids", label: "Fasilitas Wisata", type: "multicheck", lookup: "fasilitas-wisata" },
       { key: "kecamatan_id", label: "Kecamatan", type: "select", lookup: "kecamatan" },
       { key: "kelurahan_id", label: "Desa/Kelurahan", type: "select", lookup: "kelurahan", dependsOn: "kecamatan_id" },
       { key: "kode_pos", label: "Kode Pos" },
@@ -244,6 +248,7 @@ export const resourceConfigs: Record<string, ResourceConfig> = {
       { key: "klasifikasi_bintang", label: "Klasifikasi Bintang", type: "number", min: 0, max: 5 }, { key: "nama_pengelola", label: "Nama Pengelola" },
       { key: "deskripsi_singkat", label: "Deskripsi Singkat", type: "textarea" }, { key: "deskripsi", label: "Deskripsi Lengkap", type: "textarea" },
       { key: "alamat", label: "Alamat", type: "textarea", required: true }, { key: "kecamatan_id", label: "Kecamatan", type: "select", lookup: "kecamatan" },
+      { key: "fasilitas_ids", label: "Fasilitas Hotel", type: "multicheck", lookup: "fasilitas-hotel" },
       { key: "kelurahan_id", label: "Desa/Kelurahan", type: "select", lookup: "kelurahan", dependsOn: "kecamatan_id" }, { key: "kode_pos", label: "Kode Pos" },
       { key: "latitude", label: "Latitude", type: "number", min: -90, max: 90, step: "any" }, { key: "longitude", label: "Longitude", type: "number", min: -180, max: 180, step: "any" },
       { key: "telepon", label: "Telepon" }, { key: "whatsapp", label: "WhatsApp" }, { key: "email", label: "Email", type: "email" }, { key: "website", label: "Website", type: "url", placeholder: "https://..." },
@@ -285,6 +290,7 @@ export const resourceConfigs: Record<string, ResourceConfig> = {
       { key: "nama_pemilik", label: "Nama Pemilik/Pengelola" }, { key: "deskripsi_singkat", label: "Deskripsi Singkat", type: "textarea" }, { key: "deskripsi", label: "Deskripsi Lengkap", type: "textarea" },
       { key: "menu_unggulan", label: "Menu Unggulan", type: "textarea" }, { key: "cita_rasa_khas", label: "Cita Rasa Khas", type: "textarea" },
       { key: "alamat", label: "Alamat", type: "textarea", required: true }, { key: "kecamatan_id", label: "Kecamatan", type: "select", lookup: "kecamatan" },
+      { key: "fasilitas_ids", label: "Fasilitas Kuliner", type: "multicheck", lookup: "fasilitas-kuliner" },
       { key: "kelurahan_id", label: "Desa/Kelurahan", type: "select", lookup: "kelurahan", dependsOn: "kecamatan_id" }, { key: "kode_pos", label: "Kode Pos" },
       { key: "latitude", label: "Latitude", type: "number", min: -90, max: 90, step: "any" }, { key: "longitude", label: "Longitude", type: "number", min: -180, max: 180, step: "any" },
       { key: "telepon", label: "Telepon" }, { key: "whatsapp", label: "WhatsApp" }, { key: "email", label: "Email", type: "email" }, { key: "website", label: "Website", type: "url", placeholder: "https://..." },

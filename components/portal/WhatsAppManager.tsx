@@ -146,7 +146,7 @@ export function WhatsAppManager() {
           </div>
 
           <p className="wa-state-message">
-            {status?.message || "Menghubungi service WhatsApp di Railway."}
+            {status?.message || "Menghubungi service WhatsApp Node.js."}
           </p>
 
           {showQr ? (
@@ -184,7 +184,7 @@ export function WhatsAppManager() {
                     ? "Koneksi nomor, QR, paket, dan perangkat dikelola melalui dashboard Fonnte."
                     : isReady
                       ? "Sesi tersimpan permanen; deploy atau restart berikutnya tidak memerlukan QR baru."
-                      : "QR akan muncul di sini saat WhatsApp Web selesai dimuat."}
+                      : "QR akan muncul otomatis saat service whatsapp-web.js meminta penautan baru."}
                 </p>
               </div>
             </div>

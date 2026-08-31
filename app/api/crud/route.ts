@@ -57,6 +57,62 @@ function validateRequired(config: ResourceConfig, data: Record<string, DatabaseV
   return config.required.find((key) => data[key] === null || data[key] === undefined || data[key] === "");
 }
 
+
+type FacilityRelation = { table: "hotel_fasilitas" | "kuliner_fasilitas" | "tempat_wisata_fasilitas"; foreignKey: "hotel_id" | "kuliner_id" | "tempat_wisata_id" };
+
+function facilityRelation(config: ResourceConfig): FacilityRelation | null {
+  if (config.table === "hotel") return { table: "hotel_fasilitas", foreignKey: "hotel_id" };
+  if (config.table === "kuliner") return { table: "kuliner_fasilitas", foreignKey: "kuliner_id" };
+  if (config.table === "tempat_wisata") return { table: "tempat_wisata_fasilitas", foreignKey: "tempat_wisata_id" };
+  return null;
+}
+
+function facilityIds(raw: Record<string, unknown>) {
+  if (raw.fasilitas_ids === undefined || raw.fasilitas_ids === null) return null;
+  if (!Array.isArray(raw.fasilitas_ids)) throw new Error("Fasilitas harus berupa daftar pilihan yang valid.");
+  const ids = raw.fasilitas_ids.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value > 0);
+  return Array.from(new Set(ids));
+}
+
+async function syncFacilities(connection: import("mysql2/promise").PoolConnection, config: ResourceConfig, id: number, ids: number[] | null) {
+  const relation = facilityRelation(config);
+  if (!relation || ids === null) return;
+  await connection.execute(`DELETE FROM ${relation.table} WHERE ${relation.foreignKey} = ?`, [id]);
+  if (!ids.length) return;
+  const placeholders = ids.map(() => "(?, ?)").join(", ");
+  const params: number[] = [];
+  ids.forEach((facilityId) => params.push(id, facilityId));
+  await connection.execute(`INSERT INTO ${relation.table} (${relation.foreignKey}, fasilitas_id) VALUES ${placeholders}`, params);
+}
+
+async function loadFacilities(rows: RowDataPacket[], config: ResourceConfig) {
+  const relation = facilityRelation(config);
+  if (!relation || !rows.length) return rows;
+  const ids = rows.map((row) => Number(row.id)).filter((id) => Number.isInteger(id));
+  if (!ids.length) return rows;
+  const placeholders = ids.map(() => "?").join(",");
+  const [facilityRows] = await db().execute<RowDataPacket[]>(
+    `SELECT ${relation.foreignKey} owner_id, hf.fasilitas_id, mf.nama_fasilitas, mf.kategori
+     FROM ${relation.table} hf
+     JOIN master_fasilitas mf ON mf.id = hf.fasilitas_id
+     WHERE hf.${relation.foreignKey} IN (${placeholders}) AND mf.aktif = 1
+     ORDER BY mf.kategori, mf.nama_fasilitas`,
+    ids,
+  );
+  const byOwner = new Map<number, { ids: string[]; names: string[] }>();
+  for (const row of facilityRows) {
+    const ownerId = Number(row.owner_id);
+    const bucket = byOwner.get(ownerId) ?? { ids: [], names: [] };
+    bucket.ids.push(String(row.fasilitas_id));
+    bucket.names.push(String(row.nama_fasilitas));
+    byOwner.set(ownerId, bucket);
+  }
+  return rows.map((row) => {
+    const bucket = byOwner.get(Number(row.id)) ?? { ids: [], names: [] };
+    return { ...row, fasilitas_ids: bucket.ids, fasilitas_nama: bucket.names };
+  });
+}
+
 function errorMessage(error: unknown) {
   const code = (error as { code?: string })?.code;
   if (code === "ER_DUP_ENTRY") return "Data duplikat terdeteksi. Periksa judul atau data unik lainnya.";
@@ -79,7 +135,8 @@ export async function GET(request: NextRequest) {
   const [rows] = await db().execute<RowDataPacket[]>(
     `SELECT ${config.select.join(", ")} FROM ${config.table} ORDER BY ${config.orderBy}`,
   );
-  const data = rows.map((row) => {
+  const rowsWithFacilities = await loadFacilities(rows, config);
+  const data = rowsWithFacilities.map((row) => {
     if ("foto_utama" in row) {
       return { ...row, foto_utama: browserSafeR2ImageUrl(row.foto_utama as string | null) };
     }
@@ -95,7 +152,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const config = configFor(body.resource);
     if (!config) return NextResponse.json({ message: "Resource tidak tersedia." }, { status: 404 });
-    const data = normalizeData(config, body.data ?? {});
+    const rawData = (body.data ?? {}) as Record<string, unknown>;
+    const selectedFacilityIds = facilityIds(rawData);
+    const data = normalizeData(config, rawData);
     const missing = validateRequired(config, data);
     if (missing) return NextResponse.json({ message: `Field ${missing} wajib diisi.` }, { status: 400 });
 
@@ -115,11 +174,22 @@ export async function POST(request: NextRequest) {
 
     const keys = Object.keys(data);
     const placeholders = keys.map(() => "?").join(", ");
-    const [result] = await db().execute<ResultSetHeader>(
-      `INSERT INTO ${config.table} (${keys.join(", ")}) VALUES (${placeholders})`,
-      keys.map((key) => data[key]),
-    );
-    return NextResponse.json({ message: `${config.label} berhasil ditambahkan.`, id: result.insertId }, { status: 201 });
+    const connection = await db().getConnection();
+    try {
+      await connection.beginTransaction();
+      const [result] = await connection.execute<ResultSetHeader>(
+        `INSERT INTO ${config.table} (${keys.join(", ")}) VALUES (${placeholders})`,
+        keys.map((key) => data[key]),
+      );
+      await syncFacilities(connection, config, Number(result.insertId), selectedFacilityIds);
+      await connection.commit();
+      return NextResponse.json({ message: `${config.label} berhasil ditambahkan.`, id: result.insertId }, { status: 201 });
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   } catch (error) {
     console.error(error);
     return NextResponse.json({ message: errorMessage(error) }, { status: 400 });
@@ -134,18 +204,31 @@ export async function PATCH(request: NextRequest) {
     const config = configFor(body.resource);
     const id = Number(body.id);
     if (!config || !id) return NextResponse.json({ message: "Resource atau ID tidak valid." }, { status: 400 });
-    const data = normalizeData(config, body.data ?? {});
+    const rawData = (body.data ?? {}) as Record<string, unknown>;
+    const selectedFacilityIds = facilityIds(rawData);
+    const data = normalizeData(config, rawData);
     const missing = validateRequired(config, data);
     if (missing) return NextResponse.json({ message: `Field ${missing} wajib diisi.` }, { status: 400 });
     if (Number(data.dipublikasikan) === 1 && !data.tanggal_publikasi) data.tanggal_publikasi = nowMysql();
     data.updated_by = user.id;
     const keys = Object.keys(data);
     if (!keys.length) return NextResponse.json({ message: "Tidak ada data yang diubah." }, { status: 400 });
-    await db().execute(
-      `UPDATE ${config.table} SET ${keys.map((key) => `${key} = ?`).join(", ")} WHERE id = ?`,
-      [...keys.map((key) => data[key]), id],
-    );
-    return NextResponse.json({ message: `${config.label} berhasil diperbarui.` });
+    const connection = await db().getConnection();
+    try {
+      await connection.beginTransaction();
+      await connection.execute(
+        `UPDATE ${config.table} SET ${keys.map((key) => `${key} = ?`).join(", ")} WHERE id = ?`,
+        [...keys.map((key) => data[key]), id],
+      );
+      await syncFacilities(connection, config, id, selectedFacilityIds);
+      await connection.commit();
+      return NextResponse.json({ message: `${config.label} berhasil diperbarui.` });
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   } catch (error) {
     console.error(error);
     return NextResponse.json({ message: errorMessage(error) }, { status: 400 });
