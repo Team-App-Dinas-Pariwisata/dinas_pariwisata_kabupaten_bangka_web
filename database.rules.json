@@ -42,6 +42,10 @@
       ".read": "auth != null",
       ".write": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')"
     },
+    "master_fasilitas": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')"
+    },
     "master_subsektor_ekraf": {
       ".read": "auth != null",
       ".write": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')"
@@ -75,6 +79,21 @@
       ".read": "auth != null",
       ".write": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')",
       ".indexOn": ["dipublikasikan", "aktif", "tanggal_publikasi", "kategori_kuliner_id", "kecamatan_id"]
+    },
+    "tempat_wisata_fasilitas": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')",
+      ".indexOn": ["tempat_wisata_id", "fasilitas_id"]
+    },
+    "hotel_fasilitas": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')",
+      ".indexOn": ["hotel_id", "fasilitas_id"]
+    },
+    "kuliner_fasilitas": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role == 'admin' || auth.token.role == 'pengguna')",
+      ".indexOn": ["kuliner_id", "fasilitas_id"]
     },
     "satwa_endemik": {
       ".read": "auth != null",

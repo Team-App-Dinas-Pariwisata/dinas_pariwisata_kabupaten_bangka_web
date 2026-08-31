@@ -67,6 +67,7 @@ export type RecommendationItem = {
   rank: number;
   criteria: SawCriterionResult[];
   reasons: string[];
+  facilities: string[];
 };
 
 type CriterionRow = DbRecord & {
@@ -107,6 +108,7 @@ type Candidate = {
   priceTo: number | null;
   priceKnown: boolean;
   distanceKm: number | null;
+  facilities: string[];
   values: Record<string, number | null>;
   raw: CandidateRow;
 };
@@ -344,7 +346,11 @@ async function fetchCandidateRows(kind: RecommendationKind): Promise<CandidateRo
       .slice(0, 500)
       .map((row) => {
         const rels = relByOwner.get(Number(row.id)) ?? [];
-        const codes = new Set(rels.map((rel) => facilityMap.get(Number(rel.fasilitas_id))).filter((f) => f && isTruthyDb(f.aktif)).map((f) => String(f?.kode ?? "")));
+        const resolvedFacilities = rels
+          .map((rel) => facilityMap.get(Number(rel.fasilitas_id)))
+          .filter((facility): facility is DbRecord => Boolean(facility && isTruthyDb(facility.aktif)));
+        const codes = new Set(resolvedFacilities.map((facility) => String(facility.kode ?? "")));
+        const facilityNames = [...new Set(resolvedFacilities.map((facility) => String(facility.nama_fasilitas ?? "")).filter(Boolean))];
         const adult = toNumber(row.harga_tiket_domestik_dewasa);
         const child = toNumber(row.harga_tiket_domestik_anak);
         const foreign = toNumber(row.harga_tiket_mancanegara);
@@ -366,7 +372,8 @@ async function fetchCandidateRows(kind: RecommendationKind): Promise<CandidateRo
           harga_tiket_referensi: adult ?? child ?? foreign ?? 0,
           skor_kesesuaian_pengunjung: Number(row.cocok_anak ?? 0) + Number(row.cocok_keluarga ?? 0) + Number(row.ramah_lansia ?? 0),
           skor_aksesibilitas: accessScore(row.tingkat_kesulitan_akses),
-          jumlah_fasilitas: rels.length,
+          jumlah_fasilitas: resolvedFacilities.length,
+          facilities: facilityNames,
           jumlah_aktivitas: (actByOwner.get(Number(row.id)) ?? []).filter((item) => isTruthyDb(item.aktif)).length,
           memiliki_parkir: codes.has("PARKIR") ? 1 : 0,
           memiliki_musala: codes.has("MUSALA") ? 1 : 0,
@@ -391,7 +398,11 @@ async function fetchCandidateRows(kind: RecommendationKind): Promise<CandidateRo
       .slice(0, 500)
       .map((row) => {
         const rels = relByOwner.get(Number(row.id)) ?? [];
-        const codes = new Set(rels.map((rel) => facilityMap.get(Number(rel.fasilitas_id))).filter((f) => f && isTruthyDb(f.aktif)).map((f) => String(f?.kode ?? "")));
+        const resolvedFacilities = rels
+          .map((rel) => facilityMap.get(Number(rel.fasilitas_id)))
+          .filter((facility): facility is DbRecord => Boolean(facility && isTruthyDb(facility.aktif)));
+        const codes = new Set(resolvedFacilities.map((facility) => String(facility.kode ?? "")));
+        const facilityNames = [...new Set(resolvedFacilities.map((facility) => String(facility.nama_fasilitas ?? "")).filter(Boolean))];
         return {
           ...row,
           id: Number(row.id),
@@ -409,7 +420,8 @@ async function fetchCandidateRows(kind: RecommendationKind): Promise<CandidateRo
           harga_referensi: referenceAverage(row.harga_mulai, row.harga_sampai),
           skor_halal: halalScore(row.status_halal),
           jumlah_layanan: Number(row.tersedia_dine_in ?? 0) + Number(row.tersedia_takeaway ?? 0) + Number(row.tersedia_delivery ?? 0) + Number(row.menerima_reservasi ?? 0),
-          jumlah_fasilitas: rels.length,
+          jumlah_fasilitas: resolvedFacilities.length,
+          facilities: facilityNames,
           memiliki_parkir: codes.has("PARKIR") ? 1 : 0,
           memiliki_musala: codes.has("MUSALA") ? 1 : 0,
         } as CandidateRow;
@@ -432,7 +444,11 @@ async function fetchCandidateRows(kind: RecommendationKind): Promise<CandidateRo
       .slice(0, 500)
       .map((row) => {
         const rels = relByOwner.get(Number(row.id)) ?? [];
-        const codes = new Set(rels.map((rel) => facilityMap.get(Number(rel.fasilitas_id))).filter((f) => f && isTruthyDb(f.aktif)).map((f) => String(f?.kode ?? "")));
+        const resolvedFacilities = rels
+          .map((rel) => facilityMap.get(Number(rel.fasilitas_id)))
+          .filter((facility): facility is DbRecord => Boolean(facility && isTruthyDb(facility.aktif)));
+        const codes = new Set(resolvedFacilities.map((facility) => String(facility.kode ?? "")));
+        const facilityNames = [...new Set(resolvedFacilities.map((facility) => String(facility.nama_fasilitas ?? "")).filter(Boolean))];
         return {
           ...row,
           id: Number(row.id),
@@ -448,7 +464,8 @@ async function fetchCandidateRows(kind: RecommendationKind): Promise<CandidateRo
           source_price_from: toNumber(row.harga_mulai),
           source_price_to: toNumber(row.harga_sampai),
           harga_referensi: referenceAverage(row.harga_mulai, row.harga_sampai),
-          jumlah_fasilitas: rels.length,
+          jumlah_fasilitas: resolvedFacilities.length,
+          facilities: facilityNames,
           memiliki_parkir: codes.has("PARKIR") ? 1 : 0,
           memiliki_musala: codes.has("MUSALA") ? 1 : 0,
           skor_aksesibilitas: ["DIFABEL", "KURSI_RODA", "LIFT", "PARKIR"].filter((code) => codes.has(code)).length,
@@ -545,6 +562,7 @@ function buildCandidates(kind: RecommendationKind, rows: CandidateRow[], criteri
       priceTo: priceKnown ? toNumber(row.price_to) : null,
       priceKnown,
       distanceKm,
+      facilities: Array.isArray(row.facilities) ? row.facilities.map((facility) => String(facility)).filter(Boolean) : [],
       values,
       raw: row,
     };
@@ -554,7 +572,7 @@ function buildCandidates(kind: RecommendationKind, rows: CandidateRow[], criteri
 function keywordMatches(candidate: Candidate, keyword: string) {
   const needle = keyword.trim().toLocaleLowerCase("id-ID");
   if (!needle) return true;
-  return [candidate.title, candidate.category, candidate.summary, candidate.address]
+  return [candidate.title, candidate.category, candidate.summary, candidate.address, ...candidate.facilities]
     .filter(Boolean)
     .some((value) => String(value).toLocaleLowerCase("id-ID").includes(needle));
 }
@@ -733,6 +751,7 @@ export async function findSawRecommendations(input: RecommendationSearchInput) {
     rank: index + 1,
     criteria: entry.criteria,
     reasons: entry.reasons,
+    facilities: entry.candidate.facilities,
   }));
 
   return {

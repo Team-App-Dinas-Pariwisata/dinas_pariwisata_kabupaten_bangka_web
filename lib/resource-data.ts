@@ -1,15 +1,28 @@
+import { facilityConfigForTable, facilityInfoForOwner, isFacilityOwnerTable } from "@/lib/facilities";
 import { getAll, type DbRecord } from "@/lib/realtime-db";
 import { sortByOrder } from "@/lib/data-helpers";
 import type { ResourceConfig } from "@/lib/resources";
 
 export async function loadResourceRows(config: ResourceConfig) {
-  const [rows, kategoriWisata, kategoriKuliner, jenisHotel, kecamatan, statusKonservasi] = await Promise.all([
+  const facilityConfig = facilityConfigForTable(config.table);
+  const [
+    rows,
+    kategoriWisata,
+    kategoriKuliner,
+    jenisHotel,
+    kecamatan,
+    statusKonservasi,
+    facilityRelations,
+    facilities,
+  ] = await Promise.all([
     getAll<DbRecord>(config.table),
     config.table === "tempat_wisata" ? getAll<DbRecord>("master_kategori_wisata") : Promise.resolve([]),
     config.table === "kuliner" ? getAll<DbRecord>("master_kategori_kuliner") : Promise.resolve([]),
     config.table === "hotel" ? getAll<DbRecord>("master_jenis_hotel") : Promise.resolve([]),
     ["tempat_wisata", "hotel", "kuliner"].includes(config.table) ? getAll<DbRecord>("master_kecamatan") : Promise.resolve([]),
     config.table === "satwa_endemik" ? getAll<DbRecord>("master_status_konservasi") : Promise.resolve([]),
+    facilityConfig ? getAll<DbRecord>(facilityConfig.relationTable) : Promise.resolve([]),
+    facilityConfig ? getAll<DbRecord>("master_fasilitas") : Promise.resolve([]),
   ]);
 
   const wisataMap = new Map(kategoriWisata.map((row) => [Number(row.id), row.nama_kategori]));
@@ -25,6 +38,12 @@ export async function loadResourceRows(config: ResourceConfig) {
     if (config.table === "hotel") out.jenis_hotel = hotelMap.get(Number(row.jenis_hotel_id)) ?? null;
     if (["tempat_wisata", "hotel", "kuliner"].includes(config.table)) out.kecamatan = kecamatanMap.get(Number(row.kecamatan_id)) ?? null;
     if (config.table === "satwa_endemik") out.status_konservasi = konservasiMap.get(Number(row.status_konservasi_id)) ?? null;
+
+    if (isFacilityOwnerTable(config.table)) {
+      const resolved = facilityInfoForOwner(config.table, Number(row.id), facilityRelations, facilities);
+      out.fasilitas_ids = resolved.map((facility) => facility.id);
+      out.fasilitas = resolved.map((facility) => facility.name).join(", ");
+    }
     return out;
   });
 

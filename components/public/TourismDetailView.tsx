@@ -1,12 +1,20 @@
 import Link from "next/link";
 import PublicSiteFooter from "@/components/public/PublicSiteFooter";
 import PublicSiteHeader from "@/components/public/PublicSiteHeader";
-import type { PublicTourismItem, TourismKind } from "@/lib/public-tourism";
+import type { PublicFacility, PublicTourismItem, TourismKind } from "@/lib/public-tourism";
 import { tourismMeta } from "@/lib/public-tourism";
 
 function formatCurrency(value: number | null) {
   if (value === null || value === undefined) return null;
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(Number(value));
+}
+
+function groupFacilities(facilities: PublicFacility[]) {
+  const groups: Record<string, PublicFacility[]> = {};
+  for (const facility of facilities) {
+    (groups[facility.category] ??= []).push(facility);
+  }
+  return Object.entries(groups);
 }
 
 export default function TourismDetailView({
@@ -73,6 +81,26 @@ export default function TourismDetailView({
                 )}
               </div>
 
+              {item.facilities.length > 0 && (
+                <section className="tourism-facilities-card">
+                  <div className="tourism-facilities-heading">
+                    <span>Fasilitas</span>
+                    <h3>Fasilitas yang tersedia</h3>
+                    <p>{item.facilities.length} fasilitas tercatat pada data ini.</p>
+                  </div>
+                  <div className="tourism-facilities-groups">
+                    {groupFacilities(item.facilities).map(([group, facilities]) => (
+                      <div className="tourism-facility-group" key={group}>
+                        <strong>{group}</strong>
+                        <div className="tourism-facility-tags">
+                          {facilities.map((facility) => <span key={facility.id}>{facility.name}</span>)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
               {(hasCoordinates || item.address) && (
                 <section className="tourism-map-card">
                   <div className="tourism-map-heading">
@@ -116,6 +144,7 @@ export default function TourismDetailView({
                 {item.address && <div><small>Lokasi / wilayah</small><strong>{item.address}</strong></div>}
                 {item.badge && <div><small>Keterangan</small><strong>{item.badge}</strong></div>}
                 {priceFrom && <div><small>Kisaran harga</small><strong>{priceTo && priceTo !== priceFrom ? `${priceFrom} – ${priceTo}` : priceFrom}</strong></div>}
+                {item.facilities.length > 0 && <div><small>Fasilitas</small><strong>{item.facilities.length} tersedia</strong></div>}
               </div>
               <Link href={basePath} className="public-outline-button">← Kembali ke daftar</Link>
             </aside>

@@ -65,6 +65,12 @@ export default function TourismListView({
                       <h3><Link href={`${basePath}/${item.slug}`}>{item.title}</Link></h3>
                       {item.address && <p className="tourism-card-location">⌖ {item.address}</p>}
                       <p className="tourism-card-summary">{item.summary || "Informasi wisata Kabupaten Bangka."}</p>
+                      {item.facilities.length > 0 && (
+                        <div className="tourism-card-facilities">
+                          {item.facilities.slice(0, 3).map((facility) => <span key={facility.id}>{facility.name}</span>)}
+                          {item.facilities.length > 3 && <span>+{item.facilities.length - 3}</span>}
+                        </div>
+                      )}
                       <Link href={`${basePath}/${item.slug}`} className="public-read-link">Lihat detail <span>→</span></Link>
                     </div>
                   </article>

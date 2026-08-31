@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRequestRole } from "@/lib/auth";
+import {
+  deleteFacilityRelations,
+  isFacilityOwnerTable,
+  syncFacilityRelations,
+  validateFacilityIds,
+} from "@/lib/facilities";
 import { createNumeric, deleteById, dbNow, updateById } from "@/lib/realtime-db";
 import { loadResourceRows } from "@/lib/resource-data";
 import { resourceConfigs, type ResourceConfig } from "@/lib/resources";
@@ -67,8 +73,14 @@ function validateRequired(config: ResourceConfig, data: Record<string, DatabaseV
 }
 
 function errorMessage(error: unknown) {
-  if (error instanceof Error && error.message.startsWith("Nilai ")) return error.message;
+  if (error instanceof Error && (error.message.startsWith("Nilai ") || error.message.startsWith("Fasilitas "))) return error.message;
   return "Permintaan belum dapat diproses.";
+}
+
+async function selectedFacilityIds(config: ResourceConfig, raw: Record<string, unknown>) {
+  if (!isFacilityOwnerTable(config.table)) return null;
+  if (!Object.prototype.hasOwnProperty.call(raw, "fasilitas_ids")) return null;
+  return validateFacilityIds(config.table, raw.fasilitas_ids);
 }
 
 async function userOnly(request: NextRequest) {
@@ -95,7 +107,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const config = configFor(body.resource);
     if (!config) return NextResponse.json({ message: "Resource tidak tersedia." }, { status: 404 });
-    const data = normalizeData(config, body.data ?? {});
+    const raw = (body.data ?? {}) as Record<string, unknown>;
+    const facilityIds = await selectedFacilityIds(config, raw);
+    const data = normalizeData(config, raw);
     const missing = validateRequired(config, data);
     if (missing) return NextResponse.json({ message: `Field ${missing} wajib diisi.` }, { status: 400 });
 
@@ -112,6 +126,14 @@ export async function POST(request: NextRequest) {
     data.updated_by = user.id;
 
     const id = await createNumeric(config.table, data);
+    if (facilityIds !== null && isFacilityOwnerTable(config.table)) {
+      try {
+        await syncFacilityRelations(config.table, id, facilityIds);
+      } catch (error) {
+        await deleteById(config.table, id).catch(() => false);
+        throw error;
+      }
+    }
     return NextResponse.json({ message: `${config.label} berhasil ditambahkan.`, id }, { status: 201 });
   } catch (error) {
     console.error(error);
@@ -127,14 +149,20 @@ export async function PATCH(request: NextRequest) {
     const config = configFor(body.resource);
     const id = Number(body.id);
     if (!config || !id) return NextResponse.json({ message: "Resource atau ID tidak valid." }, { status: 400 });
-    const data = normalizeData(config, body.data ?? {});
+    const raw = (body.data ?? {}) as Record<string, unknown>;
+    const facilityIds = await selectedFacilityIds(config, raw);
+    const data = normalizeData(config, raw);
     const missing = validateRequired(config, data);
     if (missing) return NextResponse.json({ message: `Field ${missing} wajib diisi.` }, { status: 400 });
     if (Number(data.dipublikasikan) === 1 && !data.tanggal_publikasi) data.tanggal_publikasi = dbNow();
     data.updated_by = user.id;
-    if (!Object.keys(data).length) return NextResponse.json({ message: "Tidak ada data yang diubah." }, { status: 400 });
-    const updated = await updateById(config.table, id, data);
+    if (!Object.keys(data).length && facilityIds === null) return NextResponse.json({ message: "Tidak ada data yang diubah." }, { status: 400 });
+
+    const updated = Object.keys(data).length ? await updateById(config.table, id, data) : true;
     if (!updated) return NextResponse.json({ message: "Data tidak ditemukan." }, { status: 404 });
+    if (facilityIds !== null && isFacilityOwnerTable(config.table)) {
+      await syncFacilityRelations(config.table, id, facilityIds);
+    }
     return NextResponse.json({ message: `${config.label} berhasil diperbarui.` });
   } catch (error) {
     console.error(error);
@@ -155,6 +183,13 @@ export async function DELETE(request: NextRequest) {
     }
     const removed = await deleteById(config.table, id);
     if (!removed) return NextResponse.json({ message: "Data tidak ditemukan." }, { status: 404 });
+    if (isFacilityOwnerTable(config.table)) {
+      try {
+        await deleteFacilityRelations(config.table, id);
+      } catch (cleanupError) {
+        console.error("Facility relation cleanup error:", cleanupError);
+      }
+    }
     return NextResponse.json({ message: `${config.label} berhasil dihapus.` });
   } catch (error) {
     console.error(error);

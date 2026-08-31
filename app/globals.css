@@ -11831,3 +11831,120 @@ body {
   color: #607681;
   font-size: 12px;
 }
+
+/* Fasilitas — CRUD petugas + halaman guest */
+.portal-multicheck {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid #dce6e9;
+  border-radius: 14px;
+  background: #f8fbfc;
+}
+.portal-multicheck-group {
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #e1e9ec;
+  border-radius: 12px;
+  background: #fff;
+}
+.portal-multicheck-group legend {
+  padding: 0 7px;
+  color: #315f75;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.portal-multicheck-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+.portal-multicheck-option {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid #e2e9ec;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, box-shadow .16s ease;
+}
+.portal-multicheck-option:hover { border-color: #9cb8c3; background: #f8fbfc; }
+.portal-multicheck-option.is-selected { border-color: #6f9dad; background: #eef6f8; box-shadow: 0 0 0 2px rgba(94,139,157,.08); }
+.portal-multicheck-option input { position: absolute; opacity: 0; pointer-events: none; }
+.portal-multicheck-mark {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #b9cbd2;
+  border-radius: 6px;
+  background: #fff;
+  color: transparent;
+  font-size: 13px;
+  font-weight: 900;
+}
+.portal-multicheck-option.is-selected .portal-multicheck-mark { border-color: #315f75; background: #315f75; color: #fff; }
+.portal-multicheck-option > span:last-child { min-width: 0; display: grid; gap: 2px; }
+.portal-multicheck-option strong { color: #28495a; font-size: 13px; line-height: 1.25; }
+.portal-multicheck-option small { color: #85959d; font-size: 10px; font-weight: 700; }
+.portal-multicheck-empty { padding: 14px; border: 1px dashed #cbd9de; border-radius: 10px; color: #6f818b; background: #f8fbfc; font-size: 13px; }
+
+.tourism-card-facilities,
+.spk-facility-tags,
+.tourism-facility-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tourism-card-facilities { margin: -2px 0 14px; }
+.tourism-card-facilities span,
+.spk-facility-tags span,
+.tourism-facility-tags span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 27px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #eef5f7;
+  color: #315f75;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.2;
+}
+.tourism-facilities-card {
+  margin-top: 22px;
+  padding: 20px;
+  border: 1px solid #e1e9ec;
+  border-radius: 16px;
+  background: #fff;
+}
+.tourism-facilities-heading > span {
+  color: #668592;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.tourism-facilities-heading h3 { margin: 4px 0 3px; color: #18364c; font-size: 20px; }
+.tourism-facilities-heading p { margin: 0; color: #72858f; font-size: 13px; }
+.tourism-facilities-groups { display: grid; gap: 15px; margin-top: 18px; }
+.tourism-facility-group { display: grid; gap: 8px; }
+.tourism-facility-group > strong { color: #526f7b; font-size: 12px; }
+.spk-facility-tags { margin-top: 10px; }
+.spk-facility-tags span { background: #f0f6f3; color: #366151; }
+
+@media (max-width: 860px) {
+  .portal-multicheck-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .portal-multicheck-options { grid-template-columns: 1fr; }
+  .portal-multicheck { padding: 10px; }
+  .tourism-facilities-card { padding: 16px; }
+}

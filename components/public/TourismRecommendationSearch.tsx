@@ -40,6 +40,7 @@ type ResultItem = {
   rank: number;
   criteria: CriterionResult[];
   reasons: string[];
+  facilities: string[];
 };
 type SearchResponse = {
   data?: {
@@ -499,6 +500,12 @@ export default function TourismRecommendationSearch() {
                     {item.distanceKm !== null && <span><b>{item.distanceKm.toFixed(item.distanceKm < 10 ? 1 : 0)} km</b> dari lokasi Anda</span>}
                     {item.priceFrom !== null && <span><b>{rupiah(item.priceFrom)}</b> harga mulai</span>}
                   </div>
+                  {item.facilities.length > 0 && (
+                    <div className="spk-facility-tags">
+                      {item.facilities.slice(0, 5).map((facility) => <span key={facility}>{facility}</span>)}
+                      {item.facilities.length > 5 && <span>+{item.facilities.length - 5} fasilitas</span>}
+                    </div>
+                  )}
                   <div className="spk-reason-tags">{item.reasons.map((reason) => <span key={reason}>{reason}</span>)}</div>
                   <div className="spk-result-actions">
                     <Link href={item.href}>Lihat detail <span>→</span></Link>
