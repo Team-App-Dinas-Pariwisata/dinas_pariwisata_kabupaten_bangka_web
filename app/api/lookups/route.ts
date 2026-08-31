@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     [kecamatan],
     [kelurahan],
     [statusKonservasi],
+    [fasilitas],
   ] = await Promise.all([
     db().execute<RowDataPacket[]>(
       "SELECT id value, nama_kategori label FROM master_kategori_berita WHERE aktif = 1 ORDER BY urutan, nama_kategori",
@@ -42,6 +43,7 @@ export async function GET(request: NextRequest) {
     db().execute<RowDataPacket[]>(
       "SELECT id value, CONCAT(kode, ' - ', nama_status) label FROM master_status_konservasi WHERE aktif = 1 ORDER BY urutan_prioritas, nama_status",
     ),
+    db().execute<RowDataPacket[]>("SELECT id value, nama_fasilitas label, kategori groupName FROM master_fasilitas WHERE aktif = 1 ORDER BY kategori, nama_fasilitas"),
   ]);
 
   return NextResponse.json({
@@ -54,6 +56,9 @@ export async function GET(request: NextRequest) {
       kecamatan,
       kelurahan,
       "status-konservasi": statusKonservasi,
+      "fasilitas-hotel": fasilitas.filter((item) => ["Umum", "Hotel", "Aksesibilitas", "Keamanan"].includes(String(item.groupName))),
+      "fasilitas-kuliner": fasilitas.filter((item) => ["Umum", "Kuliner", "Aksesibilitas", "Keamanan"].includes(String(item.groupName))),
+      "fasilitas-wisata": fasilitas.filter((item) => ["Umum", "Wisata", "Aksesibilitas", "Keamanan"].includes(String(item.groupName))),
     },
   });
 }

@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "whatsapp:install": "npm --prefix whatsapp-service install",
+    "whatsapp:start": "npm --prefix whatsapp-service start"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1097.0",
