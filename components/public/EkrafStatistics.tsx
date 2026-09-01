@@ -12,6 +12,8 @@ type StatistikPayload = {
   total?: number;
   kecamatan?: StatistikItem[];
   subsektor?: StatistikItem[];
+  years?: number[];
+  selectedYear?: number | null;
   message?: string;
 };
 
@@ -61,6 +63,8 @@ export default function EkrafStatistics() {
   const [total, setTotal] = useState(0);
   const [kecamatan, setKecamatan] = useState<StatistikItem[]>([]);
   const [subsektor, setSubsektor] = useState<StatistikItem[]>([]);
+  const [years, setYears] = useState<number[]>([]);
+  const [selectedYear, setSelectedYear] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -69,13 +73,16 @@ export default function EkrafStatistics() {
     setLoading(true);
     setError("");
 
-    fetch("/api/public/statistik-ekraf", { cache: "no-store", signal: controller.signal })
+    const query = selectedYear ? `?tahun=${encodeURIComponent(selectedYear)}` : "";
+
+    fetch(`/api/public/statistik-ekraf${query}`, { cache: "no-store", signal: controller.signal })
       .then(async (response) => {
         const payload = (await response.json()) as StatistikPayload;
         if (!response.ok) throw new Error(payload.message || "Statistik gagal dimuat.");
         setTotal(Number(payload.total ?? 0));
         setKecamatan(Array.isArray(payload.kecamatan) ? payload.kecamatan : []);
         setSubsektor(Array.isArray(payload.subsektor) ? payload.subsektor : []);
+        setYears(Array.isArray(payload.years) ? payload.years : []);
       })
       .catch((fetchError) => {
         if (fetchError instanceof DOMException && fetchError.name === "AbortError") return;
@@ -86,7 +93,7 @@ export default function EkrafStatistics() {
       });
 
     return () => controller.abort();
-  }, []);
+  }, [selectedYear]);
 
   useEffect(() => {
     const track = trackRef.current;
@@ -131,13 +138,27 @@ export default function EkrafStatistics() {
               <h2 id="ekraf-statistics-title">Potret Ekonomi Kreatif Kabupaten Bangka.</h2>
             </div>
 
-            <div className="ekraf-statistics-actions" aria-label="Navigasi grafik statistik">
+            <div className="ekraf-statistics-actions" aria-label="Filter dan navigasi grafik statistik">
+
               <span className="ekraf-statistics-total">
                 <strong>{loading ? "…" : total}</strong>
                 <small>Pelaku disetujui</small>
               </span>
               <button type="button" onClick={() => move(-1)} aria-label="Grafik sebelumnya">←</button>
               <button type="button" onClick={() => move(1)} aria-label="Grafik berikutnya">→</button>
+              <label className="ekraf-statistics-year-filter">
+                <span>Tahun</span>
+                <select
+                  value={selectedYear}
+                  onChange={(event) => setSelectedYear(event.target.value)}
+                  aria-label="Filter statistik berdasarkan tahun verifikasi"
+                >
+                  <option value="">Semua Tahun</option>
+                  {years.map((year) => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </label>
             </div>
           </div>
 
@@ -156,7 +177,10 @@ export default function EkrafStatistics() {
                         <div>
                           <span>{frame.eyebrow}</span>
                           <h3>{frame.title}</h3>
-                          <p>{frame.description}</p>
+                          <p>
+                            {frame.description}
+                            {selectedYear ? ` Data tahun ${selectedYear}.` : ""}
+                          </p>
                         </div>
                         <span className="ekraf-statistics-frame-count">{data.length.toString().padStart(2, "0")}</span>
                       </div>
@@ -164,7 +188,11 @@ export default function EkrafStatistics() {
                       {data.length > 0 ? (
                         <BarList data={data} columns={frame.key === "subsektor"} />
                       ) : (
-                        <div className="ekraf-statistics-empty">Belum ada data Pelaku Ekraf yang disetujui.</div>
+                        <div className="ekraf-statistics-empty">
+                          {selectedYear
+                            ? `Belum ada data Pelaku Ekraf yang disetujui pada tahun ${selectedYear}.`
+                            : "Belum ada data Pelaku Ekraf yang disetujui."}
+                        </div>
                       )}
                     </article>
                   );
