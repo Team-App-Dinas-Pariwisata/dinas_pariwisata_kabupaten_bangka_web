@@ -458,6 +458,21 @@ function buildCandidates(kind: RecommendationKind, rows: CandidateRow[], criteri
 function keywordMatches(candidate: Candidate, keyword: string) {
   const needle = keyword.trim().toLocaleLowerCase("id-ID");
   if (!needle) return true;
+
+  // Istilah seperti "Wisata Keluarga" adalah preferensi pengunjung, bukan selalu
+  // kategori master yang dipasang pada destinasi. Cocokkan ke flag SPK agar
+  // destinasi yang memang cocok untuk keluarga tidak gugur hanya karena
+  // kategori utamanya adalah Bahari/Alam/Buatan.
+  if (["wisata keluarga", "keluarga", "ramah keluarga"].includes(needle)) {
+    return Number(candidate.raw.cocok_keluarga ?? 0) === 1;
+  }
+  if (["ramah anak", "untuk anak", "anak"].includes(needle)) {
+    return Number(candidate.raw.cocok_anak ?? 0) === 1;
+  }
+  if (["ramah lansia", "untuk lansia", "lansia"].includes(needle)) {
+    return Number(candidate.raw.ramah_lansia ?? 0) === 1;
+  }
+
   return [candidate.title, candidate.category, candidate.summary, candidate.address]
     .filter(Boolean)
     .some((value) => String(value).toLocaleLowerCase("id-ID").includes(needle));
