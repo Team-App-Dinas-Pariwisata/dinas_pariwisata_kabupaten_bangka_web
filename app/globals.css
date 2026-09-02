@@ -4878,7 +4878,7 @@ a {
    ========================================================================== */
 .home-contact-section {
   position: relative;
-  padding: 0 0 64px;
+  padding: 56px 0 64px;
   background: #fff;
 }
 
@@ -5029,7 +5029,7 @@ a {
 }
 
 @media (max-width: 560px) {
-  .home-contact-section { padding-bottom: 34px; }
+  .home-contact-section { padding: 36px 0 34px; }
   .home-contact-card { padding: 16px; border-radius: 24px; }
   .home-contact-map { border-radius: 16px; }
   .home-contact-map,
@@ -11649,12 +11649,362 @@ body {
   .dm-pagination-pages button { min-width: 32px; height: 32px; }
 }
 
-.portal-multicheck { grid-column: 1 / -1; border: 1px solid #d6e1e5; border-radius: 16px; padding: 14px; background: #fbfdfd; }
-.portal-multicheck-group + .portal-multicheck-group { margin-top: 14px; padding-top: 14px; border-top: 1px solid #e5edef; }
-.portal-multicheck-group > strong { display: block; margin-bottom: 9px; color: #315f75; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
-.portal-multicheck-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.portal-multicheck-options label { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border: 1px solid #e0e9ec; border-radius: 11px; background: #fff; cursor: pointer; font-size: 13px; color: #425d69; }
-.portal-multicheck-options label:hover { border-color: #9fc2c9; background: #f3fafa; }
-.portal-multicheck-options input { width: 17px; height: 17px; margin: 0; accent-color: #315f75; flex: 0 0 auto; }
-@media (max-width: 900px) { .portal-multicheck-options { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 560px) { .portal-multicheck-options { grid-template-columns: 1fr; } }
+
+/* ========================================================================== 
+   V38 — Mobile safe spacing
+   Memberi ruang horizontal yang konsisten pada seluruh area konten utama
+   tanpa menghilangkan section/background yang memang full-bleed.
+   ========================================================================== */
+@media (max-width: 760px) {
+  :root {
+    --mobile-page-gutter: 20px;
+  }
+
+  .page-container,
+  .public-container,
+  .topbar-wrap,
+  .submission-shell {
+    width: min(calc(100% - (var(--mobile-page-gutter) * 2)), 680px);
+  }
+
+  .portal-content,
+  .applicant-content {
+    padding-left: var(--mobile-page-gutter);
+    padding-right: var(--mobile-page-gutter);
+  }
+
+  .portal-topbar,
+  .applicant-topbar {
+    padding-left: var(--mobile-page-gutter);
+    padding-right: var(--mobile-page-gutter);
+  }
+
+  .auth-card,
+  .applicant-auth-card {
+    width: calc(100% - (var(--mobile-page-gutter) * 2));
+  }
+
+  .portal-modal-layer {
+    padding-left: var(--mobile-page-gutter);
+    padding-right: var(--mobile-page-gutter);
+  }
+}
+
+@media (max-width: 420px) {
+  :root {
+    --mobile-page-gutter: 18px;
+  }
+}
+
+/* V37 — label untuk global navigation/process preloader */
+.app-preloader__status-text {
+  margin-top: -8px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.86rem;
+  font-weight: 650;
+  letter-spacing: 0.025em;
+  text-align: center;
+  text-shadow: 0 3px 14px rgba(0, 0, 0, 0.25);
+}
+
+@media (max-width: 640px) {
+  .app-preloader__status-text {
+    max-width: 78vw;
+    font-size: 0.8rem;
+  }
+}
+
+/* Petugas: penghapusan pengajuan + monitoring deteksi */
+.submission-action-buttons { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.delete-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 8px 11px; border: 1px solid #e3a5a5; border-radius: 9px; background: #fff7f7; color: #a32f2f; font: inherit; font-size: 13px; font-weight: 750; cursor: pointer; }
+.delete-button:hover:not(:disabled) { background: #fdeaea; border-color: #d98989; }
+.delete-button:disabled { opacity: .55; cursor: not-allowed; }
+.delete-button svg { width: 16px; height: 16px; }
+.delete-button.danger { margin-right: auto; }
+
+.detection-toolbar { display: grid; grid-template-columns: minmax(240px, 1fr) auto; gap: 12px; align-items: center; margin: 16px 0; }
+.detection-search { display: flex; align-items: center; gap: 9px; border: 1px solid #d7e2e6; border-radius: 11px; background: #fff; padding: 0 12px; }
+.detection-search svg { width: 18px; height: 18px; color: #6f818b; }
+.detection-search input { width: 100%; min-height: 42px; border: 0; outline: 0; background: transparent; font: inherit; }
+.detection-monitor-grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: 14px; margin-bottom: 16px; }
+.detection-panel { background: #fff; border: 1px solid #e0e8eb; border-radius: 14px; padding: 16px; box-shadow: 0 5px 18px rgba(21, 50, 67, .045); }
+.detection-panel h2 { margin: 0; color: #18364c; font-size: 16px; }
+.detection-panel > p { margin: 4px 0 14px; color: #72858f; font-size: 13px; }
+.detection-bars { height: 190px; display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; align-items: end; }
+.detection-bar-item { min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: end; align-items: center; gap: 6px; }
+.detection-bar-value { font-size: 11px; font-weight: 800; color: #506873; }
+.detection-bar-track { width: min(32px, 75%); height: 135px; display: flex; align-items: end; border-radius: 8px 8px 3px 3px; background: #edf4f6; overflow: hidden; }
+.detection-bar-fill { width: 100%; min-height: 2px; border-radius: 8px 8px 0 0; background: #5e8b9d; }
+.detection-bar-label { font-size: 10.5px; color: #71838d; white-space: nowrap; }
+.detection-ranking { display: grid; gap: 10px; }
+.detection-ranking-row { display: grid; grid-template-columns: 28px minmax(0,1fr) auto; gap: 9px; align-items: center; }
+.detection-ranking-row > span:first-child { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: #e8f1f4; color: #18364c; font-size: 12px; font-weight: 900; }
+.detection-ranking-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.detection-ranking-row small { font-weight: 850; color: #5e8b9d; }
+.detection-image-thumb { width: 98px; height: 76px; object-fit: cover; border-radius: 9px; border: 1px solid #dce7ea; background: #edf4f6; }
+.detection-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.detection-tag { display: inline-flex; padding: 4px 7px; border-radius: 999px; background: #eaf2f4; color: #254b60; font-size: 11px; font-weight: 750; }
+.detection-modal-image { display: block; width: 100%; max-height: 430px; object-fit: contain; border-radius: 12px; background: #eef4f6; }
+.detection-detail-list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px 16px; margin-top: 15px; }
+.detection-detail-list > div { min-width: 0; }
+.detection-detail-list span { display: block; color: #7b8c95; font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.detection-detail-list strong { display: block; margin-top: 3px; color: #1a3444; font-size: 13.5px; overflow-wrap: anywhere; }
+@media (max-width: 900px) { .detection-monitor-grid { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { .detection-toolbar { grid-template-columns: 1fr; } .detection-detail-list { grid-template-columns: 1fr; } .detection-image-thumb { width: 78px; height: 64px; } }
+
+/* V38 — loader kecil untuk proses yang tetap berada di halaman yang sama */
+.inline-loader {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  color: inherit;
+  font: inherit;
+  vertical-align: middle;
+}
+
+.inline-loader--compact {
+  gap: 6px;
+}
+
+.inline-loader__spinner {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  opacity: .78;
+  animation: inline-loader-spin .72s linear infinite;
+}
+
+.inline-loader--compact .inline-loader__spinner {
+  width: 15px;
+  height: 15px;
+  flex-basis: 15px;
+  border-width: 2px;
+}
+
+.inline-loader__label {
+  min-width: 0;
+}
+
+.dm-empty .inline-loader,
+.staff-chat-empty .inline-loader,
+.staff-floating-chat-state .inline-loader {
+  color: #607681;
+}
+
+.dm-actions button:disabled {
+  cursor: wait;
+  opacity: .62;
+}
+
+.ai-bubble.is-loading .inline-loader {
+  justify-content: flex-start;
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+@keyframes inline-loader-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inline-loader__spinner { animation-duration: 1.6s; }
+}
+.support-chat-loading {
+  display: flex;
+  justify-content: center;
+  padding: 10px 6px;
+  color: #607681;
+  font-size: 12px;
+}
+
+/* Fasilitas — CRUD petugas + halaman guest */
+.portal-multicheck {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid #dce6e9;
+  border-radius: 14px;
+  background: #f8fbfc;
+}
+.portal-multicheck-group {
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #e1e9ec;
+  border-radius: 12px;
+  background: #fff;
+}
+.portal-multicheck-group legend {
+  padding: 0 7px;
+  color: #315f75;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.portal-multicheck-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+.portal-multicheck-option {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid #e2e9ec;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, box-shadow .16s ease;
+}
+.portal-multicheck-option:hover { border-color: #9cb8c3; background: #f8fbfc; }
+.portal-multicheck-option.is-selected { border-color: #6f9dad; background: #eef6f8; box-shadow: 0 0 0 2px rgba(94,139,157,.08); }
+.portal-multicheck-option input { position: absolute; opacity: 0; pointer-events: none; }
+.portal-multicheck-mark {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #b9cbd2;
+  border-radius: 6px;
+  background: #fff;
+  color: transparent;
+  font-size: 13px;
+  font-weight: 900;
+}
+.portal-multicheck-option.is-selected .portal-multicheck-mark { border-color: #315f75; background: #315f75; color: #fff; }
+.portal-multicheck-option > span:last-child { min-width: 0; display: grid; gap: 2px; }
+.portal-multicheck-option strong { color: #28495a; font-size: 13px; line-height: 1.25; }
+.portal-multicheck-option small { color: #85959d; font-size: 10px; font-weight: 700; }
+.portal-multicheck-empty { padding: 14px; border: 1px dashed #cbd9de; border-radius: 10px; color: #6f818b; background: #f8fbfc; font-size: 13px; }
+
+.tourism-card-facilities,
+.spk-facility-tags,
+.tourism-facility-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tourism-card-facilities { margin: -2px 0 14px; }
+.tourism-card-facilities span,
+.spk-facility-tags span,
+.tourism-facility-tags span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 27px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #eef5f7;
+  color: #315f75;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.2;
+}
+.tourism-facilities-card {
+  margin-top: 22px;
+  padding: 20px;
+  border: 1px solid #e1e9ec;
+  border-radius: 16px;
+  background: #fff;
+}
+.tourism-facilities-heading > span {
+  color: #668592;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.tourism-facilities-heading h3 { margin: 4px 0 3px; color: #18364c; font-size: 20px; }
+.tourism-facilities-heading p { margin: 0; color: #72858f; font-size: 13px; }
+.tourism-facilities-groups { display: grid; gap: 15px; margin-top: 18px; }
+.tourism-facility-group { display: grid; gap: 8px; }
+.tourism-facility-group > strong { color: #526f7b; font-size: 12px; }
+.spk-facility-tags { margin-top: 10px; }
+.spk-facility-tags span { background: #f0f6f3; color: #366151; }
+
+@media (max-width: 860px) {
+  .portal-multicheck-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .portal-multicheck-options { grid-template-columns: 1fr; }
+  .portal-multicheck { padding: 10px; }
+  .tourism-facilities-card { padding: 16px; }
+}
+
+/* ========================================================================== 
+   V39 — Homepage year filter + contact spacing + unified public footer
+   ========================================================================== */
+.ekraf-statistics-year-filter {
+  display: grid;
+  gap: 5px;
+  min-width: 138px;
+}
+
+.ekraf-statistics-year-filter > span {
+  color: #8395a5;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.ekraf-statistics-year-filter select {
+  width: 100%;
+  height: 42px;
+  padding: 0 36px 0 13px;
+  border: 1px solid #d7e2eb;
+  border-radius: 12px;
+  outline: none;
+  color: #314256;
+  background: #ffffff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 760;
+  cursor: pointer;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+.ekraf-statistics-year-filter select:hover,
+.ekraf-statistics-year-filter select:focus {
+  border-color: #9eb3c6;
+  box-shadow: 0 0 0 3px rgba(113, 141, 172, .12);
+}
+
+@media (max-width: 980px) {
+  .ekraf-statistics-actions {
+    flex-wrap: wrap;
+  }
+
+  .ekraf-statistics-year-filter {
+    min-width: 150px;
+  }
+}
+
+@media (max-width: 560px) {
+  .ekraf-statistics-year-filter {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .ekraf-statistics-year-filter select {
+    height: 44px;
+  }
+}
