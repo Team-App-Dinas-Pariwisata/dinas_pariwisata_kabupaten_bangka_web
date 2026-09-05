@@ -276,9 +276,9 @@ CREATE TABLE IF NOT EXISTS `chat_conversations` (
   UNIQUE KEY `uk_chat_conversations_guest_identifier` (`guest_identifier`),
   KEY `idx_chat_conversations_last_message` (`last_message_at`),
   KEY `idx_chat_conversations_status` (`status`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Dumping data for table dinas_pariwisata.chat_conversations: ~2 rows (approximately)
+-- Dumping data for table dinas_pariwisata.chat_conversations: ~4 rows (approximately)
 DELETE FROM `chat_conversations`;
 INSERT INTO `chat_conversations` (`id`, `guest_identifier`, `status`, `last_message_at`, `created_at`, `updated_at`) VALUES
 	(1, 'guest_7ad6d4cbee0642cd8d52a39cbe9a6c15', 'open', '2026-08-30 02:13:32', '2026-08-15 17:10:17', '2026-08-30 02:13:34'),
@@ -300,9 +300,9 @@ CREATE TABLE IF NOT EXISTS `chat_messages` (
   KEY `idx_chat_messages_sender_user` (`sender_user_id`),
   CONSTRAINT `fk_chat_messages_conversation` FOREIGN KEY (`conversation_id`) REFERENCES `chat_conversations` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_chat_messages_sender_user` FOREIGN KEY (`sender_user_id`) REFERENCES `pengguna` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Dumping data for table dinas_pariwisata.chat_messages: ~7 rows (approximately)
+-- Dumping data for table dinas_pariwisata.chat_messages: ~12 rows (approximately)
 DELETE FROM `chat_messages`;
 INSERT INTO `chat_messages` (`id`, `conversation_id`, `sender_type`, `sender_user_id`, `sender_name_snapshot`, `message`, `created_at`) VALUES
 	(1, 1, 'guest', NULL, NULL, 'tes', '2026-08-15 17:10:17'),
@@ -332,7 +332,7 @@ CREATE TABLE IF NOT EXISTS `chat_staff_reads` (
   CONSTRAINT `fk_chat_staff_reads_user` FOREIGN KEY (`user_id`) REFERENCES `pengguna` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Dumping data for table dinas_pariwisata.chat_staff_reads: ~2 rows (approximately)
+-- Dumping data for table dinas_pariwisata.chat_staff_reads: ~4 rows (approximately)
 DELETE FROM `chat_staff_reads`;
 INSERT INTO `chat_staff_reads` (`conversation_id`, `user_id`, `last_read_message_id`, `last_read_at`, `created_at`, `updated_at`) VALUES
 	(1, 2, 12, '2026-08-30 02:13:38', '2026-08-31 12:58:07', '2026-08-31 12:58:07'),
@@ -402,7 +402,7 @@ CREATE TABLE IF NOT EXISTS `hotel` (
   CONSTRAINT `chk_hotel_harga` CHECK (((`harga_mulai` is null) or (`harga_sampai` is null) or (`harga_sampai` >= `harga_mulai`)))
 ) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table dinas_pariwisata.hotel: ~10 rows (approximately)
+-- Dumping data for table dinas_pariwisata.hotel: ~4 rows (approximately)
 DELETE FROM `hotel`;
 INSERT INTO `hotel` (`id`, `slug`, `nama_hotel`, `jenis_hotel_id`, `klasifikasi_bintang`, `nama_pengelola`, `deskripsi_singkat`, `deskripsi`, `alamat`, `kecamatan_id`, `kelurahan_id`, `kode_pos`, `latitude`, `longitude`, `telepon`, `whatsapp`, `email`, `website`, `instagram`, `facebook`, `jam_check_in`, `jam_check_out`, `jumlah_kamar`, `harga_mulai`, `harga_sampai`, `informasi_reservasi`, `kebijakan_hotel`, `aksesibilitas`, `nomor_izin_usaha`, `nomor_sertifikat_chse`, `foto_utama`, `video_url`, `unggulan`, `urutan_tampil`, `dipublikasikan`, `tanggal_publikasi`, `aktif`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
 	(1, 'bangka-seaside-hotel-dummy', 'Novilla Boutique Resort', 2, 4, 'Novilla', 'Hotel modern dekat kawasan pesisir dengan kamar nyaman untuk wisata dan bisnis.', 'Berlokasi di Jalan Laut RT.02 Kampung Pasir, Kecamatan Sungailiat, Kabupaten Bangka. Hanya menempuh waktu kira-kira 55 menit dari Bandara Depati Amir Pangkalpinang dengan jarak 42,7 km melewati Jalan Lintas Timur atau 43,7 km apabila melintasi Jalan Sungailiat-Pangkalpinang yang memakan waktu kurang lebih 1 jam 3 menit.\n\nFasilitas yang disediakan oleh Novilla Boutique Resort antara lain 95 kamar tidur berbagai ukuran dan tema yang berbeda-beda. Setiap kamar dilengkapi dengan TV kabel, AC, fasilitas pembuat kopi/teh, shower, lemari pakaian, kulkas, sandal, tempat sampah. Untuk kamar tertentu juga dilengkapi sofa, bathtub, kursi pijat elektrik, serta minibar dan fasilitas lainnya sesuai dengan jenis kamar yang dipilih tamu.\nSelain itu tamu juga dapat menikmati WIFI gratis, restoran berbagai menu yang menggugah selera makan anda dan telah bersertifikasi halal, jadi bagi anda yang muslim tak perlu khawatir akan makanan yang disantap. Karaoke bersama keluarga, taman bermain anak, kolam renang beserta taman bersantai di sekitar kolam, lapangan sepak bola mini, pusat kebugaran dan batu refleksi kaki. Tentunya tidak ketinggalan cooking club yang dinaungi oleh salah satu pemenang Master Chef Indonesia.\nBagian belakang hotel tersedia kolam pemancingan dan pukat bagan ikan. Berdiri 5 saung di pinggir danau yang bisa digunakan sebagai tempat bersantai bersama keluarga sambil memancing ikan. Ketika malam hari dermaga menuju saung akan dihiasi lampu-lampu yang menyinari kawasan ini. Sangat cocok sekali bagi anda yang hobi berselfie ria.\nMenuju ke atas atap hotel anda bisa menikmati pemandangan sekitar hotel dari ketinggian. Terlihat luasnya perkebunan kelapa sawit yang dimiliki oleh Novilla. Juga danau yang ditumbuhi oleh bakau-bakau yang menghiasi perairan tersebut. Kerlap-kerlip lampu yang menerangi seluruh kawasan Novilla Boutique Resort.\nHotel ini juga menawarkan ruang pertemuan atau seminar terdiri dari 5 ruang untuk 10 hingga 150 pax dan Grand Ballroom hingga 900 pax. Ruangan pertemuan yang ideal dengan berbagai ukuran baik kecil maupun besar, pertemuan tertutup, dengan fasilitas meeting yang sesuai standar.', 'Sungailiat, Kabupaten Bangka', 1, NULL, NULL, -1.8456225, 106.1120056, NULL, NULL, NULL, NULL, NULL, NULL, '14:00:00', '12:00:00', 78, 700000.00, 2160000.00, 'Phone : 0717 92535                Fax : 0717 95785                    Mobile/WA : 0821 8349 1251\n\nEmail : info@novillaboutiqueresort.com                   http://www.novillaboutiqueresort.com\n\nFb : Novilla Boutique Resort                                    IG : @novillaboutiqueresort', 'Check-in memerlukan identitas. Kebijakan pembatalan dan tambahan tamu mengikuti ketentuan pengelola.', 'Akses kendaraan tersedia;', NULL, NULL, '/api/uploads/r2?key=appekraf%2Fhotel%2F2026%2F08%2Fdd6f0903-238c-4dd9-9d60-13d53eea7c54.jpg', NULL, 1, 1, 1, '2026-08-03 10:00:00', 1, NULL, 2, '2026-08-08 14:11:05', '2026-08-31 15:14:14'),
@@ -421,7 +421,7 @@ CREATE TABLE IF NOT EXISTS `hotel_fasilitas` (
   CONSTRAINT `fk_hotel_fasilitas_master` FOREIGN KEY (`fasilitas_id`) REFERENCES `master_fasilitas` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table dinas_pariwisata.hotel_fasilitas: ~0 rows (approximately)
+-- Dumping data for table dinas_pariwisata.hotel_fasilitas: ~59 rows (approximately)
 DELETE FROM `hotel_fasilitas`;
 INSERT INTO `hotel_fasilitas` (`hotel_id`, `fasilitas_id`, `keterangan`) VALUES
 	(1, 1, NULL),
@@ -570,7 +570,7 @@ CREATE TABLE IF NOT EXISTS `kuliner` (
   CONSTRAINT `chk_kuliner_harga` CHECK (((`harga_mulai` is null) or (`harga_sampai` is null) or (`harga_sampai` >= `harga_mulai`)))
 ) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table dinas_pariwisata.kuliner: ~10 rows (approximately)
+-- Dumping data for table dinas_pariwisata.kuliner: ~7 rows (approximately)
 DELETE FROM `kuliner`;
 INSERT INTO `kuliner` (`id`, `slug`, `nama_usaha`, `kategori_kuliner_id`, `nama_pemilik`, `deskripsi_singkat`, `deskripsi`, `menu_unggulan`, `cita_rasa_khas`, `alamat`, `kecamatan_id`, `kelurahan_id`, `kode_pos`, `latitude`, `longitude`, `telepon`, `whatsapp`, `email`, `website`, `instagram`, `facebook`, `tiktok`, `jam_operasional`, `harga_mulai`, `harga_sampai`, `kapasitas_pengunjung`, `tersedia_dine_in`, `tersedia_takeaway`, `tersedia_delivery`, `menerima_reservasi`, `status_halal`, `nomor_sertifikat_halal`, `nomor_pirt`, `nomor_nib`, `metode_pembayaran`, `foto_utama`, `video_url`, `unggulan`, `urutan_tampil`, `dipublikasikan`, `tanggal_publikasi`, `aktif`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
 	(1, 'dapur-lempah-bangka-dummy', 'Kembang Katis Cultural Resto', 1, NULL, 'Sajian makanan yang mengusung kategori Indonesia/Asia dengan suasana budaya dan arsitektur tradisional.', 'Kembang Katis mengusung suasana budaya dan arsitektur tradisional, dengan lingkungan hijau, pepohonan dan kolam ikan sehingga pengalaman makannya lebih santai dan khas. RRI menggambarkannya sebagai restoran dengan suasana tenang, alami, dan arsitektur tradisional. Pilihan makanannya berada pada kategori Indonesia/Asia, dan dari ulasan pengunjung terdapat menu seperti rujak kembang katis serta lempah ikan, yang sangat menarik apabila tujuan Anda memang ingin mencoba cita rasa Bangka. Kisaran harga tercatat sekitar Rp50–75 ribu/orang. Tempat ini paling cocok untuk membawa tamu dari luar Bangka, makan keluarga, makan sambil menikmati suasana, atau berfoto.', NULL, NULL, 'Kembang Katis Cultural Resto, Jl. Jati, Pesona, Sungai Liat, Kabupaten Bangka, Kepulauan Bangka Belitung 33215', 1, 1, NULL, -1.8837688, 106.1724405, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '{"senin": {"buka": "09:00", "tutup": "21:00"}, "minggu": {"buka": "09:00", "tutup": "22:00"}}', 25000.00, 85000.00, NULL, 1, 1, 1, 1, 'Klaim Halal', NULL, NULL, NULL, 'Tunai, QRIS, transfer bank', '/api/uploads/r2?key=appekraf%2Fkuliner%2F2026%2F08%2F3c79faa6-daa8-4aca-bade-21808b907931.jpg', NULL, 1, 1, 1, '2026-08-02 09:00:00', 1, NULL, 2, '2026-08-08 14:11:05', '2026-08-31 14:53:47'),
@@ -592,7 +592,7 @@ CREATE TABLE IF NOT EXISTS `kuliner_fasilitas` (
   CONSTRAINT `fk_kuliner_fasilitas_master` FOREIGN KEY (`fasilitas_id`) REFERENCES `master_fasilitas` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table dinas_pariwisata.kuliner_fasilitas: ~0 rows (approximately)
+-- Dumping data for table dinas_pariwisata.kuliner_fasilitas: ~62 rows (approximately)
 DELETE FROM `kuliner_fasilitas`;
 INSERT INTO `kuliner_fasilitas` (`kuliner_id`, `fasilitas_id`, `keterangan`) VALUES
 	(1, 1, NULL),
@@ -750,7 +750,7 @@ INSERT INTO `master_fasilitas` (`id`, `kode`, `nama_fasilitas`, `kategori`, `iko
 -- Dumping structure for table dinas_pariwisata.master_jabatan
 CREATE TABLE IF NOT EXISTS `master_jabatan` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
-  `nama_jabatan` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nama_jabatan` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `nama_jabatan` (`nama_jabatan`),
   KEY `idx_master_jabatan_nama_jabatan` (`nama_jabatan`)
@@ -916,8 +916,8 @@ INSERT INTO `master_kategori_wisata` (`id`, `kode`, `nama_kategori`, `deskripsi`
 -- Dumping structure for table dinas_pariwisata.master_kecamatan
 CREATE TABLE IF NOT EXISTS `master_kecamatan` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
-  `kode_bps` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `nama_kecamatan` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `kode_bps` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nama_kecamatan` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `aktif` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`),
   UNIQUE KEY `kode_bps` (`kode_bps`),
@@ -940,9 +940,9 @@ INSERT INTO `master_kecamatan` (`id`, `kode_bps`, `nama_kecamatan`, `aktif`) VAL
 CREATE TABLE IF NOT EXISTS `master_kelurahan` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
   `kecamatan_id` int unsigned NOT NULL,
-  `kode_bps` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `nama_kelurahan` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `jenis` enum('Desa','Kelurahan') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `kode_bps` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nama_kelurahan` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `jenis` enum('Desa','Kelurahan') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `kode_bps` (`kode_bps`),
   KEY `idx_master_kelurahan_kecamatan` (`kecamatan_id`),
@@ -1273,7 +1273,7 @@ CREATE TABLE IF NOT EXISTS `pengajuan_sdm_pariwisata` (
   KEY `idx_pengajuan_sdm_created_by` (`created_by`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table dinas_pariwisata.pengajuan_sdm_pariwisata: ~1 rows (approximately)
+-- Dumping data for table dinas_pariwisata.pengajuan_sdm_pariwisata: ~0 rows (approximately)
 DELETE FROM `pengajuan_sdm_pariwisata`;
 INSERT INTO `pengajuan_sdm_pariwisata` (`id`, `no_registrasi`, `status_pengajuan`, `nama_lengkap`, `email`, `jabatan`, `nik`, `alamat`, `no_hp`, `npwp`, `tempat_bertugas`, `alamat_bertugas`, `bulan_mulai_bertugas`, `tahun_mulai_bertugas`, `file_foto_diri`, `file_sertifikat_pelatihan`, `persetujuan_publikasi`, `dipublikasikan`, `tanggal_publikasi`, `catatan_verifikasi`, `alasan_penolakan`, `diverifikasi_oleh`, `tanggal_verifikasi`, `token_perbaikan`, `token_perbaikan_kedaluwarsa`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
 	(1, 'SDM-2026-STV78STZ3K8', 'Disetujui', 'Bradika Almandin Wisesa', 'superman.wisesa@gmail.com', 'Staff Kitchen', '3573023010920005', 'Jl. Nusakambangan no. 19 E', '081217780258', NULL, 'Lumpia Rinka', 'Jalan Sripemandang', 1, '2026', '/api/uploads/r2/submission?key=appekraf%2Fpengajuan%2Fsdm%2Fuser-3%2F2026%2F08%2Ffile_foto_diri-f4cb5c02-3710-446a-8c12-e3c66da0c8fb.jpg', '/api/uploads/r2/submission?key=appekraf%2Fpengajuan%2Fsdm%2Fuser-3%2F2026%2F08%2Ffile_sertifikat_pelatihan-d03c9b71-c0f1-4f3c-9ef6-159a1a94433f.pdf', 1, 1, '2026-08-15 11:17:44', NULL, NULL, 2, '2026-08-15 11:17:44', NULL, NULL, 3, 2, '2026-08-15 11:17:21', '2026-08-15 11:17:44');
@@ -1301,13 +1301,13 @@ CREATE TABLE IF NOT EXISTS `pengguna` (
   UNIQUE KEY `uk_users_phone` (`phone`),
   UNIQUE KEY `uk_users_google_sub` (`google_sub`),
   KEY `idx_users_role_status` (`role`,`status`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Dumping data for table dinas_pariwisata.pengguna: ~4 rows (approximately)
+-- Dumping data for table dinas_pariwisata.pengguna: ~6 rows (approximately)
 DELETE FROM `pengguna`;
 INSERT INTO `pengguna` (`id`, `role`, `nip`, `name`, `email`, `phone`, `id_jabatan`, `auth_provider`, `google_sub`, `email_verified`, `password`, `avatar_url`, `status`, `last_login_at`, `created_at`, `updated_at`) VALUES
 	(1, 'admin', NULL, 'Administrator APPEKRAF', 'admin@appekraf.bangka.go.id', NULL, NULL, 'password', NULL, 0, 'scrypt$3ee9fb46643f71dd88d344e490d1a8d5$52ed493cd53039c165708474cb716181ae3d06172f6137342445111a2aaf6c8d1928f7c639d3c2f589bd8980d6a5e6aa0847f1e6250a79b6d6860459cfb4501c', NULL, 'active', '2026-08-31 20:45:20', '2026-08-07 15:01:55', '2026-08-31 13:45:20'),
-	(2, 'pengguna', NULL, 'Brad', 'bradika@polman-babel.ac.id', NULL, NULL, 'password', NULL, 0, 'scrypt$d56366b59e7fc844ccd06409ea0eefb1$604901656f294c523a677e22d660dc94de10713bf5edb8bf690fd2a4a5980faba1b7f04f65b2c9110bf1515e1a28f6ff1b6db077a126274c436dd0a7cdf1ab6d', NULL, 'active', '2026-08-31 21:07:29', '2026-08-07 15:12:06', '2026-08-31 14:07:29'),
+	(2, 'pengguna', NULL, 'Brad', 'bradika@polman-babel.ac.id', NULL, NULL, 'password', NULL, 0, 'scrypt$d56366b59e7fc844ccd06409ea0eefb1$604901656f294c523a677e22d660dc94de10713bf5edb8bf690fd2a4a5980faba1b7f04f65b2c9110bf1515e1a28f6ff1b6db077a126274c436dd0a7cdf1ab6d', NULL, 'active', '2026-09-01 09:32:10', '2026-08-07 15:12:06', '2026-09-01 02:32:10'),
 	(3, 'pengaju', NULL, 'Bradika Almandin Wisesa', 'superman.wisesa@gmail.com', NULL, NULL, 'google', '115561841967191663146', 1, 'oauth:google', 'https://lh3.googleusercontent.com/a/ACg8ocKt-YzROr82zQ41zZEW7VzgJRQtZjBrP_T5GnZG-TfxKhV89L8wWQ=s96-c', 'active', '2026-08-29 14:19:20', '2026-08-11 17:27:57', '2026-08-29 14:19:20'),
 	(4, 'pengaju', NULL, 'Alya Zilyanti', 'alyazilyanti3@gmail.com', NULL, NULL, 'google', '117657544875972883865', 1, 'oauth:google', 'https://lh3.googleusercontent.com/a/ACg8ocJEJa5bieoKfJlNz4h0IH_50xUT6cLP3a3Y0ubMhkItSz2cbfwT=s96-c', 'active', '2026-08-19 10:05:26', '2026-08-19 10:05:26', '2026-08-19 10:05:26'),
 	(5, 'pengaju', NULL, 'Brad Wisesa', 'brad.wisesa@gmail.com', NULL, NULL, 'google', '112776608070340318795', 1, 'oauth:google', 'https://lh3.googleusercontent.com/a/ACg8ocK9MnV0OVHLFEzTFxfoCQ75fGUdnj5I0xxL8rvkQq_VDypSKmPd=s96-c', 'active', '2026-08-29 14:30:19', '2026-08-29 14:30:20', '2026-08-29 14:30:20'),
@@ -1397,7 +1397,7 @@ CREATE TABLE IF NOT EXISTS `satwa_endemik` (
   CONSTRAINT `fk_satwa_updated_by` FOREIGN KEY (`updated_by`) REFERENCES `pengguna` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table dinas_pariwisata.satwa_endemik: ~10 rows (approximately)
+-- Dumping data for table dinas_pariwisata.satwa_endemik: ~2 rows (approximately)
 DELETE FROM `satwa_endemik`;
 INSERT INTO `satwa_endemik` (`id`, `slug`, `nama_umum`, `nama_lokal`, `nama_ilmiah`, `kingdom`, `filum`, `kelas`, `ordo`, `famili`, `genus`, `status_endemisitas`, `wilayah_endemik`, `status_konservasi_id`, `status_perlindungan_indonesia`, `nomor_peraturan_perlindungan`, `deskripsi_singkat`, `deskripsi`, `ciri_fisik`, `habitat`, `persebaran`, `makanan`, `perilaku`, `reproduksi`, `ancaman`, `upaya_konservasi`, `fakta_unik`, `panduan_pengamatan`, `peringatan_interaksi`, `foto_utama`, `audio_url`, `video_url`, `sumber_ringkas`, `unggulan`, `urutan_tampil`, `dipublikasikan`, `tanggal_publikasi`, `aktif`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
 	(1, 'mentilin-bangka-dummy', 'Mentilin', 'Mentilin', 'Cephalopachus bancanus', 'Animalia', NULL, NULL, NULL, NULL, NULL, 'Endemik Regional', 'Pulau Bangka dan kawasan regional terkait', NULL, 'Perlu verifikasi status perlindungan resmi', NULL, 'Primata nokturnal berukuran kecil yang dikenal sebagai salah satu fauna khas kawasan Bangka Belitung.', 'Primata nokturnal berukuran kecil yang dikenal sebagai salah satu fauna khas kawasan Bangka Belitung.', NULL, 'Hutan sekunder, semak, kebun campuran, dan area berpohon.', 'Pulau Bangka dan wilayah sebaran regional sesuai catatan ilmiah.', NULL, NULL, NULL, NULL, NULL, 'Aktif malam hari, memiliki mata besar, dan bergerak dengan lompatan.', 'Gunakan teropong atau kamera dengan jarak aman, hindari suara keras, dan jangan mengubah habitat.', 'Jangan memberi makan atau mengejar satwa; lakukan pengamatan dari jarak aman.', '/api/uploads/r2?key=appekraf%2Fsatwa-endemik%2F2026%2F08%2F1f086e56-4e9b-4ba3-8dee-ca6e5d60b294.jpg', NULL, NULL, 'Data dummy pengembangan portal; bukan rujukan ilmiah.', 1, 1, 1, '2026-08-04 11:00:00', 1, NULL, 2, '2026-08-08 14:11:05', '2026-08-31 14:54:32'),
@@ -1646,11 +1646,8 @@ CREATE TABLE IF NOT EXISTS `staff_chat_presence` (
   CONSTRAINT `fk_staff_chat_presence_user` FOREIGN KEY (`user_id`) REFERENCES `pengguna` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Dumping data for table dinas_pariwisata.staff_chat_presence: ~1 rows (approximately)
+-- Dumping data for table dinas_pariwisata.staff_chat_presence: ~0 rows (approximately)
 DELETE FROM `staff_chat_presence`;
-INSERT INTO `staff_chat_presence` (`user_id`, `last_seen_at`, `created_at`, `updated_at`) VALUES
-	(1, '2026-08-31 14:41:20', '2026-08-31 13:45:20', '2026-08-31 14:41:20'),
-	(2, '2026-08-31 15:29:55', '2026-08-31 14:07:29', '2026-08-31 15:29:55');
 
 -- Dumping structure for table dinas_pariwisata.tempat_wisata
 CREATE TABLE IF NOT EXISTS `tempat_wisata` (
@@ -1772,7 +1769,7 @@ CREATE TABLE IF NOT EXISTS `tempat_wisata_fasilitas` (
   CONSTRAINT `fk_tempat_wisata_fasilitas_tempat` FOREIGN KEY (`tempat_wisata_id`) REFERENCES `tempat_wisata` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table dinas_pariwisata.tempat_wisata_fasilitas: ~0 rows (approximately)
+-- Dumping data for table dinas_pariwisata.tempat_wisata_fasilitas: ~87 rows (approximately)
 DELETE FROM `tempat_wisata_fasilitas`;
 INSERT INTO `tempat_wisata_fasilitas` (`tempat_wisata_id`, `fasilitas_id`, `keterangan`) VALUES
 	(1, 1, NULL),

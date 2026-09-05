@@ -4,6 +4,7 @@ import { requireRequestRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { notifySubmissionDecision } from "@/lib/submission-notifications";
 import type { SubmissionType } from "@/lib/submission-config";
+import { deleteSubmissionWithManagedFiles, isSubmissionType } from "@/lib/staff-record-cleanup";
 
 const listQueries: Record<SubmissionType, string> = {
   ekraf: `
@@ -176,5 +177,34 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ message: "Verifikasi gagal disimpan ke database." }, { status: 500 });
   } finally {
     connection.release();
+  }
+}
+
+
+export async function DELETE(request: NextRequest) {
+  if (!(await requireRequestRole(request, "pengguna"))) {
+    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+  }
+
+  try {
+    const body = await request.json();
+    const type = body?.type;
+    const id = Number(body?.id);
+    if (!isSubmissionType(type) || !Number.isSafeInteger(id) || id <= 0) {
+      return NextResponse.json({ message: "Pengajuan yang akan dihapus tidak valid." }, { status: 400 });
+    }
+
+    const result = await deleteSubmissionWithManagedFiles(type, id);
+    if (!result) return NextResponse.json({ message: "Pengajuan tidak ditemukan." }, { status: 404 });
+
+    return NextResponse.json({
+      message: result.failedFiles
+        ? "Pengajuan berhasil dihapus. Sebagian file R2 belum dapat dibersihkan dan sudah dicatat pada log server."
+        : "Pengajuan dan file terkait berhasil dihapus permanen.",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Submission delete error:", error);
+    return NextResponse.json({ message: "Pengajuan belum dapat dihapus dari database." }, { status: 500 });
   }
 }

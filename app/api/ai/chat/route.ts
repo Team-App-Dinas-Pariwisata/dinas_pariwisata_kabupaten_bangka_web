@@ -23,15 +23,15 @@ const CATEGORY_MAP: Record<string, string> = {
 
 const PRIORITY_MAP: Record<string, string> = {
   HARGA: "HARGA",
-  HARGA_TIKET: "HARGA",
+  HARGA_TIKET: "HARGA_TIKET",
   JARAK: "JARAK",
   FASILITAS: "FASILITAS",
-  KLASIFIKASI: "BINTANG",
-  AKSESIBILITAS: "AKSES",
-  STATUS_HALAL: "HALAL",
+  KLASIFIKASI: "KLASIFIKASI",
+  AKSESIBILITAS: "AKSESIBILITAS",
+  STATUS_HALAL: "STATUS_HALAL",
   LAYANAN: "LAYANAN",
-  KESESUAIAN_PENGUNJUNG: "KESESUAIAN",
-  KEMUDAHAN_PENGAMATAN: "KEMUDAHAN",
+  KESESUAIAN_PENGUNJUNG: "KESESUAIAN_PENGUNJUNG",
+  KEMUDAHAN_PENGAMATAN: "KEMUDAHAN_PENGAMATAN",
   LOKASI_EDUKASI: "LOKASI_EDUKASI",
   LOKASI_PENGAMATAN: "LOKASI_PENGAMATAN",
 };
@@ -65,6 +65,51 @@ function asStringArray(value: unknown): string[] {
 
 function truthy(value: unknown): boolean {
   return value === true || value === 1 || value === "1" || value === "true";
+}
+
+function budgetFromIndonesianText(message: string) {
+  const text = message.toLowerCase();
+
+  const rupiah = text.match(/\brp\s*(\d{1,3}(?:\.\d{3})+|\d+)(?:,(\d+))?/i);
+  if (rupiah) {
+    const integer = rupiah[1].replace(/\./g, "");
+    const amount = Number(rupiah[2] ? `${integer}.${rupiah[2]}` : integer);
+    if (Number.isFinite(amount)) return amount;
+  }
+
+  const compact = text.match(/(\d+(?:[.,]\d+)?)\s*(ribu|rb|k|juta|jt)\b/i);
+  if (compact) {
+    const amount = Number(compact[1].replace(",", "."));
+    if (!Number.isFinite(amount)) return null;
+    const multiplier = /^(juta|jt)$/i.test(compact[2]) ? 1_000_000 : 1_000;
+    return amount * multiplier;
+  }
+
+  const contextual = text.match(/(?:harga|tiket|budget|biaya)[^0-9]{0,40}(\d{1,3}(?:\.\d{3})+)/i);
+  if (contextual) {
+    const amount = Number(contextual[1].replace(/\./g, ""));
+    return Number.isFinite(amount) ? amount : null;
+  }
+
+  return null;
+}
+
+function normalizeSearchRedirectPayload(payload: Record<string, unknown>, originalMessage: string) {
+  if (payload.type !== "search_redirect" || typeof payload.redirect_url !== "string") return payload;
+  const inferredBudget = budgetFromIndonesianText(originalMessage);
+  if (inferredBudget === null) return payload;
+
+  try {
+    const url = new URL(payload.redirect_url, "http://local.invalid");
+    if (!url.pathname.includes("/pencarian") || !url.searchParams.has("maxBudget")) return payload;
+    url.searchParams.set("maxBudget", String(inferredBudget));
+    return {
+      ...payload,
+      redirect_url: `${url.pathname}?${url.searchParams.toString()}`,
+    };
+  } catch {
+    return payload;
+  }
 }
 
 function buildFallbackWebIntent(criteria: Criteria, originalMessage: string) {
@@ -113,8 +158,11 @@ function buildFallbackWebIntent(criteria: Criteria, originalMessage: string) {
   query.set("category", category);
 
   // Gunakan satu search term spesifik atau satu nama kategori master saja.
-  // Menggabungkan beberapa kategori menjadi satu keyword dapat membuat semua alternatif gagal match.
-  const keyword = (searchTerms[0] || categories[0] || "").trim();
+  // "Wisata Keluarga" diperlakukan sebagai preferensi cocok_keluarga, bukan
+  // keyword keras, karena destinasi keluarga dapat berkategori Bahari/Alam/Buatan.
+  const inferredCategory = (categories[0] || "").trim();
+  const familyCategoryIntent = /^(wisata\s+keluarga|keluarga|ramah\s+keluarga)$/i.test(inferredCategory);
+  const keyword = (searchTerms[0] || (familyCategoryIntent ? "" : inferredCategory)).trim();
   if (keyword) query.set("keyword", keyword.slice(0, 120));
 
   const setNumber = (key: string, value: unknown) => {
@@ -124,12 +172,15 @@ function buildFallbackWebIntent(criteria: Criteria, originalMessage: string) {
   setNumber("latitude", origin.latitude);
   setNumber("longitude", origin.longitude);
   setNumber("maxDistanceKm", filters.max_distance_km);
-  setNumber("maxBudget", filters.max_price);
+  const inferredBudget = filters.max_price !== undefined && filters.max_price !== null
+    ? budgetFromIndonesianText(String(criteria.original_message || originalMessage))
+    : null;
+  setNumber("maxBudget", inferredBudget ?? filters.max_price);
 
   if (truthy(filters.requires_parking)) query.set("parking", "1");
   if (truthy(filters.requires_prayer_room)) query.set("prayerRoom", "1");
   if (truthy(filters.suitable_for_children)) query.set("childFriendly", "1");
-  if (truthy(filters.suitable_for_family)) query.set("familyFriendly", "1");
+  if (truthy(filters.suitable_for_family) || familyCategoryIntent) query.set("familyFriendly", "1");
   if (truthy(filters.elderly_friendly)) query.set("seniorFriendly", "1");
   if (truthy(filters.halal_required)) query.set("halalMode", "halal");
   if (services.has("delivery")) query.set("deliveryOnly", "1");
@@ -211,7 +262,7 @@ export async function POST(request: NextRequest) {
 
         const criteria = asRecord(fallbackPayload.criteria) as Criteria;
         const payload = buildFallbackWebIntent(criteria, message);
-        return NextResponse.json(payload, { headers: { "Cache-Control": "no-store, max-age=0" } });
+        return NextResponse.json(normalizeSearchRedirectPayload(payload, message), { headers: { "Cache-Control": "no-store, max-age=0" } });
       }
 
       const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
@@ -223,7 +274,7 @@ export async function POST(request: NextRequest) {
           { status: 502 },
         );
       }
-      return NextResponse.json(payload, { headers: { "Cache-Control": "no-store, max-age=0" } });
+      return NextResponse.json(normalizeSearchRedirectPayload(payload, message), { headers: { "Cache-Control": "no-store, max-age=0" } });
     } finally {
       clearTimeout(timer);
     }

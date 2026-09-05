@@ -108,6 +108,22 @@ function priorityLabel(value: number) {
   return "Sangat tinggi";
 }
 
+function parseRupiahInput(value: string) {
+  const raw = value.trim().toLowerCase();
+  if (!raw) return null;
+  const words = raw.match(/(?:rp\s*)?(\d+(?:[.,]\d+)?)\s*(ribu|rb|k|juta|jt)\b/i);
+  if (words) {
+    const amount = Number(words[1].replace(",", "."));
+    if (!Number.isFinite(amount)) return null;
+    return amount * (/^(juta|jt)$/i.test(words[2]) ? 1_000_000 : 1_000);
+  }
+  const cleaned = raw.replace(/[^0-9,.-]/g, "");
+  if (!cleaned) return null;
+  const normalized = cleaned.replace(/\./g, "").replace(",", ".");
+  const amount = Number(normalized);
+  return Number.isFinite(amount) ? amount : null;
+}
+
 export default function TourismRecommendationSearch() {
   const [category, setCategory] = useState<TourismKind>("tempat-wisata");
   const [keyword, setKeyword] = useState("");
@@ -267,7 +283,7 @@ export default function TourismRecommendationSearch() {
         latitude: latitude === "" ? null : Number(latitude),
         longitude: longitude === "" ? null : Number(longitude),
         maxDistanceKm: maxDistanceKm === "" ? null : Number(maxDistanceKm),
-        maxBudget: maxBudget === "" ? null : Number(maxBudget),
+        maxBudget: parseRupiahInput(maxBudget),
         priorities,
         requirements,
         limit: 12,
@@ -388,7 +404,7 @@ export default function TourismRecommendationSearch() {
             <div className="spk-field-grid two">
               <label className="spk-field">
                 <span>Budget maksimum <em>opsional</em></span>
-                <input type="number" min="0" max="100000000" step="1000" value={maxBudget} onChange={(event) => setMaxBudget(event.target.value)} placeholder={category === "hotel" ? "750000" : "100000"} />
+                <input type="text" inputMode="numeric" value={maxBudget} onChange={(event) => setMaxBudget(event.target.value)} placeholder={category === "hotel" ? "750.000" : "20.000"} />
                 <small>Alternatif tanpa data harga tidak dipakai jika budget diaktifkan.</small>
               </label>
               {category === "hotel" && (

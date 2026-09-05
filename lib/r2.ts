@@ -26,7 +26,7 @@ const SUBMISSION_EXTENSIONS: Record<string, string> = {
 const DEFAULT_MAX_SUBMISSION_BYTES = 5 * 1024 * 1024;
 const SUBMISSION_PROXY_PATH = "/api/uploads/r2/submission";
 
-type R2Resource = "berita" | "acara" | "tempat-wisata" | "hotel" | "kuliner" | "satwa-endemik";
+type R2Resource = "berita" | "acara" | "tempat-wisata" | "hotel" | "kuliner" | "satwa-endemik" | "deteksi";
 export type R2SubmissionType = "ekraf" | "sdm" | "komunitas";
 
 type R2Config = {
@@ -68,6 +68,21 @@ let cachedClientKey = "";
 function configuredPrefix() {
   const value = process.env.R2_OBJECT_PREFIX?.trim().replace(/^\/+|\/+$/g, "");
   return value || DEFAULT_PREFIX;
+}
+
+
+function normalizedImageContentType(file: File) {
+  const raw = file.type.toLowerCase().split(";", 1)[0].trim();
+  if (raw === "image/jpg") return "image/jpeg";
+  if (raw in IMAGE_EXTENSIONS) return raw;
+
+  const extension = file.name.toLowerCase().split(".").pop();
+  if (extension === "jpg" || extension === "jpeg") return "image/jpeg";
+  if (extension === "png") return "image/png";
+  if (extension === "webp") return "image/webp";
+  if (extension === "gif") return "image/gif";
+  if (extension === "avif") return "image/avif";
+  return "";
 }
 
 function configuredMaxBytes() {
@@ -227,7 +242,7 @@ export function isManagedR2ImageKey(key: string) {
   }
 
   const prefix = configuredPrefix();
-  return ["berita", "acara", "tempat-wisata", "hotel", "kuliner", "satwa-endemik"]
+  return ["berita", "acara", "tempat-wisata", "hotel", "kuliner", "satwa-endemik", "deteksi"]
     .some((resource) => key.startsWith(`${prefix}/${resource}/`));
 }
 
@@ -426,14 +441,14 @@ function cloudflareS3Error(error: unknown, action: string) {
 }
 
 export async function uploadImageToR2(file: File, resource: string): Promise<R2UploadResult> {
-  const allowedResources: R2Resource[] = ["berita", "acara", "tempat-wisata", "hotel", "kuliner", "satwa-endemik"];
+  const allowedResources: R2Resource[] = ["berita", "acara", "tempat-wisata", "hotel", "kuliner", "satwa-endemik", "deteksi"];
   if (!allowedResources.includes(resource as R2Resource)) {
     throw new Error("Resource upload R2 tidak valid.");
   }
   if (!file.size) throw new Error("File gambar kosong.");
 
-  const contentType = file.type.toLowerCase();
-  if (!(contentType in IMAGE_EXTENSIONS)) {
+  const contentType = normalizedImageContentType(file);
+  if (!contentType || !(contentType in IMAGE_EXTENSIONS)) {
     throw new Error("Format gambar harus JPG/JPEG, PNG, WebP, GIF, atau AVIF.");
   }
 
