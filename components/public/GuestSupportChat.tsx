@@ -138,7 +138,20 @@ export default function GuestSupportChat() {
       const response = await fetch(`/api/chat/guest?guest_id=${encodeURIComponent(guestId)}`, { cache: "no-store" });
       const payload = (await response.json()) as GuestPayload;
       if (!response.ok) throw new Error(payload.message || "Chat belum dapat dimuat.");
-      setMessages(payload.data?.messages ?? []);
+      setMessages((current) => {
+        const serverMessages = payload.data?.messages ?? [];
+
+        // Hindari polling menghapus pesan guest terbaru yang sudah tampil
+        const merged = [...serverMessages];
+
+        current.forEach((item) => {
+          if (!merged.some((serverItem) => serverItem.id === item.id)) {
+            merged.push(item);
+          }
+        });
+
+        return merged.sort((a, b) => a.id - b.id);
+      });
       setError("");
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Chat belum dapat dimuat.");
@@ -217,7 +230,6 @@ export default function GuestSupportChat() {
       }
 
       setInput("");
-      await loadMessages();
     } catch (sendError) {
       setError(sendError instanceof Error ? sendError.message : "Pesan belum dapat dikirim.");
     } finally {
