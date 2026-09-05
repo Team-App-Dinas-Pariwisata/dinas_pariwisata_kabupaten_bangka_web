@@ -156,7 +156,6 @@ export default function GuestSupportChat() {
 
   useEffect(() => {
     if (!isOpen) return;
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     const latest = messages[messages.length - 1]?.id ?? 0;
     if (latest > lastSeenId) {
       setLastSeenId(latest);
