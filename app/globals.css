@@ -1375,7 +1375,7 @@ a {
 .portal-field select:focus,
 .portal-field textarea:focus { border-color: #6f9dad; box-shadow: 0 0 0 4px rgba(94, 139, 157, .11); }
 .portal-field input:disabled { background: #f1f5f6; color: #71838d; }
-.portal-field .portal-checkbox { width: 22px; min-height: 22px; margin-top: 9px; accent-color: #315f75; }
+.portal-field .portal-checkbox { width: 16px; height: 16px; min-height: 16px; margin-top: 5px; accent-color: #315f75; }
 
 .auth-submit,
 .portal-primary,
@@ -12007,4 +12007,17 @@ body {
   .ekraf-statistics-year-filter select {
     height: 44px;
   }
+}
+
+
+/* Compact facility checkbox */
+.portal-multicheck input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  min-height: 16px;
+  margin-right: 10px;
+}
+.portal-multicheck label {
+  gap: 8px;
 }

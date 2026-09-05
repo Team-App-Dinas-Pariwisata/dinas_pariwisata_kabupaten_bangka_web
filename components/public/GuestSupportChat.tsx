@@ -135,23 +135,12 @@ export default function GuestSupportChat() {
   const loadMessages = useCallback(async () => {
     if (!guestId) return;
     try {
-      const response = await fetch(`/api/chat/guest?guest_id=${encodeURIComponent(guestId)}`, { cache: "no-store" });
+      const response = await fetch(`/api/chat/guest?guest_id=${encodeURIComponent(guestId)}&_=${Date.now()}`, { cache: "no-store", headers: { "Cache-Control": "no-cache" } });
       const payload = (await response.json()) as GuestPayload;
       if (!response.ok) throw new Error(payload.message || "Chat belum dapat dimuat.");
-      setMessages((current) => {
-        const serverMessages = payload.data?.messages ?? [];
+      const freshMessages = payload.data?.messages ?? [];
+      setMessages([...freshMessages]);
 
-        // Hindari polling menghapus pesan guest terbaru yang sudah tampil
-        const merged = [...serverMessages];
-
-        current.forEach((item) => {
-          if (!merged.some((serverItem) => serverItem.id === item.id)) {
-            merged.push(item);
-          }
-        });
-
-        return merged.sort((a, b) => a.id - b.id);
-      });
       setError("");
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Chat belum dapat dimuat.");
@@ -230,6 +219,7 @@ export default function GuestSupportChat() {
       }
 
       setInput("");
+      await loadMessages();
     } catch (sendError) {
       setError(sendError instanceof Error ? sendError.message : "Pesan belum dapat dikirim.");
     } finally {
@@ -362,7 +352,7 @@ export default function GuestSupportChat() {
             <div className="unified-staff-chat" role="tabpanel">
               <div className="support-chat-meta">ID Pengunjung: <strong>{guestId ? shortGuestId(guestId) : "..."}</strong></div>
 
-              <div className="support-chat-messages" aria-live="polite">
+              <div key={messages.map((message) => message.id).join("_")} className="support-chat-messages" aria-live="polite">
                 <div className={`support-chat-welcome ${staffOnline ? "" : "is-offline"}`}>
                   {staffOnline
                     ? "Halo. Petugas sedang online. Silakan tulis pesan Anda. Semua petugas dapat melihat percakapan ini dan petugas lain dapat melanjutkan balasan bila diperlukan."
