@@ -149,22 +149,24 @@ export function DataManager({ resource, title, description, label, fields, colum
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const params = new URLSearchParams({ resource });
+      const params = new URLSearchParams({ resource, page: String(page), pageSize: String(pageSize), search: query });
       const response = await fetch(`/api/crud?${params.toString()}`, { cache: "no-store" });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || "Gagal mengambil data.");
       setRows(result.data);
+      setTotalItems(Number(result.total || 0));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal mengambil data.");
     } finally {
       setLoading(false);
     }
-  }, [resource]);
+  }, [resource, page, pageSize, query]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -188,22 +190,16 @@ export function DataManager({ resource, title, description, label, fields, colum
     return options.filter((option) => String(option.parentValue ?? "") === String(parentValue));
   }, [lookups, form]);
 
-  const filtered = useMemo(() => {
-    const keyword = query.trim().toLowerCase();
-    if (!keyword) return rows;
-    return rows.filter((row) => columns.some((column) => String(row[column.key] ?? "").toLowerCase().includes(keyword)));
-  }, [rows, query, columns]);
-
   const sortedRows = useMemo(() => {
-    if (!sortKey) return filtered;
-    return [...filtered].sort((left, right) => {
+    if (!sortKey) return rows;
+    return [...rows].sort((left, right) => {
       const result = compareTableValues(left[sortKey], right[sortKey]);
       return sortDirection === "asc" ? result : -result;
     });
-  }, [filtered, sortDirection, sortKey]);
+  }, [rows, sortDirection, sortKey]);
 
-  const totalPages = Math.max(1, Math.ceil(sortedRows.length / pageSize));
-  const pagedRows = useMemo(() => sortedRows.slice((page - 1) * pageSize, page * pageSize), [page, pageSize, sortedRows]);
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const pagedRows = sortedRows;
 
   useEffect(() => { setPage(1); }, [query, resource]);
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
@@ -324,17 +320,17 @@ export function DataManager({ resource, title, description, label, fields, colum
   return (
     <section>
       <div className="portal-page-head"><div><p className="portal-breadcrumb">Dashboard / {label}</p><h1>{title}</h1><p>{description}</p></div><button className="portal-primary" type="button" onClick={openCreate}><PortalIcon name="plus" />Tambah {label}</button></div>
-      <div className="dm-toolbar"><label><PortalIcon name="search" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`Cari ${label.toLowerCase()}...`} /></label><span>{filtered.length} data</span></div>
+      <div className="dm-toolbar"><label><PortalIcon name="search" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`Cari ${label.toLowerCase()}...`} /></label><span>{totalItems} data</span></div>
       {error && !modalOpen && <div className="portal-alert error">{error}</div>}
       <div className="dm-table-wrap">
         <table className="dm-table"><thead><tr>{columns.map((col) => <SortableTableHeader key={col.key} label={col.label} sortKey={col.key} activeKey={sortKey} direction={sortDirection} onSort={handleSort} />)}<th>Aksi</th></tr></thead><tbody>
-          {loading ? <tr><td colSpan={columns.length + 1} className="dm-empty">Memuat data...</td></tr> : sortedRows.length === 0 ? <tr><td colSpan={columns.length + 1} className="dm-empty">Belum ada data.</td></tr> : pagedRows.map((row) => <tr key={row.id}>{columns.map((col) => <td key={col.key} data-label={col.label}>{col.key === "foto_utama" ? <ImageThumbnail value={row[col.key]} alt={String(row.judul ?? row.nama_acara ?? row.nama_tempat ?? row.nama_hotel ?? row.nama_usaha ?? row.nama_umum ?? label)} /> : col.key === "status" || col.key === "status_acara" ? <span className={`portal-status ${String(row[col.key] ?? "").toLowerCase().replaceAll(" ", "-")}`}>{formatValue(col.key, row[col.key])}</span> : formatValue(col.key, row[col.key])}</td>)}<td className="dm-actions" data-label="Aksi"><button type="button" onClick={() => openEdit(row)} aria-label="Edit"><PortalIcon name="edit" /></button><button className="danger" type="button" onClick={() => void remove(row)} aria-label="Hapus"><PortalIcon name="trash" /></button></td></tr>)}
+          {loading ? <tr><td colSpan={columns.length + 1} className="dm-empty">Memuat data...</td></tr> : totalItems === 0 ? <tr><td colSpan={columns.length + 1} className="dm-empty">Belum ada data.</td></tr> : pagedRows.map((row) => <tr key={row.id}>{columns.map((col) => <td key={col.key} data-label={col.label}>{col.key === "foto_utama" ? <ImageThumbnail value={row[col.key]} alt={String(row.judul ?? row.nama_acara ?? row.nama_tempat ?? row.nama_hotel ?? row.nama_usaha ?? row.nama_umum ?? label)} /> : col.key === "status" || col.key === "status_acara" ? <span className={`portal-status ${String(row[col.key] ?? "").toLowerCase().replaceAll(" ", "-")}`}>{formatValue(col.key, row[col.key])}</span> : formatValue(col.key, row[col.key])}</td>)}<td className="dm-actions" data-label="Aksi"><button type="button" onClick={() => openEdit(row)} aria-label="Edit"><PortalIcon name="edit" /></button><button className="danger" type="button" onClick={() => void remove(row)} aria-label="Hapus"><PortalIcon name="trash" /></button></td></tr>)}
         </tbody></table>
       </div>
-      {!loading && sortedRows.length > 0 && <TablePagination totalItems={sortedRows.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={handlePageSize} />}
+      {!loading && totalItems > 0 && <TablePagination totalItems={totalItems} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={handlePageSize} />}
 
       {modalOpen && <div className="portal-modal-layer" role="dialog" aria-modal="true"><button className="portal-modal-backdrop" type="button" onClick={() => setModalOpen(false)} aria-label="Tutup" /><form className="portal-modal" onSubmit={save}><div className="portal-modal-head"><div><p>{editing ? "Edit data" : "Data baru"}</p><h2>{editing ? `Ubah ${label}` : `Tambah ${label}`}</h2></div><button type="button" onClick={() => setModalOpen(false)}><PortalIcon name="x" /></button></div><div className="portal-form-grid">
-        {fields.map((field) => <div className={`portal-field ${field.type === "textarea" || field.type === "image" || field.type === "multicheck" ? "full" : ""}`} key={field.key}><span>{field.label}{field.required ? " *" : ""}</span>{field.type === "textarea" ? <textarea value={String(form[field.key] ?? "")} onChange={(e) => setForm((old) => ({ ...old, [field.key]: e.target.value }))} required={field.required} rows={4} placeholder={field.placeholder} /> : field.type === "select" ? <select value={String(form[field.key] ?? "")} onChange={(e) => setForm((old) => {
+        {fields.map((field) => <div className={`portal-field ${field.type === "textarea" || field.type === "image" || field.type === "multicheck" ? "full" : ""}`} key={field.key}><span>{field.label}{field.required ? <b className="required-mark"> *</b> : ""}</span>{field.type === "textarea" ? <textarea value={String(form[field.key] ?? "")} onChange={(e) => setForm((old) => ({ ...old, [field.key]: e.target.value }))} required={field.required} rows={4} placeholder={field.placeholder} /> : field.type === "select" ? <select value={String(form[field.key] ?? "")} onChange={(e) => setForm((old) => {
           const next = { ...old, [field.key]: e.target.value };
           fields.filter((candidate) => candidate.dependsOn === field.key).forEach((candidate) => { next[candidate.key] = ""; });
           return next;

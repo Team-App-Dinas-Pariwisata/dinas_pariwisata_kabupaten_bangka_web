@@ -82,6 +82,9 @@ export default function GuestSupportChat() {
   const [error, setError] = useState("");
   const [lastSeenId, setLastSeenId] = useState(0);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const chatContainerRef = useRef<HTMLDivElement | null>(null);
+  const previousMessagesRef = useRef<ChatMessage[]>([]);
+  const messageInitializedRef = useRef(false);
 
   const [aiQuestion, setAiQuestion] = useState("");
   const [aiSending, setAiSending] = useState(false);
@@ -156,7 +159,21 @@ export default function GuestSupportChat() {
 
   useEffect(() => {
     if (!isOpen) return;
-    const latest = messages[messages.length - 1]?.id ?? 0;
+
+    const previousMessages = previousMessagesRef.current;
+    const latestMessage = messages[messages.length - 1];
+    const previousLastId = previousMessages[previousMessages.length - 1]?.id ?? 0;
+
+    if (messageInitializedRef.current && latestMessage && latestMessage.id > previousLastId && latestMessage.sender_type === "staff") {
+      window.setTimeout(() => {
+        scrollChatToBottom();
+      }, 100);
+    }
+
+    previousMessagesRef.current = messages;
+    messageInitializedRef.current = true;
+
+    const latest = latestMessage?.id ?? 0;
     if (latest > lastSeenId) {
       setLastSeenId(latest);
       window.localStorage.setItem(SEEN_KEY, String(latest));
@@ -165,6 +182,13 @@ export default function GuestSupportChat() {
 
   const unread = messages.filter((message) => message.sender_type === "staff" && message.id > lastSeenId).length;
   const staffOnline = (onlineStaffCount ?? 0) > 0;
+
+  function scrollChatToBottom() {
+    const container = chatContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
+  }
 
   function openPanel() {
     setIsOpen(true);
@@ -218,6 +242,9 @@ export default function GuestSupportChat() {
       }
 
       setInput("");
+      window.setTimeout(() => {
+        scrollChatToBottom();
+      }, 100);
       await loadMessages();
     } catch (sendError) {
       setError(sendError instanceof Error ? sendError.message : "Pesan belum dapat dikirim.");
@@ -351,7 +378,7 @@ export default function GuestSupportChat() {
             <div className="unified-staff-chat" role="tabpanel">
               <div className="support-chat-meta">ID Pengunjung: <strong>{guestId ? shortGuestId(guestId) : "..."}</strong></div>
 
-              <div key={messages.map((message) => message.id).join("_")} className="support-chat-messages" aria-live="polite">
+              <div ref={chatContainerRef} className="support-chat-messages" aria-live="polite">
                 <div className={`support-chat-welcome ${staffOnline ? "" : "is-offline"}`}>
                   {staffOnline
                     ? "Halo. Petugas sedang online. Silakan tulis pesan Anda. Semua petugas dapat melihat percakapan ini dan petugas lain dapat melanjutkan balasan bila diperlukan."

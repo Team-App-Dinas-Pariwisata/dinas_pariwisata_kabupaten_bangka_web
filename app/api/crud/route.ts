@@ -132,8 +132,28 @@ export async function GET(request: NextRequest) {
   const config = configFor(request.nextUrl.searchParams.get("resource"));
   if (!config) return NextResponse.json({ message: "Resource tidak tersedia." }, { status: 404 });
 
+  const page = Math.max(1, Number(request.nextUrl.searchParams.get("page") || 1));
+  const pageSize = Math.min(100, Math.max(1, Number(request.nextUrl.searchParams.get("pageSize") || 10)));
+  const search = String(request.nextUrl.searchParams.get("search") || "").trim();
+  const offset = (page - 1) * pageSize;
+  const where = search && config.searchFields.length
+    ? `WHERE (${config.searchFields.map((field) => `${field} LIKE ?`).join(" OR ")})`
+    : "";
+  const searchParams = search && config.searchFields.length
+    ? config.searchFields.map(() => `%${search}%`)
+    : [];
+
+  const [countRows] = await db().execute<RowDataPacket[]>(
+    `SELECT COUNT(*) AS total FROM ${config.table} ${where}`,
+    searchParams,
+  );
+  // LIMIT/OFFSET tidak memakai placeholder karena beberapa versi mysql2
+  // menghasilkan ER_WRONG_ARGUMENTS pada prepared statement.
+  const safeLimit = Number.isInteger(pageSize) ? pageSize : 10;
+  const safeOffset = Number.isInteger(offset) ? offset : 0;
   const [rows] = await db().execute<RowDataPacket[]>(
-    `SELECT ${config.select.join(", ")} FROM ${config.table} ORDER BY ${config.orderBy}`,
+    `SELECT ${config.select.join(", ")} FROM ${config.table} ${where} ORDER BY ${config.orderBy} LIMIT ${safeLimit} OFFSET ${safeOffset}`,
+    searchParams,
   );
   const rowsWithFacilities = await loadFacilities(rows, config);
   const data = rowsWithFacilities.map((row) => {
@@ -142,7 +162,7 @@ export async function GET(request: NextRequest) {
     }
     return row;
   });
-  return NextResponse.json({ data });
+  return NextResponse.json({ data, total: Number(countRows[0]?.total || 0), page, pageSize });
 }
 
 export async function POST(request: NextRequest) {
