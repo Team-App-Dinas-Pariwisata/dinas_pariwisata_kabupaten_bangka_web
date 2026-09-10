@@ -359,7 +359,7 @@ export default function GuestSupportChat() {
                 <i />
                 {staffOnline
                   ? `${onlineStaffCount} PETUGAS ONLINE`
-                  : onlineStaffCount === null ? "MENGECEK PETUGAS" : "AI ONLINE · PETUGAS OFFLINE"}
+                  : onlineStaffCount === null ? "MENGECEK PETUGAS" : "PETUGAS OFFLINE"}
               </span>
               <strong>POJOK BINCANG</strong>
               <small>Asisten pengajuan, ekraf &amp; pariwisata</small>
