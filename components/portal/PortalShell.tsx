@@ -40,6 +40,7 @@ const userMenu: MenuItem[] = [
   { key: "kuliner", href: "/dashboard/wisata/kuliner", label: "Kuliner", icon: "tag" },
   { key: "satwa-endemik", href: "/dashboard/wisata/satwa-endemik", label: "Satwa Endemik", icon: "eye" },
   { key: "laporan", href: "/dashboard/laporan", label: "Laporan", icon: "report" },
+  { key: "monitoring-sampah", href: "/dashboard/monitoring-sampah", label: "Monitoring Sampah", icon: "database" },
   { key: "pengaturan", href: "/dashboard/pengaturan", label: "Pengaturan", icon: "settings" },
 ];
 

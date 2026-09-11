@@ -1375,7 +1375,7 @@ a {
 .portal-field select:focus,
 .portal-field textarea:focus { border-color: #6f9dad; box-shadow: 0 0 0 4px rgba(94, 139, 157, .11); }
 .portal-field input:disabled { background: #f1f5f6; color: #71838d; }
-.portal-field .portal-checkbox { width: 22px; min-height: 22px; margin-top: 9px; accent-color: #315f75; }
+.portal-field .portal-checkbox { width: 16px; height: 16px; min-height: 16px; margin-top: 5px; accent-color: #315f75; }
 
 .auth-submit,
 .portal-primary,
@@ -2189,6 +2189,163 @@ a {
   .auth-card { padding: 29px 22px; }
   .auth-card h1 { font-size: 28px; }
 }
+
+/* =========================================================
+   DETAIL MONITORING SAMPAH
+   ========================================================= */
+
+.detail-sampah-layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+/* Photo section */
+.detail-sampah-photo-body {
+  padding: 14px;
+}
+
+.detail-sampah-img-link {
+  display: block;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: zoom-in;
+  transition: box-shadow .2s ease;
+}
+.detail-sampah-img-link:hover {
+  box-shadow: 0 8px 28px rgba(20, 50, 66, .12);
+}
+.detail-sampah-img-link img {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 200px;
+  max-height: 380px;
+  object-fit: cover;
+  border-radius: 10px;
+  transition: transform .25s ease;
+}
+.detail-sampah-img-link:hover img {
+  transform: scale(1.025);
+}
+
+.detail-sampah-no-photo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 220px;
+  border: 2px dashed #dce4e7;
+  border-radius: 10px;
+  background: #f8fafb;
+  color: #94a3ab;
+}
+.detail-sampah-no-photo svg {
+  width: 40px;
+  height: 40px;
+  opacity: .45;
+}
+.detail-sampah-no-photo span {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+/* Info section */
+.detail-sampah-info-body {
+  padding: 20px;
+}
+
+.detail-sampah-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+/* Individual field */
+.detail-sampah-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  padding: 14px 15px;
+  border-radius: 10px;
+  transition: background .15s ease;
+}
+.detail-sampah-field:hover {
+  background: #f5f8f9;
+}
+.detail-sampah-field.full {
+  grid-column: 1 / -1;
+}
+
+.detail-sampah-field-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  background: #edf3f5;
+  color: #35616f;
+}
+.detail-sampah-field-icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.detail-sampah-field-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding-top: 1px;
+}
+
+.detail-sampah-field-label {
+  color: #71858e;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: .02em;
+}
+
+.detail-sampah-field-value {
+  color: #1c3440;
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  word-break: break-word;
+}
+.detail-sampah-field-value.highlight {
+  color: #1a5c3a;
+  font-family: var(--portal-display, var(--app-font));
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+
+/* Responsive */
+@media (max-width: 960px) {
+  .detail-sampah-layout {
+    grid-template-columns: 1fr;
+  }
+  .detail-sampah-photo-body {
+    padding: 12px;
+  }
+  .detail-sampah-img-link img {
+    max-height: 280px;
+  }
+}
+
+@media (max-width: 620px) {
+  .detail-sampah-grid {
+    grid-template-columns: 1fr;
+  }
+  .detail-sampah-field-value.highlight {
+    font-size: 16px;
+  }
+}
+
 
 /* =========================================================
    V8 — ALUR PENGAJUAN 4 TAHAP + MENU PORTAL BARU
@@ -12007,4 +12164,70 @@ body {
   .ekraf-statistics-year-filter select {
     height: 44px;
   }
+}
+
+
+/* Compact facility checkbox */
+.portal-multicheck input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  min-height: 16px;
+  margin-right: 10px;
+}
+.portal-multicheck label {
+  gap: 8px;
+}
+
+/* Monitoring Sampah */
+.monitoring-sampah-page .page-header h1 { margin:0; font-size:32px; }
+.monitoring-sampah-page .page-header p { color:#64748b; margin-top:10px; }
+.stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin:24px 0; }
+.stat-card { background:#fff; border:1px solid #e5e7eb; border-radius:18px; padding:22px; box-shadow:0 8px 25px rgba(15,23,42,.06); }
+.stat-card span { display:block; color:#64748b; font-size:14px; margin-bottom:8px; }
+.stat-card strong { font-size:32px; color:#0f2d45; }
+.portal-card { background:#fff; border-radius:18px; padding:24px; box-shadow:0 8px 25px rgba(15,23,42,.06); border:1px solid #e5e7eb; }
+.table-wrap { overflow-x:auto; }
+.portal-table { width:100%; border-collapse:separate; border-spacing:0; min-width:900px; }
+.portal-table th { text-align:left; background:#f1f5f9; padding:14px 16px; color:#0f2d45; font-size:13px; font-weight:700; }
+.portal-table td { padding:15px 16px; border-bottom:1px solid #eef2f7; color:#334155; font-size:14px; vertical-align:top; }
+.portal-table tbody tr:hover { background:#f8fafc; }
+.portal-table small { color:#64748b; }
+.status-badge { display:inline-flex; padding:5px 12px; border-radius:999px; background:#fef3c7; color:#92400e; font-size:12px; font-weight:700; text-transform:capitalize; }
+@media(max-width:800px){.stats-grid{grid-template-columns:1fr;}}
+
+.dm-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+
+.dm-action {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid #dbe3ea;
+  background: #fff;
+  color: #1f5d73;
+  cursor: pointer;
+  transition: .2s;
+}
+
+
+.dm-action:hover {
+  background: #f1f5f9;
+}
+
+
+.dm-action.danger {
+  color: #dc2626;
+}
+
+
+.dm-action.danger:hover {
+  background: #fee2e2;
 }

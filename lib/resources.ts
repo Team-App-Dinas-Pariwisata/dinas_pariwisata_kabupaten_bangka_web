@@ -78,7 +78,7 @@ export const resourceConfigs: Record<string, ResourceConfig> = {
       { key: "penulis_tampil", label: "Penulis" },
       { key: "dipublikasikan", label: "Publik" },
       { key: "headline", label: "Headline" },
-      { key: "created_at", label: "Dibuat" },
+      { key: "tanggal_publikasi", label: "Tanggal Publish" },
     ],
   },
   acara: {

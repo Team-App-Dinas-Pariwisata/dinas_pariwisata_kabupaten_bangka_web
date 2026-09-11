@@ -20,7 +20,11 @@ type ExistingUser = RowDataPacket & {
 };
 
 function errorRedirect(request: NextRequest, code: string) {
-  const response = NextResponse.redirect(new URL(`/akun/masuk?error=${encodeURIComponent(code)}`, request.url));
+  const baseUrl =
+  process.env.APP_BASE_URL ||
+  "https://siparik.bangka.go.id";
+
+  const response = NextResponse.redirect(new URL(`/akun/masuk?error=${encodeURIComponent(code)}`, baseUrl));
   response.cookies.set(GOOGLE_OAUTH_STATE_COOKIE, "", { path: "/", maxAge: 0, httpOnly: true, sameSite: "lax" });
   return response;
 }
@@ -85,7 +89,13 @@ export async function GET(request: NextRequest) {
     }
 
     const token = createSessionToken({ uid: userId, role: "pengaju" });
-    const response = NextResponse.redirect(new URL("/akun", request.url));
+    const baseUrl =
+    process.env.APP_BASE_URL ||
+    "https://siparik.bangka.go.id";
+
+  const response = NextResponse.redirect(
+    new URL("/akun", baseUrl)
+  );
     response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions());
     response.cookies.set(GOOGLE_OAUTH_STATE_COOKIE, "", { path: "/", maxAge: 0, httpOnly: true, sameSite: "lax" });
     return response;

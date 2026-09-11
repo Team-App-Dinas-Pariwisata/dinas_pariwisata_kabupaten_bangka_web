@@ -139,9 +139,20 @@ async function canonicalLocation(kind: LocationKind, id: number) {
   return rows[0] ?? null;
 }
 
-async function requireStaff(request: NextRequest) {
+async function requireDetectionAccess(request: NextRequest) {
   const user = await getRequestUser(request);
-  return user && ["pengguna", "admin"].includes(user.role) ? user : null;
+
+  if (!user) return null;
+
+  const allowedRoles = [
+    "pengaju",
+    "pengguna",
+    "admin"
+  ];
+
+  return allowedRoles.includes(user.role)
+    ? user
+    : null;
 }
 
 export async function POST(request: NextRequest) {
@@ -232,7 +243,18 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  if (!(await requireStaff(request))) {
+
+  console.log(
+    "COOKIE:",
+    request.cookies.get("appekraf_session")?.value
+  );
+
+  console.log(
+    "AUTH:",
+    request.headers.get("authorization")
+  );
+
+  if (!(await requireDetectionAccess(request))) {
     return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
   }
 
@@ -269,7 +291,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  if (!(await requireStaff(request))) {
+  if (!(await requireDetectionAccess(request))) {
     return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
   }
 

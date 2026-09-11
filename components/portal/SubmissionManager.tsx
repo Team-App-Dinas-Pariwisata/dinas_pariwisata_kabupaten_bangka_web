@@ -59,6 +59,7 @@ export function SubmissionManager({ type }: Props) {
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [featureSavingId, setFeatureSavingId] = useState<number | null>(null);
+  const [deleteSavingId, setDeleteSavingId] = useState<number | null>(null);
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [page, setPage] = useState(1);
@@ -165,6 +166,29 @@ export function SubmissionManager({ type }: Props) {
     }
   }
 
+  async function removeSubmission(row: Row) {
+    const name = identityFor(type, row).title;
+    if (!window.confirm(`Hapus pengajuan ${name}? Semua file gambar/dokumen yang tersimpan di Cloudflare R2 dan record database akan dihapus permanen.`)) return;
+
+    setDeleteSavingId(row.id);
+    setError("");
+    try {
+      const response = await fetch("/api/submissions", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type, id: row.id }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.message || "Penghapusan pengajuan gagal.");
+      if (selected?.id === row.id) setSelected(null);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Penghapusan pengajuan gagal.");
+    } finally {
+      setDeleteSavingId(null);
+    }
+  }
+
   async function verify(action: "approve" | "reject") {
     if (!selected) return;
     if (action === "reject" && !note.trim()) {
@@ -235,7 +259,7 @@ export function SubmissionManager({ type }: Props) {
                 <td data-label="Status"><span className={`portal-status ${statusClass(currentStatus)}`}>{currentStatus}</span></td>
                 {type === "ekraf" && <td data-label="Unggulan">{currentStatus === "Disetujui" ? <button className={`featured-toggle ${Number(row.unggulan) === 1 ? "active" : ""}`} type="button" disabled={featureSavingId === row.id} onClick={() => void toggleFeatured(row)} title={Number(row.unggulan) === 1 ? "Hapus dari Pelaku Unggulan" : "Jadikan Pelaku Unggulan"}><PortalIcon name="star" />{featureSavingId === row.id ? "Menyimpan" : Number(row.unggulan) === 1 ? "Unggulan" : "Jadikan unggulan"}</button> : <span className="featured-disabled">Setujui dulu</span>}</td>}
                 <td data-label="Tanggal">{formatDate(row.created_at, true)}</td>
-                <td data-label="Aksi"><button className="review-button" type="button" onClick={() => openReview(row)}><PortalIcon name="eye" />Tinjau</button></td>
+                <td data-label="Aksi"><div className="submission-actions"><button className="review-button" type="button" onClick={() => openReview(row)}><PortalIcon name="eye" />Tinjau</button><button className="verify-reject" type="button" disabled={deleteSavingId === row.id} onClick={() => void removeSubmission(row)}><PortalIcon name="x" />{deleteSavingId === row.id ? "Menghapus…" : "Hapus"}</button></div></td>
               </tr>;
             })}
           </tbody>
