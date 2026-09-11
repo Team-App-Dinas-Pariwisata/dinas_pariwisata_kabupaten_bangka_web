@@ -40,7 +40,7 @@ export function LoginForm() {
       <p className="auth-copy">Pilih jenis akun, lalu gunakan email dan kata sandi yang terdaftar pada database.</p>
 
       <div className="auth-role-tabs" role="tablist" aria-label="Jenis akun">
-        <button type="button" className={role === "pengguna" ? "active" : ""} onClick={() => setRole("pengguna")}>Pengguna</button>
+        <button type="button" className={role === "pengguna" ? "active" : ""} onClick={() => setRole("pengguna")}>Petugas</button>
         <button type="button" className={role === "admin" ? "active" : ""} onClick={() => setRole("admin")}>Admin</button>
       </div>
 
@@ -48,7 +48,7 @@ export function LoginForm() {
       <label className="auth-field"><span>Kata sandi</span><input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Masukkan kata sandi" required /></label>
 
       {error && <div className="auth-error">{error}</div>}
-      <button className="auth-submit" type="submit" disabled={loading}>{loading ? "Memeriksa..." : `Masuk sebagai ${role === "admin" ? "Admin" : "Pengguna"}`}</button>
+      <button className="auth-submit" type="submit" disabled={loading}>{loading ? "Memeriksa..." : `Masuk sebagai ${role === "admin" ? "Admin" : "Petugas"}`}</button>
       <Link className="auth-home-link" href="/">← Kembali ke halaman utama</Link>
     </form>
   );
