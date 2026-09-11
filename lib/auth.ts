@@ -50,10 +50,25 @@ async function readUser(uid: number): Promise<AuthUser | null> {
 }
 
 export async function getRequestUser(request: NextRequest): Promise<AuthUser | null> {
-  const payload = verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value);
+  let token = request.cookies.get(SESSION_COOKIE)?.value;
+
+  // Support Flutter/mobile Bearer Token
+  if (!token) {
+    const authorization = request.headers.get("authorization");
+
+    if (authorization?.startsWith("Bearer ")) {
+      token = authorization.replace("Bearer ", "").trim();
+    }
+  }
+
+  const payload = verifySessionToken(token);
+
   if (!payload) return null;
+
   const user = await readUser(payload.uid);
+
   if (!user || user.role !== payload.role) return null;
+
   return user;
 }
 
