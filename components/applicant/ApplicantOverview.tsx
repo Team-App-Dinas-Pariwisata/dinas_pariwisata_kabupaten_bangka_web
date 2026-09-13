@@ -2,17 +2,7 @@ import Link from "next/link";
 import type { RowDataPacket } from "mysql2/promise";
 import { db } from "@/lib/db";
 import { PortalIcon } from "@/components/portal/PortalIcon";
-
-type SubmissionItem = {
-  id: number;
-  type: "ekraf" | "sdm" | "komunitas";
-  typeLabel: string;
-  title: string;
-  noRegistrasi: string;
-  status: string;
-  createdAt: string;
-  canEdit: boolean;
-};
+import { ApplicantHistory, type SubmissionItem } from "./ApplicantHistory";
 
 type Row = RowDataPacket & {
   id: number;
@@ -22,27 +12,8 @@ type Row = RowDataPacket & {
   created_at: string;
 };
 
-function formatDate(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", year: "numeric" }).format(date);
-}
-
-function statusClass(status: string) {
-  const normalized = status.toLowerCase();
-  if (normalized.includes("disetujui")) return "approved";
-  if (normalized.includes("ditolak")) return "rejected";
-  if (normalized.includes("perbaikan")) return "revision";
-  return "pending";
-}
-
 function canEditStatus(status: string) {
   return ["Menunggu", "Perlu Perbaikan", "Ditolak"].includes(status);
-}
-
-function editHref(type: SubmissionItem["type"], id: number) {
-  const segment = type === "ekraf" ? "pelaku-ekraf" : type === "sdm" ? "sdm-pariwisata" : "komunitas";
-  return `/akun/pengajuan/${segment}/${id}/edit`;
 }
 
 export async function ApplicantOverview({ userId, userName }: { userId: number; userName: string }) {
@@ -87,32 +58,7 @@ export async function ApplicantOverview({ userId, userName }: { userId: number; 
         </div>
       </section>
 
-      <section className="applicant-history-card">
-        <div className="applicant-section-title"><div><p>RIWAYAT</p><h2>Pengajuan saya</h2></div><span>{items.length} data</span></div>
-        {items.length ? (
-          <div className="applicant-history-list">
-            {items.map((item) => (
-              <article key={`${item.type}-${item.id}`}>
-                <div className="history-type"><span>{item.typeLabel}</span><strong>{item.title}</strong><small>{item.noRegistrasi} · {formatDate(item.createdAt)}</small></div>
-                <div className="applicant-history-actions">
-                  <span className={`applicant-status ${statusClass(item.status)}`}>{item.status}</span>
-                  {item.status === "Disetujui" ? (
-                    <Link href={editHref(item.type, item.id)} className="applicant-edit-button"><PortalIcon name="eye" /> Lihat Pengajuan</Link>
-                  ) : item.status === "Ditolak" || item.status === "Perlu Perbaikan" ? (
-                    <Link href={editHref(item.type, item.id)} className="applicant-edit-button"><PortalIcon name="edit" /> Revisi Pengajuan</Link>
-                  ) : item.canEdit ? (
-                    <Link href={editHref(item.type, item.id)} className="applicant-edit-button"><PortalIcon name="edit" /> Edit Pengajuan</Link>
-                  ) : (
-                    <Link href={editHref(item.type, item.id)} className="applicant-edit-button"><PortalIcon name="eye" /> Lihat Pengajuan</Link>
-                  )}
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="applicant-empty"><PortalIcon name="clipboard" /><strong>Belum ada pengajuan</strong><p>Pilih salah satu layanan di atas untuk mengirim data pertama Anda.</p></div>
-        )}
-      </section>
+      <ApplicantHistory items={items} />
     </section>
   );
 }

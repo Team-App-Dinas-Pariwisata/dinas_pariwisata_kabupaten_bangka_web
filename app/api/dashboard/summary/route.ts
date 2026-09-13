@@ -46,6 +46,7 @@ export async function GET(request: NextRequest) {
     const page = Math.max(1, Number(request.nextUrl.searchParams.get("page") ?? 1));
     const pageSize = Math.min(100, Math.max(1, Number(request.nextUrl.searchParams.get("pageSize") ?? 10)));
     const offset = (page - 1) * pageSize;
+    const searchParam = (request.nextUrl.searchParams.get("search") ?? request.nextUrl.searchParams.get("q") ?? "").trim().toLowerCase();
 
     /*
      * Jangan gabungkan tiga tabel pengajuan memakai UNION di MySQL.
@@ -154,8 +155,21 @@ export async function GET(request: NextRequest) {
     ]
       .sort((a, b) => toTimestamp(b.created_at) - toTimestamp(a.created_at));
 
-    const totalRecent = recent.length;
-    const paginatedRecent = recent.slice(offset, offset + pageSize);
+    const filteredRecent = searchParam
+      ? recent.filter((row) => {
+          const jenisLabel = row.jenis === "ekraf" ? "pelaku ekraf" : row.jenis === "sdm" ? "sdm pariwisata" : "komunitas";
+          return (
+            (row.no_registrasi || "").toLowerCase().includes(searchParam) ||
+            (row.nama || "").toLowerCase().includes(searchParam) ||
+            (row.detail || "").toLowerCase().includes(searchParam) ||
+            (row.status || "").toLowerCase().includes(searchParam) ||
+            jenisLabel.includes(searchParam)
+          );
+        })
+      : recent;
+
+    const totalRecent = filteredRecent.length;
+    const paginatedRecent = filteredRecent.slice(offset, offset + pageSize);
 
     return NextResponse.json({
       data: {

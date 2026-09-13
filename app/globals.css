@@ -12629,6 +12629,12 @@ body {
   font-size: 12px;
 }
 
+.applicant-history-card .dm-pagination {
+  margin-top: 16px;
+  background: #fbfdfd;
+  border-color: #e4e9eb;
+}
+
 .applicant-empty p {
   max-width: 350px;
   margin: 5px auto 0;

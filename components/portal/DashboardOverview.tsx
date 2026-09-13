@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { PortalIcon, type PortalIconName } from "./PortalIcon";
 import { submissionConfigs, type SubmissionField, type SubmissionType } from "@/lib/submission-config";
 
@@ -67,17 +67,24 @@ export function DashboardOverview(){
  const [selectedJenis,setSelectedJenis]=useState<SubmissionType>("ekraf");
  const [detailStep,setDetailStep]=useState(0);
  const [loadingReview,setLoadingReview]=useState<string|null>(null);
+ const [search, setSearch] = useState("");
 
- async function load(){
-  const r=await fetch(`/api/dashboard/summary?page=1&pageSize=${MAX_DASHBOARD_ROWS}`,{cache:"no-store"});
-  const p=await r.json();
-  if(!r.ok) throw new Error(p.message||"Gagal memuat dashboard");
+ const load = useCallback(async (searchQuery = "") => {
+  const queryParam = searchQuery.trim() ? `&search=${encodeURIComponent(searchQuery.trim())}` : "";
+  const r = await fetch(`/api/dashboard/summary?page=1&pageSize=${MAX_DASHBOARD_ROWS}${queryParam}`, { cache: "no-store" });
+  const p = await r.json();
+  if (!r.ok) throw new Error(p.message || "Gagal memuat dashboard");
   setData(p.data);
-  setRows(p.data.recent||[]);
+  setRows(p.data.recent || []);
   setTotalRecent(p.pagination?.total ?? 0);
- }
+ }, []);
 
- useEffect(()=>{load().catch(e=>setError(e.message));},[]);
+ useEffect(() => {
+  const timer = setTimeout(() => {
+   load(search).catch((e) => setError(e.message));
+  }, 250);
+  return () => clearTimeout(timer);
+ }, [search, load]);
 
  const openReview = useCallback(async (row: Recent) => {
   const reviewKey = `${row.jenis}-${row.id}`;
@@ -174,21 +181,84 @@ export function DashboardOverview(){
  const config = selected ? submissionConfigs[selectedJenis] : null;
  const currentStatus = selected ? String(selected.status_label ?? "Menunggu") : "";
 
+ const visibleRows = useMemo(() => {
+   const q = search.trim().toLowerCase();
+   if (!q) return rows;
+   return rows.filter((row) => {
+     const jenisLabel = row.jenis === "ekraf" ? "pelaku ekraf" : row.jenis === "sdm" ? "sdm pariwisata" : "komunitas";
+     return (
+       (row.no_registrasi || "").toLowerCase().includes(q) ||
+       (row.nama || "").toLowerCase().includes(q) ||
+       (row.detail || "").toLowerCase().includes(q) ||
+       (row.status || "").toLowerCase().includes(q) ||
+       jenisLabel.includes(q)
+     );
+   });
+ }, [rows, search]);
+
  return <section>
   <div className="portal-page-head"><div><p className="portal-breadcrumb">Dashboard</p><h1>Dashboard Pengelolaan Data</h1><p>Pantau pengajuan yang masuk, berita, dan acara SI PARIK BANGKA Kabupaten Bangka.</p></div></div>
   {error&&!selected&&<div className="portal-alert error">{error}</div>}
   <div className="portal-stat-row">{cards.map(c=><div className="portal-stat-card" key={c.key}><span className="stat-icon"><PortalIcon name={c.icon}/></span><div><small>{c.label}</small><strong>{data?.[c.key]??"—"}</strong><p>{c.caption}</p></div></div>)}</div>
   <div className="portal-panel">
-   <div className="portal-panel-head"><div><h2>Pengajuan yang perlu ditinjau</h2><p>Menunggu atau Perlu Perbaikan.{totalRecent > MAX_DASHBOARD_ROWS && ` Menampilkan ${MAX_DASHBOARD_ROWS} dari ${totalRecent} pengajuan.`}</p></div></div>
+   <div className="portal-panel-head">
+     <div>
+       <h2>Pengajuan yang perlu ditinjau</h2>
+       <p>
+         Menunggu atau Perlu Perbaikan.
+         {search
+           ? ` Menampilkan hasil pencarian "${search}".`
+           : totalRecent > MAX_DASHBOARD_ROWS
+           ? ` Menampilkan ${MAX_DASHBOARD_ROWS} dari ${totalRecent} pengajuan.`
+           : ""}
+       </p>
+     </div>
+   </div>
+
+   <div className="dm-toolbar">
+     <label>
+       <PortalIcon name="search" />
+       <input
+         type="text"
+         value={search}
+         onChange={(e) => setSearch(e.target.value)}
+         placeholder="Cari pengajuan (registrasi, nama, usaha, atau jenis)…"
+         aria-label="Cari pengajuan"
+       />
+     </label>
+     {search && (
+       <button
+         type="button"
+         onClick={() => setSearch("")}
+         style={{
+           background: "none",
+           border: "1px solid #e0e6e9",
+           borderRadius: "8px",
+           padding: "6px 12px",
+           cursor: "pointer",
+           color: "#536d7b",
+           fontSize: "12px",
+           display: "inline-flex",
+           alignItems: "center",
+           gap: "4px",
+         }}
+         title="Reset pencarian"
+       >
+         ✕ Reset
+       </button>
+     )}
+     <span>{search ? `${visibleRows.length} data ditemukan` : `${visibleRows.length} data`}</span>
+   </div>
+
    <div className="dm-table-wrap embedded"><table className="dm-table"><thead><tr><th>No. Registrasi</th><th>Jenis</th><th>Nama</th><th>Detail</th><th>Status</th><th>Tanggal</th><th>Aksi</th></tr></thead>
-   <tbody>{rows.length===0?<tr><td colSpan={7} className="dm-empty">Tidak ada pengajuan.</td></tr>:rows.map(row=>{
+   <tbody>{visibleRows.length===0?<tr><td colSpan={7} className="dm-empty">{search ? `Tidak ada pengajuan yang cocok dengan "${search}".` : "Tidak ada pengajuan."}</td></tr>:visibleRows.map(row=>{
     const reviewKey = `${row.jenis}-${row.id}`;
     const isLoadingThis = loadingReview === reviewKey;
     return <tr key={reviewKey}><td><button className="table-link" type="button" disabled={isLoadingThis} onClick={()=>openReview(row)}>{isLoadingThis ? "Memuat…" : (row.no_registrasi||"—")}</button></td><td>{row.jenis==="ekraf"?"Pelaku Ekraf":row.jenis==="sdm"?"SDM Pariwisata":"Komunitas"}</td><td>{row.nama}</td><td>{row.detail}</td><td><span className="portal-status">{row.status}</span></td><td>{formatDate(row.created_at)}</td><td><div className="submission-actions"><button className="review-button" type="button" disabled={isLoadingThis} onClick={()=>openReview(row)}><PortalIcon name="eye"/> {isLoadingThis ? "Memuat…" : "Tinjau"}</button><button className="verify-reject" onClick={()=>remove(row)} disabled={loadingDelete===row.id}><PortalIcon name="x"/> Hapus</button></div></td></tr>;
    })}</tbody></table></div>
 
    {/* Link ke halaman lengkap, gantikan pagination */}
-   {totalRecent > MAX_DASHBOARD_ROWS && (
+   {totalRecent > MAX_DASHBOARD_ROWS && !search && (
     <div className="dashboard-view-all-row">
      <a href="/dashboard/pengajuan/pelaku-ekraf" className="dashboard-view-all-link">
       <PortalIcon name="clipboard" /> Lihat semua pengajuan →
