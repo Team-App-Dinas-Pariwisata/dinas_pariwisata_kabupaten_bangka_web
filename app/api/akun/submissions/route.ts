@@ -9,6 +9,7 @@ import {
   keyFromR2SubmissionStorageReference,
   uploadSubmissionFileToR2,
 } from "@/lib/r2";
+import { notifyNewSubmission, notifySubmissionRevised } from "@/lib/notifications";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -200,6 +201,17 @@ export async function POST(request: NextRequest) {
       keys.map((key) => data[key]),
     );
 
+    // Notifikasi internal ke petugas (best-effort)
+    const applicantName = type === "komunitas"
+      ? String(data.nama_organisasi ?? user.name)
+      : String(data.nama_lengkap ?? user.name);
+    void notifyNewSubmission({
+      type,
+      submissionId: result.insertId,
+      applicantName,
+      noRegistrasi: String(data.no_registrasi ?? ""),
+    });
+
     return NextResponse.json({
       message: "Pengajuan berhasil dikirim dan terhubung ke akun Google Anda.",
       data: { id: result.insertId, no_registrasi: data.no_registrasi },
@@ -285,6 +297,17 @@ export async function PATCH(request: NextRequest) {
 
     // Setelah referensi database berhasil diganti, file R2 lama dibersihkan.
     await Promise.allSettled(replacedOldKeys.map((key) => deleteSubmissionFileFromR2(key)));
+
+    // Notifikasi internal ke petugas (best-effort)
+    const reviserName = type === "komunitas"
+      ? String(existing.nama_organisasi ?? user.name)
+      : String(existing.nama_lengkap ?? user.name);
+    void notifySubmissionRevised({
+      type,
+      submissionId: id,
+      applicantName: reviserName,
+      noRegistrasi: existing.no_registrasi,
+    });
 
     return NextResponse.json({
       message: "Perubahan pengajuan berhasil disimpan dan dikirim kembali untuk verifikasi.",

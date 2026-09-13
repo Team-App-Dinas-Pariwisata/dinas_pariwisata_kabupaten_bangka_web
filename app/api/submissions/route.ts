@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRequestRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { notifySubmissionDecision } from "@/lib/submission-notifications";
+import { notifyVerificationAction } from "@/lib/notifications";
 import type { SubmissionType } from "@/lib/submission-config";
 import { deleteSubmissionWithManagedFiles, isSubmissionType } from "@/lib/staff-record-cleanup";
 
@@ -162,10 +163,25 @@ export async function PATCH(request: NextRequest) {
 
     await connection.commit();
 
-    // Notifikasi WhatsApp dikirim SETELAH commit, dan best-effort saja:
-    // kegagalan kirim WA (nomor kosong, service belum siap, dsb) tidak boleh
-    // membuat proses verifikasi yang sudah tersimpan terlihat gagal ke petugas.
+    // Notifikasi WhatsApp/Email ke pengaju (best-effort)
     await notifySubmissionDecision({ type: type as SubmissionType, id, status, note });
+
+    // Notifikasi internal ke admin (best-effort)
+    // Ambil no_registrasi untuk disertakan di notifikasi
+    try {
+      const regCol = type === "ekraf" ? "no_registrasi" : "no_registrasi";
+      const tbl = type === "ekraf" ? "pengajuan_ekraf" : type === "sdm" ? "pengajuan_sdm_pariwisata" : "pengajuan_komunitas_asosiasi";
+      const [regRows] = await db().execute<(RowDataPacket & { no_registrasi: string | null })[]>(
+        `SELECT no_registrasi FROM ${tbl} WHERE id = ? LIMIT 1`, [id],
+      );
+      void notifyVerificationAction({
+        type: type as SubmissionType,
+        submissionId: id,
+        staffName: user.name,
+        action: action as "approve" | "reject",
+        noRegistrasi: regRows[0]?.no_registrasi,
+      });
+    } catch { /* notifikasi internal gagal tidak menghambat response */ }
 
     return NextResponse.json({ message: action === "approve" ? "Pengajuan berhasil disetujui." : "Pengajuan berhasil ditolak." });
   } catch (error) {

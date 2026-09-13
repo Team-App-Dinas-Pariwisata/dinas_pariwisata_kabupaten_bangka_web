@@ -2,13 +2,13 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { PortalIcon, type PortalIconName } from "./PortalIcon";
-import { TablePagination } from "./DataTableControls";
 import { submissionConfigs, type SubmissionField, type SubmissionType } from "@/lib/submission-config";
 
 type Recent = { id:number; jenis:"ekraf"|"sdm"|"komunitas"; no_registrasi:string|null; nama:string; detail:string; status:string; created_at:string };
 type Summary = { total:number; menunggu:number; disetujui:number; ditolak:number; ekraf:number; sdm:number; komunitas:number; berita:number; acara:number };
-type Pagination = { total:number; page:number; pageSize:number; totalPages:number };
 type FullRow = Record<string, unknown> & { id: number; status_label?: string; created_at?: string; no_registrasi?: string };
+
+const MAX_DASHBOARD_ROWS = 10;
 
 const cards:{key:keyof Pick<Summary,"total"|"menunggu"|"disetujui"|"ditolak">;label:string;caption:string;icon:PortalIconName}[]=[
  {key:"total",label:"Total Pengajuan",caption:"Tiga jenis pengajuan",icon:"clipboard"},
@@ -49,12 +49,16 @@ function statusClass(status: string) {
   return status.toLowerCase().replaceAll(" ", "-");
 }
 
+const jenisLinks: Record<string, string> = {
+  ekraf: "/dashboard/pengajuan/pelaku-ekraf",
+  sdm: "/dashboard/pengajuan/sdm-pariwisata",
+  komunitas: "/dashboard/pengajuan/komunitas",
+};
+
 export function DashboardOverview(){
  const [data,setData]=useState<Summary|null>(null);
  const [rows,setRows]=useState<Recent[]>([]);
- const [pagination,setPagination]=useState<Pagination>({total:0,page:1,pageSize:10,totalPages:1});
- const [page,setPage]=useState(1);
- const [pageSize,setPageSize]=useState(10);
+ const [totalRecent,setTotalRecent]=useState(0);
  const [error,setError]=useState("");
  const [loadingDelete,setLoadingDelete]=useState<number|null>(null);
  const [note,setNote]=useState("");
@@ -65,15 +69,15 @@ export function DashboardOverview(){
  const [loadingReview,setLoadingReview]=useState<string|null>(null);
 
  async function load(){
-  const r=await fetch(`/api/dashboard/summary?page=${page}&pageSize=${pageSize}`,{cache:"no-store"});
+  const r=await fetch(`/api/dashboard/summary?page=1&pageSize=${MAX_DASHBOARD_ROWS}`,{cache:"no-store"});
   const p=await r.json();
   if(!r.ok) throw new Error(p.message||"Gagal memuat dashboard");
   setData(p.data);
   setRows(p.data.recent||[]);
-  setPagination(p.pagination);
+  setTotalRecent(p.pagination?.total ?? 0);
  }
 
- useEffect(()=>{load().catch(e=>setError(e.message));},[page,pageSize]);
+ useEffect(()=>{load().catch(e=>setError(e.message));},[]);
 
  const openReview = useCallback(async (row: Recent) => {
   const reviewKey = `${row.jenis}-${row.id}`;
@@ -96,6 +100,41 @@ export function DashboardOverview(){
    setLoadingReview(null);
   }
  }, []);
+
+ // Open review directly by submission type & id (from notification click)
+ const openReviewById = useCallback(async (jenis: "ekraf" | "sdm" | "komunitas", id: number) => {
+  const reviewKey = `${jenis}-${id}`;
+  setLoadingReview(reviewKey);
+  setError("");
+  try {
+   const r = await fetch(`/api/submissions?type=${jenis}`, { cache: "no-store" });
+   const p = await r.json();
+   if (!r.ok) throw new Error(p.message || "Gagal memuat detail pengajuan.");
+   const allRows: FullRow[] = p.data ?? [];
+   const fullRecord = allRows.find((item) => Number(item.id) === id);
+   if (!fullRecord) throw new Error("Data pengajuan tidak ditemukan.");
+   setSelected(fullRecord);
+   setSelectedJenis(jenis);
+   setDetailStep(0);
+   setNote(String(fullRecord.catatan_verifikasi ?? fullRecord.alasan_penolakan ?? ""));
+  } catch (e) {
+   setError(e instanceof Error ? e.message : "Gagal memuat detail pengajuan.");
+  } finally {
+   setLoadingReview(null);
+  }
+ }, []);
+
+ // Listen for custom event from notification bell
+ useEffect(() => {
+  function handleOpenReview(e: Event) {
+   const detail = (e as CustomEvent).detail as { jenis: "ekraf" | "sdm" | "komunitas"; id: number } | undefined;
+   if (detail?.jenis && detail?.id) {
+    void openReviewById(detail.jenis, detail.id);
+   }
+  }
+  window.addEventListener("openSubmissionReview", handleOpenReview);
+  return () => window.removeEventListener("openSubmissionReview", handleOpenReview);
+ }, [openReviewById]);
 
  async function remove(row:Recent){
   if(!confirm(`Hapus pengajuan ${row.nama}?`)) return;
@@ -140,14 +179,22 @@ export function DashboardOverview(){
   {error&&!selected&&<div className="portal-alert error">{error}</div>}
   <div className="portal-stat-row">{cards.map(c=><div className="portal-stat-card" key={c.key}><span className="stat-icon"><PortalIcon name={c.icon}/></span><div><small>{c.label}</small><strong>{data?.[c.key]??"—"}</strong><p>{c.caption}</p></div></div>)}</div>
   <div className="portal-panel">
-   <div className="portal-panel-head"><div><h2>Pengajuan yang perlu ditinjau</h2><p>Menunggu atau Perlu Perbaikan.</p></div></div>
+   <div className="portal-panel-head"><div><h2>Pengajuan yang perlu ditinjau</h2><p>Menunggu atau Perlu Perbaikan.{totalRecent > MAX_DASHBOARD_ROWS && ` Menampilkan ${MAX_DASHBOARD_ROWS} dari ${totalRecent} pengajuan.`}</p></div></div>
    <div className="dm-table-wrap embedded"><table className="dm-table"><thead><tr><th>No. Registrasi</th><th>Jenis</th><th>Nama</th><th>Detail</th><th>Status</th><th>Tanggal</th><th>Aksi</th></tr></thead>
    <tbody>{rows.length===0?<tr><td colSpan={7} className="dm-empty">Tidak ada pengajuan.</td></tr>:rows.map(row=>{
     const reviewKey = `${row.jenis}-${row.id}`;
     const isLoadingThis = loadingReview === reviewKey;
     return <tr key={reviewKey}><td><button className="table-link" type="button" disabled={isLoadingThis} onClick={()=>openReview(row)}>{isLoadingThis ? "Memuat…" : (row.no_registrasi||"—")}</button></td><td>{row.jenis==="ekraf"?"Pelaku Ekraf":row.jenis==="sdm"?"SDM Pariwisata":"Komunitas"}</td><td>{row.nama}</td><td>{row.detail}</td><td><span className="portal-status">{row.status}</span></td><td>{formatDate(row.created_at)}</td><td><div className="submission-actions"><button className="review-button" type="button" disabled={isLoadingThis} onClick={()=>openReview(row)}><PortalIcon name="eye"/> {isLoadingThis ? "Memuat…" : "Tinjau"}</button><button className="verify-reject" onClick={()=>remove(row)} disabled={loadingDelete===row.id}><PortalIcon name="x"/> Hapus</button></div></td></tr>;
    })}</tbody></table></div>
-   <TablePagination totalItems={pagination.total} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={(s)=>{setPageSize(s);setPage(1)}}/>
+
+   {/* Link ke halaman lengkap, gantikan pagination */}
+   {totalRecent > MAX_DASHBOARD_ROWS && (
+    <div className="dashboard-view-all-row">
+     <a href="/dashboard/pengajuan/pelaku-ekraf" className="dashboard-view-all-link">
+      <PortalIcon name="clipboard" /> Lihat semua pengajuan →
+     </a>
+    </div>
+   )}
   </div>
 
   {selected && config && (
