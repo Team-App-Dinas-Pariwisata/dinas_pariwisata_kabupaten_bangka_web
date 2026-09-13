@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ message: "Silakan masuk untuk mengakses file pengajuan." }, { status: 401 });
   }
 
-  const isStaff = user.role === "admin" || user.role === "pengguna";
+  const isStaff = user.role === "admin" || user.role === "petugas";
   const isOwner = user.role === "pengaju" && applicantOwnsR2SubmissionKey(key, user.id);
   if (!isStaff && !isOwner) {
     return NextResponse.json({ message: "Anda tidak memiliki akses ke file pengajuan ini." }, { status: 403 });

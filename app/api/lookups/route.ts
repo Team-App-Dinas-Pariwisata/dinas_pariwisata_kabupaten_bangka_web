@@ -4,7 +4,7 @@ import { requireRequestRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 export async function GET(request: NextRequest) {
-  if (!(await requireRequestRole(request, "pengguna"))) {
+  if (!(await requireRequestRole(request, "petugas"))) {
     return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
   }
 

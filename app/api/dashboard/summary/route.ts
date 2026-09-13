@@ -38,11 +38,15 @@ function toTimestamp(value: string) {
 }
 
 export async function GET(request: NextRequest) {
-  if (!(await requireRequestRole(request, "pengguna"))) {
+  if (!(await requireRequestRole(request, "petugas"))) {
     return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
   }
 
   try {
+    const page = Math.max(1, Number(request.nextUrl.searchParams.get("page") ?? 1));
+    const pageSize = Math.min(100, Math.max(1, Number(request.nextUrl.searchParams.get("pageSize") ?? 10)));
+    const offset = (page - 1) * pageSize;
+
     /*
      * Jangan gabungkan tiga tabel pengajuan memakai UNION di MySQL.
      * dinpar.sql menggunakan collation yang berbeda pada tabel lama:
@@ -52,7 +56,7 @@ export async function GET(request: NextRequest) {
      * dapat memicu ER_CANT_AGGREGATE_NCOLLATIONS / "Illegal mix of collations".
      *
      * Karena itu data terbaru dibaca per tabel lalu digabung dan diurutkan
-     * di aplikasi. Ini juga mempertahankan struktur database asli pengguna.
+     * di aplikasi. Ini juga mempertahankan struktur database asli petugas.
      */
     const [
       [ekrafRows],
@@ -91,8 +95,7 @@ export async function GET(request: NextRequest) {
           created_at
         FROM pengajuan_ekraf
         WHERE status IN ('Menunggu','Perlu Perbaikan')
-        ORDER BY created_at DESC
-        LIMIT 8`),
+        ORDER BY created_at DESC`),
       db().execute<RecentDbRow[]>(`
         SELECT id, no_registrasi, nama_lengkap AS nama,
           COALESCE(tempat_bertugas, '') AS detail,
@@ -100,8 +103,7 @@ export async function GET(request: NextRequest) {
           created_at
         FROM pengajuan_sdm_pariwisata
         WHERE status_pengajuan IN ('Menunggu','Perlu Perbaikan')
-        ORDER BY created_at DESC
-        LIMIT 8`),
+        ORDER BY created_at DESC`),
       db().execute<RecentDbRow[]>(`
         SELECT id, no_registrasi, nama_organisasi AS nama,
           COALESCE(kategori, '') AS detail,
@@ -109,8 +111,7 @@ export async function GET(request: NextRequest) {
           created_at
         FROM pengajuan_komunitas_asosiasi
         WHERE status_pengajuan IN ('Menunggu','Perlu Perbaikan')
-        ORDER BY created_at DESC
-        LIMIT 8`),
+        ORDER BY created_at DESC`),
     ]);
 
     const ekraf = ekrafRows[0] ?? { total: 0, menunggu: 0, disetujui: 0, ditolak: 0 };
@@ -151,8 +152,10 @@ export async function GET(request: NextRequest) {
         created_at: row.created_at,
       })),
     ]
-      .sort((a, b) => toTimestamp(b.created_at) - toTimestamp(a.created_at))
-      .slice(0, 8);
+      .sort((a, b) => toTimestamp(b.created_at) - toTimestamp(a.created_at));
+
+    const totalRecent = recent.length;
+    const paginatedRecent = recent.slice(offset, offset + pageSize);
 
     return NextResponse.json({
       data: {
@@ -165,7 +168,13 @@ export async function GET(request: NextRequest) {
         komunitas: Number(komunitas.total ?? 0),
         berita: Number(beritaRows[0]?.total ?? 0),
         acara: Number(acaraRows[0]?.total ?? 0),
-        recent,
+        recent: paginatedRecent,
+      },
+      pagination: {
+        page,
+        pageSize,
+        total: totalRecent,
+        totalPages: Math.ceil(totalRecent / pageSize),
       },
     });
   } catch (error) {

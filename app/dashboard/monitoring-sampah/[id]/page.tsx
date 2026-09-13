@@ -18,7 +18,7 @@ export default async function DetailMonitoringSampah({
 
   const { id } = await params;
 
-  await requirePageRole("pengguna");
+  await requirePageRole("petugas");
 
 
   const [rows] = await db().execute<RowDataPacket[]>(

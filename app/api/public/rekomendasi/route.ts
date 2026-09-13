@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
           name: "Penilaian rekomendasi",
           benefitNormalization: "penyesuaian nilai sesuai kebutuhan",
           costNormalization: "penyesuaian batas biaya dan jarak",
-          preferenceWeighting: "prioritas pengguna digunakan untuk menyusun urutan rekomendasi",
+          preferenceWeighting: "prioritas petugas digunakan untuk menyusun urutan rekomendasi",
         },
       },
       { headers: { "Cache-Control": "no-store, max-age=0" } },

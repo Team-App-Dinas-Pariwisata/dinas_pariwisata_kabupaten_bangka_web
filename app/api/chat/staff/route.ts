@@ -43,7 +43,7 @@ type MaxMessageRow = RowDataPacket & {
 
 async function requireStaff(request: NextRequest) {
   const user = await getRequestUser(request);
-  if (!user || !["admin", "pengguna"].includes(user.role)) return null;
+  if (!user || !["admin", "petugas"].includes(user.role)) return null;
   return user;
 }
 

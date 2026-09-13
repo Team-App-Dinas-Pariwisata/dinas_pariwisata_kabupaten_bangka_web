@@ -32,7 +32,7 @@ export default function PublicSiteFooter() {
             <a href="/acara">Acara</a>
             <a href="#kontak">Kontak Kami</a>
             <a href="/akun/masuk">Akun Pengaju</a>
-            <a href="/petugas">Portal Admin &amp; Pengguna</a>
+            <a href="/petugas">Portal Admin &amp; Petugas</a>
           </div>
 
           <div className="footer-column footer-contact">

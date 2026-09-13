@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     const email = String(body.email ?? "").trim().toLowerCase();
     const password = String(body.password ?? "");
     const requestedRole = body.role as AppRole;
-    if (!email || !password || !["admin","pengguna"].includes(requestedRole)) {
+    if (!email || !password || !["admin","petugas"].includes(requestedRole)) {
       return NextResponse.json({message:"Email, kata sandi, dan jenis akun wajib diisi."},{status:400});
     }
     const [rows] = await db().execute<LoginRow[]>("SELECT id, role, name, email, phone, avatar_url, password, status FROM pengguna WHERE email = ? LIMIT 1", [email]);

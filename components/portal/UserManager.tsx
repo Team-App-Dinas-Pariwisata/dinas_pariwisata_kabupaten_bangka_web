@@ -33,11 +33,11 @@ export function UserManager() {
     try {
       const response = await fetch("/api/admin/users", { cache: "no-store" });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.message || "Gagal mengambil pengguna.");
+      if (!response.ok) throw new Error(result.message || "Gagal mengambil petugas.");
       setUsers(result.data);
       setError("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal mengambil pengguna.");
+      setError(err instanceof Error ? err.message : "Gagal mengambil petugas.");
     } finally {
       setLoading(false);
     }
@@ -105,18 +105,18 @@ export function UserManager() {
         body: JSON.stringify({ id: editing?.id, ...form }),
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.message || "Gagal menyimpan pengguna.");
+      if (!response.ok) throw new Error(result.message || "Gagal menyimpan petugas.");
       setOpen(false);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menyimpan pengguna.");
+      setError(err instanceof Error ? err.message : "Gagal menyimpan petugas.");
     } finally {
       setSaving(false);
     }
   }
 
   async function remove(user: User) {
-    if (!window.confirm(`Hapus pengguna ${user.name}?`)) return;
+    if (!window.confirm(`Hapus petugas ${user.name}?`)) return;
     const response = await fetch("/api/admin/users", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -124,7 +124,7 @@ export function UserManager() {
     });
     const result = await response.json();
     if (!response.ok) {
-      setError(result.message || "Gagal menghapus pengguna.");
+      setError(result.message || "Gagal menghapus petugas.");
       return;
     }
     await load();
@@ -134,21 +134,21 @@ export function UserManager() {
     <section>
       <div className="portal-page-head">
         <div>
-          <p className="portal-breadcrumb">Admin / Pengguna</p>
-          <h1>Kelola Pengguna</h1>
-          <p>Administrator hanya dapat membuat, melihat, mengubah, dan menghapus akun pengguna.</p>
+          <p className="portal-breadcrumb">Admin / Petugas</p>
+          <h1>Kelola Petugas</h1>
+          <p>Administrator hanya dapat membuat, melihat, mengubah, dan menghapus akun petugas.</p>
         </div>
-        <button className="portal-primary" type="button" onClick={create}><PortalIcon name="plus" />Tambah Pengguna</button>
+        <button className="portal-primary" type="button" onClick={create}><PortalIcon name="plus" />Tambah Petugas</button>
       </div>
 
       <div className="portal-stat-row compact">
-        <div className="portal-stat-card"><span className="stat-icon"><PortalIcon name="users" /></span><div><small>Total Pengguna</small><strong>{users.length}</strong><p>Akun role pengguna</p></div></div>
+        <div className="portal-stat-card"><span className="stat-icon"><PortalIcon name="users" /></span><div><small>Total Petugas</small><strong>{users.length}</strong><p>Akun role petugas</p></div></div>
         <div className="portal-stat-card"><span className="stat-icon"><PortalIcon name="users" /></span><div><small>Aktif</small><strong>{users.filter((user) => user.status === "active").length}</strong><p>Dapat masuk dashboard</p></div></div>
       </div>
 
       <div className="dm-toolbar">
         <label><PortalIcon name="search" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari nama, email, atau telepon..." /></label>
-        <span>{filtered.length} pengguna</span>
+        <span>{filtered.length} petugas</span>
       </div>
 
       {error && !open && <div className="portal-alert error">{error}</div>}
@@ -167,9 +167,9 @@ export function UserManager() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="dm-empty">Memuat pengguna...</td></tr>
+              <tr><td colSpan={6} className="dm-empty">Memuat petugas...</td></tr>
             ) : sortedUsers.length === 0 ? (
-              <tr><td colSpan={6} className="dm-empty">Belum ada akun pengguna.</td></tr>
+              <tr><td colSpan={6} className="dm-empty">Belum ada akun petugas.</td></tr>
             ) : pagedUsers.map((user) => (
               <tr key={user.id}>
                 <td data-label="Nama"><strong>{user.name}</strong></td>
@@ -184,13 +184,13 @@ export function UserManager() {
         </table>
       </div>
 
-      {!loading && sortedUsers.length > 0 && <TablePagination totalItems={sortedUsers.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={handlePageSize} itemLabel="pengguna" />}
+      {!loading && sortedUsers.length > 0 && <TablePagination totalItems={sortedUsers.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={handlePageSize} itemLabel="petugas" />}
 
       {open && (
         <div className="portal-modal-layer">
           <button className="portal-modal-backdrop" type="button" onClick={() => setOpen(false)} aria-label="Tutup" />
           <form className="portal-modal small" onSubmit={save}>
-            <div className="portal-modal-head"><div><p>Akun pengguna</p><h2>{editing ? "Edit Pengguna" : "Tambah Pengguna"}</h2></div><button type="button" onClick={() => setOpen(false)}><PortalIcon name="x" /></button></div>
+            <div className="portal-modal-head"><div><p>Akun petugas</p><h2>{editing ? "Edit Petugas" : "Tambah Petugas"}</h2></div><button type="button" onClick={() => setOpen(false)}><PortalIcon name="x" /></button></div>
             <div className="portal-form-grid">
               <label className="portal-field"><span>Nama *</span><input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required /></label>
               <label className="portal-field"><span>Email *</span><input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required /></label>
@@ -199,7 +199,7 @@ export function UserManager() {
               <label className="portal-field"><span>Status</span><select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}><option value="active">Aktif</option><option value="inactive">Nonaktif</option></select></label>
             </div>
             {error && <div className="portal-alert error">{error}</div>}
-            <div className="portal-modal-actions"><button type="button" className="portal-secondary" onClick={() => setOpen(false)}>Batal</button><button className="portal-primary" disabled={saving}>{saving ? "Menyimpan..." : "Simpan Pengguna"}</button></div>
+            <div className="portal-modal-actions"><button type="button" className="portal-secondary" onClick={() => setOpen(false)}>Batal</button><button className="portal-primary" disabled={saving}>{saving ? "Menyimpan..." : "Simpan Petugas"}</button></div>
           </form>
         </div>
       )}

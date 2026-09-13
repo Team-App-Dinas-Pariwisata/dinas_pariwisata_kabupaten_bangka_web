@@ -45,7 +45,7 @@ function validType(value: string | null): value is SubmissionType {
 }
 
 export async function GET(request: NextRequest) {
-  if (!(await requireRequestRole(request, "pengguna"))) {
+  if (!(await requireRequestRole(request, "petugas"))) {
     return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
   }
   const type = request.nextUrl.searchParams.get("type");
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const user = await requireRequestRole(request, "pengguna");
+  const user = await requireRequestRole(request, "petugas");
   if (!user) return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
 
   const body = await request.json();
@@ -182,7 +182,7 @@ export async function PATCH(request: NextRequest) {
 
 
 export async function DELETE(request: NextRequest) {
-  if (!(await requireRequestRole(request, "pengguna"))) {
+  if (!(await requireRequestRole(request, "petugas"))) {
     return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
   }
 

@@ -25,7 +25,7 @@ export function ReportOverview() {
       <article><span>Pengajuan Pelaku Ekraf</span><strong>{data?.ekraf ?? "—"}</strong><p>Data dari tabel pengajuan_ekraf.</p></article>
       <article><span>Pengajuan SDM Pariwisata</span><strong>{data?.sdm ?? "—"}</strong><p>Data dari tabel pengajuan_sdm_pariwisata.</p></article>
       <article><span>Komunitas / Asosiasi / Lembaga</span><strong>{data?.komunitas ?? "—"}</strong><p>Data dari tabel pengajuan_komunitas_asosiasi.</p></article>
-      <article><span>Berita</span><strong>{data?.berita ?? "—"}</strong><p>Konten berita yang dikelola pengguna.</p></article>
+      <article><span>Berita</span><strong>{data?.berita ?? "—"}</strong><p>Konten berita yang dikelola petugas.</p></article>
       <article><span>Acara</span><strong>{data?.acara ?? "—"}</strong><p>Agenda dan kegiatan pada tabel acara.</p></article>
     </div>
   </section>;

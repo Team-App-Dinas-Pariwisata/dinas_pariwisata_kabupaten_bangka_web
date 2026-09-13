@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await requireRequestRole(request, "pengguna"))) {
+  if (!(await requireRequestRole(request, "petugas"))) {
     return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
   }
 
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  if (!(await requireRequestRole(request, "pengguna"))) {
+  if (!(await requireRequestRole(request, "petugas"))) {
     return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
   }
 

@@ -8,7 +8,7 @@ import StaffFloatingChat from "./StaffFloatingChat";
 
 type Props = {
   children: ReactNode;
-  role: "admin" | "pengguna";
+  role: "admin" | "petugas";
   userName: string;
 };
 
@@ -45,7 +45,7 @@ const userMenu: MenuItem[] = [
 ];
 
 const adminMenu: MenuItem[] = [
-  { key: "pengguna", href: "/admin/pengguna", label: "Kelola Pengguna", icon: "users" },
+  { key: "petugas", href: "/admin/petugas", label: "Kelola Petugas", icon: "users" },
   { key: "whatsapp", href: "/admin/whatsapp", label: "Koneksi WhatsApp", icon: "whatsapp" },
 ];
 
@@ -158,7 +158,7 @@ export function PortalShell({ children, role, userName }: Props) {
           <button className="portal-mobile-menu" type="button" onClick={() => setMobileOpen(true)} aria-label="Buka menu"><PortalIcon name="menu" /></button>
           <div className="portal-topbar-spacer" />
           <button className="portal-bell" type="button" aria-label="Notifikasi"><PortalIcon name="bell" /></button>
-          <div className="portal-user-chip"><span>{userName.slice(0, 1).toUpperCase()}</span><div><strong>{userName}</strong><small>{role === "admin" ? "Administrator" : "Pengguna"}</small></div></div>
+          <div className="portal-user-chip"><span>{userName.slice(0, 1).toUpperCase()}</span><div><strong>{userName}</strong><small>{role === "admin" ? "Administrator" : "Petugas"}</small></div></div>
         </header>
         <div className="portal-content">{children}</div>
       </div>

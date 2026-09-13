@@ -27,12 +27,12 @@ type UserRow = RowDataPacket & {
 /**
  * Menormalkan role database lama maupun role portal versi sebelumnya.
  * - super_admin/admin => admin
- * - operator/verifikator/pengguna => pengguna (petugas)
+ * - operator/verifikator/petugas => petugas (petugas)
  * - pengaju => akun masyarakat/pemohon berbasis Google
  */
 export function normalizeDbRole(role: string): AppRole | null {
   if (["super_admin", "admin"].includes(role)) return "admin";
-  if (["operator", "verifikator", "pengguna"].includes(role)) return "pengguna";
+  if (["pengguna", "operator", "verifikator", "petugas"].includes(role)) return "petugas";
   if (role === "pengaju") return "pengaju";
   return null;
 }
@@ -94,8 +94,8 @@ export async function requirePageRole(role: AppRole): Promise<AuthUser> {
     throw new Error("Redirecting unauthenticated user");
   }
   if (user.role !== role) {
-    if (user.role === "admin") redirect("/admin/pengguna");
-    if (user.role === "pengguna") redirect("/dashboard");
+    if (user.role === "admin") redirect("/admin/petugas");
+    if (user.role === "petugas") redirect("/dashboard");
     redirect("/akun");
     throw new Error("Redirecting unauthorized user");
   }

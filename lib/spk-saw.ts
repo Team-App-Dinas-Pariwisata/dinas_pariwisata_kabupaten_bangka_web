@@ -129,7 +129,7 @@ const hrefBase: Record<RecommendationKind, string> = {
 const fallbackCriteria: Record<RecommendationKind, SawCriterion[]> = {
   "tempat-wisata": [
     { code: "harga", label: "Harga tiket", description: "Semakin rendah harga tiket, semakin baik.", type: "cost", source: "harga_tiket_referensi", unit: "Rp", defaultWeight: 0.22, required: false },
-    { code: "jarak", label: "Jarak", description: "Jarak dari lokasi pengguna ke destinasi.", type: "cost", source: "jarak_km", unit: "km", defaultWeight: 0.22, required: false },
+    { code: "jarak", label: "Jarak", description: "Jarak dari lokasi petugas ke destinasi.", type: "cost", source: "jarak_km", unit: "km", defaultWeight: 0.22, required: false },
     { code: "fasilitas", label: "Fasilitas", description: "Jumlah fasilitas yang tercatat pada destinasi.", type: "benefit", source: "jumlah_fasilitas", unit: "fasilitas", defaultWeight: 0.16, required: false },
     { code: "aktivitas", label: "Aktivitas", description: "Jumlah aktivitas wisata yang tersedia.", type: "benefit", source: "jumlah_aktivitas", unit: "aktivitas", defaultWeight: 0.12, required: false },
     { code: "akses", label: "Kemudahan akses", description: "Skor aksesibilitas destinasi.", type: "benefit", source: "skor_aksesibilitas", unit: "skor", defaultWeight: 0.14, required: false },
@@ -137,14 +137,14 @@ const fallbackCriteria: Record<RecommendationKind, SawCriterion[]> = {
   ],
   kuliner: [
     { code: "harga", label: "Harga", description: "Semakin rendah harga referensi, semakin baik.", type: "cost", source: "harga_referensi", unit: "Rp", defaultWeight: 0.26, required: false },
-    { code: "jarak", label: "Jarak", description: "Jarak dari lokasi pengguna ke tempat kuliner.", type: "cost", source: "jarak_km", unit: "km", defaultWeight: 0.24, required: false },
+    { code: "jarak", label: "Jarak", description: "Jarak dari lokasi petugas ke tempat kuliner.", type: "cost", source: "jarak_km", unit: "km", defaultWeight: 0.24, required: false },
     { code: "halal", label: "Status halal", description: "Skor status halal yang tercatat pada database.", type: "benefit", source: "skor_halal", unit: "skor", defaultWeight: 0.20, required: false },
     { code: "layanan", label: "Pilihan layanan", description: "Dine-in, takeaway, delivery, dan reservasi.", type: "benefit", source: "jumlah_layanan", unit: "layanan", defaultWeight: 0.14, required: false },
     { code: "fasilitas", label: "Fasilitas", description: "Jumlah fasilitas yang tersedia.", type: "benefit", source: "jumlah_fasilitas", unit: "fasilitas", defaultWeight: 0.16, required: false },
   ],
   hotel: [
     { code: "harga", label: "Harga", description: "Semakin rendah harga referensi kamar, semakin baik.", type: "cost", source: "harga_referensi", unit: "Rp", defaultWeight: 0.30, required: false },
-    { code: "jarak", label: "Jarak", description: "Jarak dari lokasi pengguna ke hotel.", type: "cost", source: "jarak_km", unit: "km", defaultWeight: 0.24, required: false },
+    { code: "jarak", label: "Jarak", description: "Jarak dari lokasi petugas ke hotel.", type: "cost", source: "jarak_km", unit: "km", defaultWeight: 0.24, required: false },
     { code: "bintang", label: "Klasifikasi bintang", description: "Semakin tinggi klasifikasi bintang, semakin baik.", type: "benefit", source: "klasifikasi_bintang", unit: "bintang", defaultWeight: 0.20, required: false },
     { code: "fasilitas", label: "Fasilitas", description: "Jumlah fasilitas hotel yang tercatat.", type: "benefit", source: "jumlah_fasilitas", unit: "fasilitas", defaultWeight: 0.16, required: false },
     { code: "akses", label: "Aksesibilitas", description: "Skor fasilitas aksesibilitas hotel.", type: "benefit", source: "skor_aksesibilitas", unit: "skor", defaultWeight: 0.10, required: false },

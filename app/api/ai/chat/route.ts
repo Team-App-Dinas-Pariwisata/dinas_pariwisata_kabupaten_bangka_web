@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
  * NLP_API_URL harus berupa base URL service Python, contoh:
  *   http://127.0.0.1:8000
  *
- * Untuk menghindari 404 ketika pengguna tanpa sengaja mengisi
+ * Untuk menghindari 404 ketika petugas tanpa sengaja mengisi
  * http://127.0.0.1:8000/web-intent atau /kriteria, suffix endpoint dibuang.
  */
 const NLP_API_URL = (process.env.NLP_API_URL || "http://127.0.0.1:8000")

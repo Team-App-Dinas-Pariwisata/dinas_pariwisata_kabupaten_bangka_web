@@ -124,7 +124,7 @@ function errorMessage(error: unknown) {
 }
 
 async function userOnly(request: NextRequest) {
-  return requireRequestRole(request, "pengguna");
+  return requireRequestRole(request, "petugas");
 }
 
 export async function GET(request: NextRequest) {

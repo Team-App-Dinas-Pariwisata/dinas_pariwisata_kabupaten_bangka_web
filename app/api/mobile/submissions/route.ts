@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export async function DELETE(request: NextRequest) {
   const user = await getRequestUser(request);
-  if (!user || !["pengguna", "admin"].includes(user.role)) {
+  if (!user || !["petugas", "admin"].includes(user.role)) {
     return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
   }
 

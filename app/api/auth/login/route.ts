@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     const password = String(body.password ?? "");
     const requestedRole = body.role as AppRole;
 
-    if (!email || !password || !["admin", "pengguna"].includes(requestedRole)) {
+    if (!email || !password || !["admin", "petugas"].includes(requestedRole)) {
       return NextResponse.json({ message: "Email, kata sandi, dan jenis akun wajib diisi." }, { status: 400 });
     }
 
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     const token = createSessionToken({ uid: row.id, role: normalizedRole });
     const response = NextResponse.json({
       message: "Login berhasil.",
-      redirectTo: normalizedRole === "admin" ? "/admin/pengguna" : "/dashboard",
+      redirectTo: normalizedRole === "admin" ? "/admin/petugas" : "/dashboard",
     });
     response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions());
     return response;

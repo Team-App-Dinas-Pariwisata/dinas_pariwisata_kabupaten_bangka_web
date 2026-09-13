@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
   /**
    * Bersihkan presence user petugas
    */
-  if (user && ["admin", "pengguna"].includes(user.role)) {
+  if (user && ["admin", "petugas"].includes(user.role)) {
     try {
       await db().execute(
         "DELETE FROM staff_chat_presence WHERE user_id = ?",

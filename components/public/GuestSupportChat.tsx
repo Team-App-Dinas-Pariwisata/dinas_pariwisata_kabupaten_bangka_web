@@ -91,7 +91,7 @@ export default function GuestSupportChat() {
   const [aiMessages, setAiMessages] = useState<AiChatMessage[]>([
     {
       role: "assistant",
-      text: "Halo! Saya dapat membantu penggunaan SI PARIK BANGKA, termasuk cara membuat pengajuan, syarat dokumen, cek status, revisi pengajuan, serta rekomendasi wisata sesuai kebutuhan Anda.",
+      text: "Halo! Saya dapat membantu petugasan SI PARIK BANGKA, termasuk cara membuat pengajuan, syarat dokumen, cek status, revisi pengajuan, serta rekomendasi wisata sesuai kebutuhan Anda.",
       suggestions: aiExamples,
     },
   ]);

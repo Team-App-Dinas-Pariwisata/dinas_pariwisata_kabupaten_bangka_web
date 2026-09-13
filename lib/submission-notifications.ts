@@ -123,11 +123,10 @@ function buildEmailHtml(params: {
                 ${regLine ? `<p style="font-size:14px;color:#666666;">${regLine}</p>` : ""}
                 ${noteHtml}
                 <div style="margin:24px 0;padding:16px;background:#f8f9fa;border-radius:10px;border:1px solid #eaecef;font-size:14px;color:#333;">
-                  ${
-                    isApproved
-                      ? "Pengajuan Anda telah disetujui. Anda dapat memantau statusnya melalui akun Anda."
-                      : "Mohon maaf, pengajuan Anda belum disetujui. Silakan perbaiki dan ajukan kembali melalui akun Anda."
-                  }
+                  ${isApproved
+      ? "Pengajuan Anda telah disetujui. Anda dapat memantau statusnya melalui akun Anda."
+      : "Mohon maaf, pengajuan Anda belum disetujui. Silakan perbaiki dan ajukan kembali melalui akun Anda."
+    }
                 </div>
                 ${baseUrl ? `
                   <a href="${baseUrl}/akun" style="display:inline-block;background:${statusColor};color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:bold;margin-top:8px;">
@@ -191,17 +190,17 @@ export async function notifySubmissionDecision(params: {
       note: params.note,
     });
 
-    // WhatsApp aktif & nomor tersedia
-    if (!isWhatsAppDisabled() && row.no_hp && row.no_hp.trim()) {
-      const waResult = await sendWhatsAppMessage(row.no_hp, plainText);
-      if (waResult.ok) {
-        console.log(`[notif] WhatsApp terkirim ke ${row.no_hp} untuk ${params.type}#${params.id}`);
-      } else {
-        console.warn(`[notif] WhatsApp gagal: ${waResult.reason}. Email tetap akan dicoba.`);
-      }
-    } else {
-      console.log(`[notif] WhatsApp dinonaktifkan / nomor kosong. Email tetap akan dicoba.`);
-    }
+    // // WhatsApp aktif & nomor tersedia
+    // if (!isWhatsAppDisabled() && row.no_hp && row.no_hp.trim()) {
+    //   const waResult = await sendWhatsAppMessage(row.no_hp, plainText);
+    //   if (waResult.ok) {
+    //     console.log(`[notif] WhatsApp terkirim ke ${row.no_hp} untuk ${params.type}#${params.id}`);
+    //   } else {
+    //     console.warn(`[notif] WhatsApp gagal: ${waResult.reason}. Email tetap akan dicoba.`);
+    //   }
+    // } else {
+    //   console.log(`[notif] WhatsApp dinonaktifkan / nomor kosong. Email tetap akan dicoba.`);
+    // }
 
     // Email selalu dicoba, terlepas dari hasil pengiriman WhatsApp.
     if (row.email && row.email.trim()) {

@@ -533,7 +533,7 @@ export default function Home() {
             <a href="/acara">Acara</a>
             <a href="#kontak">Kontak Kami</a>
             <a href="/akun/masuk">Akun Pengaju</a>
-            <a href="/petugas">Portal Admin & Pengguna</a>
+            <a href="/petugas">Portal Admin & Petugas</a>
           </div>
 
           <div className="footer-column footer-contact">

@@ -128,7 +128,7 @@ export async function uploadImageToImgBB(file: File): Promise<ImgBBUploadResult>
       throw new Error(messageFromResponse(payload, fallback));
     }
 
-    // Format ini sama seperti link yang tampil pada akun ImgBB pengguna.
+    // Format ini sama seperti link yang tampil pada akun ImgBB petugas.
     // Database sengaja menyimpan halaman viewer, bukan direct CDN i.ibb.co.
     const viewerUrl = `https://ibb.co.com/${encodeURIComponent(imageId)}`;
 

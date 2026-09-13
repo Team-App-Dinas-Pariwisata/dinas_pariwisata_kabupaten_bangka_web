@@ -6,7 +6,7 @@ import { useState, type FormEvent } from "react";
 
 export function LoginForm() {
   const router = useRouter();
-  const [role, setRole] = useState<"admin" | "pengguna">("pengguna");
+  const [role, setRole] = useState<"admin" | "petugas">("petugas");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -40,7 +40,7 @@ export function LoginForm() {
       <p className="auth-copy">Pilih jenis akun, lalu gunakan email dan kata sandi yang terdaftar pada database.</p>
 
       <div className="auth-role-tabs" role="tablist" aria-label="Jenis akun">
-        <button type="button" className={role === "pengguna" ? "active" : ""} onClick={() => setRole("pengguna")}>Petugas</button>
+        <button type="button" className={role === "petugas" ? "active" : ""} onClick={() => setRole("petugas")}>Petugas</button>
         <button type="button" className={role === "admin" ? "active" : ""} onClick={() => setRole("admin")}>Admin</button>
       </div>
 

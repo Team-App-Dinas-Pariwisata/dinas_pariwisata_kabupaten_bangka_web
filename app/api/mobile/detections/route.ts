@@ -146,7 +146,7 @@ async function requireDetectionAccess(request: NextRequest) {
 
   const allowedRoles = [
     "pengaju",
-    "pengguna",
+    "petugas",
     "admin"
   ];
 
