@@ -7,11 +7,12 @@ import type { SubmissionType } from "@/lib/submission-config";
 // ---------------------------------------------------------------------------
 
 export type NotificationKind = "pengajuan_baru" | "pengajuan_diperbaiki" | "verifikasi";
-export type NotificationTargetRole = "admin" | "petugas";
+export type NotificationTargetRole = "admin" | "petugas" | "pengaju";
 
 export type NotificationRow = {
   id: number;
   target_role: NotificationTargetRole;
+  target_user_id: number | null;
   judul: string;
   pesan: string;
   jenis: NotificationKind;
@@ -70,9 +71,17 @@ export async function createNotification(params: {
 }
 
 /**
- * Hitung notifikasi belum dibaca untuk role tertentu.
+ * Hitung notifikasi belum dibaca untuk role / user tertentu.
  */
-export async function getUnreadCount(role: NotificationTargetRole): Promise<number> {
+export async function getUnreadCount(role: NotificationTargetRole, userId?: number): Promise<number> {
+  if (role === "pengaju" && userId) {
+    const [rows] = await db().execute<CountRow[]>(
+      "SELECT COUNT(*) AS total FROM notifikasi WHERE target_role = 'pengaju' AND target_user_id = ? AND is_read = 0",
+      [userId],
+    );
+    return Number(rows[0]?.total ?? 0);
+  }
+
   const [rows] = await db().execute<CountRow[]>(
     "SELECT COUNT(*) AS total FROM notifikasi WHERE target_role = ? AND is_read = 0",
     [role],
@@ -81,16 +90,29 @@ export async function getUnreadCount(role: NotificationTargetRole): Promise<numb
 }
 
 /**
- * Ambil daftar notifikasi terbaru untuk role tertentu.
+ * Ambil daftar notifikasi terbaru untuk role / user tertentu.
  */
 export async function getNotifications(
   role: NotificationTargetRole,
   limit = 30,
+  userId?: number,
 ): Promise<NotificationRow[]> {
   const safeLimit = Math.max(1, Math.min(Number(limit) || 30, 100));
 
+  if (role === "pengaju" && userId) {
+    const [rows] = await db().execute<DbNotificationRow[]>(
+      `SELECT id, target_role, target_user_id, judul, pesan, jenis, referensi_tipe, referensi_id, pengirim_nama, is_read, created_at
+       FROM notifikasi
+       WHERE target_role = 'pengaju' AND target_user_id = ?
+       ORDER BY created_at DESC
+       LIMIT ${safeLimit}`,
+      [userId],
+    );
+    return rows;
+  }
+
   const [rows] = await db().execute<DbNotificationRow[]>(
-    `SELECT id, target_role, judul, pesan, jenis, referensi_tipe, referensi_id, pengirim_nama, is_read, created_at
+    `SELECT id, target_role, target_user_id, judul, pesan, jenis, referensi_tipe, referensi_id, pengirim_nama, is_read, created_at
      FROM notifikasi
      WHERE target_role = ?
      ORDER BY created_at DESC
@@ -104,7 +126,15 @@ export async function getNotifications(
 /**
  * Tandai satu notifikasi sebagai sudah dibaca.
  */
-export async function markAsRead(id: number): Promise<boolean> {
+export async function markAsRead(id: number, userId?: number, role?: NotificationTargetRole): Promise<boolean> {
+  if (role === "pengaju" && userId) {
+    const [result] = await db().execute<ResultSetHeader>(
+      "UPDATE notifikasi SET is_read = 1 WHERE id = ? AND target_role = 'pengaju' AND target_user_id = ?",
+      [id, userId],
+    );
+    return result.affectedRows > 0;
+  }
+
   const [result] = await db().execute<ResultSetHeader>(
     "UPDATE notifikasi SET is_read = 1 WHERE id = ?",
     [id],
@@ -113,9 +143,17 @@ export async function markAsRead(id: number): Promise<boolean> {
 }
 
 /**
- * Tandai semua notifikasi role sebagai sudah dibaca.
+ * Tandai semua notifikasi role / user sebagai sudah dibaca.
  */
-export async function markAllAsRead(role: NotificationTargetRole): Promise<number> {
+export async function markAllAsRead(role: NotificationTargetRole, userId?: number): Promise<number> {
+  if (role === "pengaju" && userId) {
+    const [result] = await db().execute<ResultSetHeader>(
+      "UPDATE notifikasi SET is_read = 1 WHERE target_role = 'pengaju' AND target_user_id = ? AND is_read = 0",
+      [userId],
+    );
+    return result.affectedRows;
+  }
+
   const [result] = await db().execute<ResultSetHeader>(
     "UPDATE notifikasi SET is_read = 1 WHERE target_role = ? AND is_read = 0",
     [role],
@@ -192,5 +230,40 @@ export async function notifyVerificationAction(params: {
     referensiTipe: params.type,
     referensiId: params.submissionId,
     pengirimNama: params.staffName,
+  });
+}
+
+/**
+ * Notifikasi ke akun pengaju: petugas telah memverifikasi pengajuan.
+ */
+export async function notifyApplicantDecision(params: {
+  applicantUserId: number;
+  type: SubmissionType;
+  submissionId: number;
+  status: "Disetujui" | "Ditolak" | "Perlu Perbaikan";
+  note?: string;
+  noRegistrasi?: string | null;
+  staffName?: string;
+}): Promise<void> {
+  const label = typeLabel[params.type];
+  const reg = params.noRegistrasi ? ` (${params.noRegistrasi})` : "";
+  const isApproved = params.status === "Disetujui";
+  const judul = isApproved
+    ? `Pengajuan Disetujui: ${label}`
+    : `Pengajuan Perlu Revisi / Ditolak: ${label}`;
+  const noteInfo = params.note ? ` Catatan petugas: "${params.note}".` : "";
+  const pesan = isApproved
+    ? `Selamat! Pengajuan ${label}${reg} Anda telah diverifikasi dan disetujui.${noteInfo}`
+    : `Pengajuan ${label}${reg} Anda belum disetujui atau memerlukan perbaikan.${noteInfo} Silakan klik untuk meninjau dan memperbarui data.`;
+
+  await createNotification({
+    targetRole: "pengaju",
+    targetUserId: params.applicantUserId,
+    judul,
+    pesan,
+    jenis: "verifikasi",
+    referensiTipe: params.type,
+    referensiId: params.submissionId,
+    pengirimNama: params.staffName ?? null,
   });
 }

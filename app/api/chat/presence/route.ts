@@ -12,7 +12,7 @@ export async function GET() {
     const [rows] = await db().execute<CountRow[]>(
       `SELECT COUNT(*) AS online_count
        FROM staff_chat_presence sp
-       INNER JOIN petugas p ON p.id = sp.user_id
+       INNER JOIN pengguna p ON p.id = sp.user_id
        WHERE p.status = 'active'
          AND p.role IN ('super_admin','admin','operator','verifikator','petugas')
          AND sp.last_seen_at >= (CURRENT_TIMESTAMP - INTERVAL ${ONLINE_WINDOW_SECONDS} SECOND)`,

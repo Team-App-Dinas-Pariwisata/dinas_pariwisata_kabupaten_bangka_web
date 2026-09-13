@@ -54,6 +54,15 @@ export function WhatsAppManager() {
   }, []);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const hostname = window.location.hostname;
+      if (hostname && !["localhost", "127.0.0.1", "0.0.0.0"].includes(hostname)) {
+        window.location.replace("/admin/petugas");
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     const initialTimer = window.setTimeout(() => void loadStatus(true), 0);
     return () => window.clearTimeout(initialTimer);
   }, [loadStatus]);

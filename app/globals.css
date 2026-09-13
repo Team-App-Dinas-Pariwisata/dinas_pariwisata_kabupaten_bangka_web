@@ -12332,6 +12332,30 @@ body {
   padding: 0;
 }
 
+.applicant-bell {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #dce4e7;
+  border-radius: 9px;
+  color: #4a626d;
+  background: #fff;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+
+.applicant-bell:hover {
+  background: #f0f4f6;
+  color: #203c49;
+  border-color: #cbd7dc;
+}
+
+.applicant-topbar .portal-notif-dropdown {
+  background: #ffffff;
+  border-color: #e2e8ea;
+  box-shadow: 0 12px 36px rgba(15, 34, 45, .12);
+  top: calc(100% + 14px);
+  right: -20px;
+}
+
 .applicant-content {
   width: min(1420px, 100%);
   padding: 30px 32px 60px;
@@ -13108,6 +13132,11 @@ body {
 
   .applicant-topbar {
     padding: 0 16px;
+  }
+
+  .applicant-topbar .portal-notif-dropdown {
+    right: -70px;
+    width: min(340px, calc(100vw - 24px));
   }
 
   .applicant-topbar-title {

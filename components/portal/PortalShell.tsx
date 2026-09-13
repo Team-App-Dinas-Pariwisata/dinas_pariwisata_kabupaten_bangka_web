@@ -10,6 +10,7 @@ type Props = {
   children: ReactNode;
   role: "admin" | "petugas";
   userName: string;
+  isLiveServer?: boolean;
 };
 
 type ChildItem = { href: string; label: string };
@@ -76,11 +77,24 @@ function formatNotifDate(value: string) {
   return new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" }).format(date);
 }
 
-export function PortalShell({ children, role, userName }: Props) {
+export function PortalShell({ children, role, userName, isLiveServer }: Props) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [submissionOpen, setSubmissionOpen] = useState(pathname.startsWith("/dashboard/pengajuan"));
-  const menu = role === "admin" ? adminMenu : userMenu;
+  const [isLive, setIsLive] = useState(isLiveServer ?? false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const hostname = window.location.hostname;
+      if (hostname && !["localhost", "127.0.0.1", "0.0.0.0"].includes(hostname)) {
+        setIsLive(true);
+      }
+    }
+  }, []);
+
+  const menu = role === "admin"
+    ? adminMenu.filter((item) => !(isLive && item.key === "whatsapp"))
+    : userMenu;
 
   // Notification state
   const [notifOpen, setNotifOpen] = useState(false);

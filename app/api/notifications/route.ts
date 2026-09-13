@@ -5,18 +5,19 @@ import { getNotifications, getUnreadCount, markAllAsRead, markAsRead } from "@/l
 /**
  * GET /api/notifications
  * Mengembalikan daftar notifikasi + jumlah belum dibaca untuk user yang sedang login.
- * Hanya role admin dan petugas yang bisa mengakses.
+ * Mendukung role admin, petugas, dan pengaju.
  */
 export async function GET(request: NextRequest) {
   const user = await getRequestUser(request);
-  if (!user || (user.role !== "admin" && user.role !== "petugas")) {
+  if (!user || !["admin", "petugas", "pengaju"].includes(user.role)) {
     return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
   }
 
   try {
+    const isApplicant = user.role === "pengaju";
     const [notifications, unreadCount] = await Promise.all([
-      getNotifications(user.role, 50),
-      getUnreadCount(user.role),
+      getNotifications(user.role, 50, isApplicant ? user.id : undefined),
+      getUnreadCount(user.role, isApplicant ? user.id : undefined),
     ]);
 
     return NextResponse.json({ data: notifications, unreadCount });
@@ -33,15 +34,16 @@ export async function GET(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   const user = await getRequestUser(request);
-  if (!user || (user.role !== "admin" && user.role !== "petugas")) {
+  if (!user || !["admin", "petugas", "pengaju"].includes(user.role)) {
     return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
   }
 
   try {
     const body = await request.json();
+    const isApplicant = user.role === "pengaju";
 
     if (body.all === true) {
-      const affected = await markAllAsRead(user.role);
+      const affected = await markAllAsRead(user.role, isApplicant ? user.id : undefined);
       return NextResponse.json({ message: `${affected} notifikasi ditandai sudah dibaca.` });
     }
 
@@ -50,7 +52,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ message: "ID notifikasi tidak valid." }, { status: 400 });
     }
 
-    const updated = await markAsRead(id);
+    const updated = await markAsRead(id, isApplicant ? user.id : undefined, user.role);
     if (!updated) {
       return NextResponse.json({ message: "Notifikasi tidak ditemukan." }, { status: 404 });
     }
