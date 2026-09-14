@@ -13991,7 +13991,11 @@ body {
   gap: 8px;
 }
 
-.directory-filters button {
+.directory-filters button,
+.directory-filters a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 38px;
   padding: 0 15px;
   border: 1px solid #dce5e9;
@@ -14001,14 +14005,33 @@ body {
   font: inherit;
   font-size: 13px;
   font-weight: 700;
+  text-decoration: none;
   cursor: pointer;
+  transition: all .18s ease;
 }
 
 .directory-filters button:hover,
-.directory-filters button.active {
+.directory-filters button.active,
+.directory-filters a:hover,
+.directory-filters a.active {
   color: #fff;
   border-color: #294257;
   background: #294257;
+}
+
+.directory-list-toolbar-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.directory-list-search-form {
+  margin: 0;
+  max-width: 440px;
+  flex: 1 1 320px;
 }
 
 .directory-nav {

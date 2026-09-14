@@ -60,10 +60,26 @@ function normalizePage(page: number) {
   return Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
 }
 
-export async function getPublicNewsList(page = 1, pageSize = 9) {
+export async function getPublicNewsList(page = 1, pageSize = 9, query = "") {
   const safePage = normalizePage(page);
   const safeSize = Math.min(Math.max(Math.floor(pageSize), 1), 24);
   const offset = (safePage - 1) * safeSize;
+  const trimmed = query.trim().slice(0, 100);
+
+  const params: unknown[] = [];
+  let searchSql = "";
+  if (trimmed) {
+    const term = `%${trimmed}%`;
+    searchSql = `AND (
+      b.judul LIKE ?
+      OR b.subjudul LIKE ?
+      OR b.ringkasan LIKE ?
+      OR b.isi LIKE ?
+      OR mkb.nama_kategori LIKE ?
+      OR b.penulis_tampil LIKE ?
+    )`;
+    params.push(term, term, term, term, term, term);
+  }
 
   const [countRows] = await db().query<CountRow[]>(`
     SELECT COUNT(*) AS total
@@ -74,7 +90,8 @@ export async function getPublicNewsList(page = 1, pageSize = 9) {
       AND b.tanggal_publikasi IS NOT NULL
       AND b.tanggal_publikasi <= NOW()
       AND mkb.aktif = 1
-  `);
+      ${searchSql}
+  `, params);
 
   const [rows] = await db().query<NewsRow[]>(`
     SELECT
@@ -89,9 +106,10 @@ export async function getPublicNewsList(page = 1, pageSize = 9) {
       AND b.tanggal_publikasi IS NOT NULL
       AND b.tanggal_publikasi <= NOW()
       AND mkb.aktif = 1
+      ${searchSql}
     ORDER BY b.headline DESC, b.tanggal_publikasi DESC, b.id DESC
     LIMIT ? OFFSET ?
-  `, [safeSize, offset]);
+  `, [...params, safeSize, offset]);
 
   const total = Number(countRows[0]?.total ?? 0);
   return {
@@ -147,10 +165,27 @@ export async function getRelatedNews(excludeId: number, limit = 3) {
   return rows.map((row) => ({ ...row, foto_utama: browserSafeR2ImageUrl(row.foto_utama) }));
 }
 
-export async function getPublicEventList(page = 1, pageSize = 9) {
+export async function getPublicEventList(page = 1, pageSize = 9, query = "") {
   const safePage = normalizePage(page);
   const safeSize = Math.min(Math.max(Math.floor(pageSize), 1), 24);
   const offset = (safePage - 1) * safeSize;
+  const trimmed = query.trim().slice(0, 100);
+
+  const params: unknown[] = [];
+  let searchSql = "";
+  if (trimmed) {
+    const term = `%${trimmed}%`;
+    searchSql = `AND (
+      a.nama_acara LIKE ?
+      OR a.ringkasan LIKE ?
+      OR a.deskripsi LIKE ?
+      OR a.nama_lokasi LIKE ?
+      OR a.alamat LIKE ?
+      OR a.penyelenggara LIKE ?
+      OR mka.nama_kategori LIKE ?
+    )`;
+    params.push(term, term, term, term, term, term, term);
+  }
 
   const [countRows] = await db().query<CountRow[]>(`
     SELECT COUNT(*) AS total
@@ -162,7 +197,8 @@ export async function getPublicEventList(page = 1, pageSize = 9) {
       AND a.tanggal_publikasi <= NOW()
       AND a.status_acara <> 'Dibatalkan'
       AND mka.aktif = 1
-  `);
+      ${searchSql}
+  `, params);
 
   const [rows] = await db().query<EventRow[]>(`
     SELECT
@@ -183,6 +219,7 @@ export async function getPublicEventList(page = 1, pageSize = 9) {
       AND a.tanggal_publikasi <= NOW()
       AND a.status_acara <> 'Dibatalkan'
       AND mka.aktif = 1
+      ${searchSql}
     ORDER BY
       CASE WHEN a.tanggal_selesai >= NOW() THEN 0 ELSE 1 END ASC,
       a.unggulan DESC,
@@ -190,7 +227,7 @@ export async function getPublicEventList(page = 1, pageSize = 9) {
       a.tanggal_mulai DESC,
       a.id DESC
     LIMIT ? OFFSET ?
-  `, [safeSize, offset]);
+  `, [...params, safeSize, offset]);
 
   const total = Number(countRows[0]?.total ?? 0);
   return {

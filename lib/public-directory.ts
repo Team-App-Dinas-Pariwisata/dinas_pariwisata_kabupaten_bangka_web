@@ -350,3 +350,238 @@ export async function getRelatedPublicDirectory(type: PublicDirectoryType, exclu
   `, [excludeId, safeLimit]);
   return rows.map((row) => normalizeRow(row)).filter((row): row is PublicDirectoryDetail => Boolean(row));
 }
+
+export type PublicDirectoryListItem = {
+  id: number;
+  type: PublicDirectoryType;
+  title: string;
+  subtitle: string | null;
+  category: string | null;
+  location: string | null;
+  description: string | null;
+  image: string | null;
+  unggulan: number;
+  updated_at: string | null;
+};
+
+export type PublicDirectoryListResult = {
+  items: PublicDirectoryListItem[];
+  total: number;
+  page: number;
+  perPage: number;
+  totalPages: number;
+};
+
+export async function getPublicDirectoryList(
+  type: PublicDirectoryType,
+  requestedPage = 1,
+  perPage = 12,
+  query = ""
+): Promise<PublicDirectoryListResult> {
+  const safePerPage = Math.min(36, Math.max(1, Math.floor(perPage)));
+  const trimmedQuery = query.trim().slice(0, 100);
+
+  if (type === "ekraf") {
+    const params: unknown[] = [];
+    let searchSql = "";
+    if (trimmedQuery) {
+      const term = `%${trimmedQuery}%`;
+      searchSql = `AND (
+        p.nama_lengkap LIKE ?
+        OR p.nama_usaha LIKE ?
+        OR p.nama_merek LIKE ?
+        OR s.nama_subsektor LIKE ?
+        OR p.deskripsi_usaha LIKE ?
+        OR p.produk_jasa LIKE ?
+        OR k.nama_kecamatan LIKE ?
+        OR l.nama_kelurahan LIKE ?
+      )`;
+      params.push(term, term, term, term, term, term, term, term);
+    }
+
+    const [countRows] = await db().query<(RowDataPacket & { total: number })[]>(`
+      SELECT COUNT(*) AS total
+      FROM pengajuan_ekraf p
+      LEFT JOIN master_subsektor_ekraf s ON s.id = p.subsektor_id
+      LEFT JOIN master_kecamatan k ON k.id = p.kecamatan_usaha_id
+      LEFT JOIN master_kelurahan l ON l.id = p.kelurahan_usaha_id
+      WHERE p.status = 'Disetujui'
+        ${searchSql}
+    `, params);
+
+    const total = Number(countRows[0]?.total ?? 0);
+    const totalPages = Math.max(1, Math.ceil(total / safePerPage));
+    const page = Math.min(totalPages, Math.max(1, Math.floor(requestedPage)));
+    const offset = (page - 1) * safePerPage;
+
+    const [rows] = await db().query<RowDataPacket[]>(`
+      SELECT
+        p.id,
+        'ekraf' AS type,
+        COALESCE(NULLIF(p.nama_merek, ''), p.nama_usaha, p.nama_lengkap) AS title,
+        p.nama_lengkap AS subtitle,
+        s.nama_subsektor AS category,
+        COALESCE(l.nama_kelurahan, k.nama_kecamatan, NULLIF(p.alamat_usaha, '')) AS location,
+        COALESCE(NULLIF(p.deskripsi_usaha, ''), NULLIF(p.produk_jasa, '')) AS description,
+        COALESCE(NULLIF(p.file_logo_usaha, ''), NULLIF(p.file_foto_dokumentasi, ''), NULLIF(p.file_foto_diri, '')) AS image,
+        COALESCE(p.unggulan, 0) AS unggulan,
+        p.updated_at
+      FROM pengajuan_ekraf p
+      LEFT JOIN master_subsektor_ekraf s ON s.id = p.subsektor_id
+      LEFT JOIN master_kecamatan k ON k.id = p.kecamatan_usaha_id
+      LEFT JOIN master_kelurahan l ON l.id = p.kelurahan_usaha_id
+      WHERE p.status = 'Disetujui'
+        ${searchSql}
+      ORDER BY p.unggulan DESC, p.tanggal_verifikasi DESC, p.updated_at DESC, p.id DESC
+      LIMIT ? OFFSET ?
+    `, [...params, safePerPage, offset]);
+
+    const items: PublicDirectoryListItem[] = (rows as (RowDataPacket & PublicDirectoryListItem)[]).map((row) => ({
+      id: Number(row.id),
+      type: "ekraf",
+      title: String(row.title ?? "Pelaku Ekraf"),
+      subtitle: row.subtitle ? String(row.subtitle) : null,
+      category: row.category ? String(row.category) : null,
+      location: row.location ? String(row.location) : null,
+      description: row.description ? String(row.description) : null,
+      image: publicImage("ekraf", Number(row.id), row.image),
+      unggulan: Number(row.unggulan ?? 0),
+      updated_at: row.updated_at ? String(row.updated_at) : null,
+    }));
+
+    return { items, total, page, perPage: safePerPage, totalPages };
+  }
+
+  if (type === "sdm") {
+    const params: unknown[] = [];
+    let searchSql = "";
+    if (trimmedQuery) {
+      const term = `%${trimmedQuery}%`;
+      searchSql = `AND (
+        p.nama_lengkap LIKE ?
+        OR p.jabatan LIKE ?
+        OR p.tempat_bertugas LIKE ?
+        OR p.alamat_bertugas LIKE ?
+      )`;
+      params.push(term, term, term, term);
+    }
+
+    const [countRows] = await db().query<(RowDataPacket & { total: number })[]>(`
+      SELECT COUNT(*) AS total
+      FROM pengajuan_sdm_pariwisata p
+      WHERE p.status_pengajuan = 'Disetujui'
+        AND p.persetujuan_publikasi = 1
+        ${searchSql}
+    `, params);
+
+    const total = Number(countRows[0]?.total ?? 0);
+    const totalPages = Math.max(1, Math.ceil(total / safePerPage));
+    const page = Math.min(totalPages, Math.max(1, Math.floor(requestedPage)));
+    const offset = (page - 1) * safePerPage;
+
+    const [rows] = await db().query<RowDataPacket[]>(`
+      SELECT
+        p.id,
+        'sdm' AS type,
+        p.nama_lengkap AS title,
+        p.jabatan AS subtitle,
+        'SDM Pariwisata' AS category,
+        p.tempat_bertugas AS location,
+        CONCAT('Bertugas sebagai ', p.jabatan, ' di ', p.tempat_bertugas, '.') AS description,
+        NULLIF(p.file_foto_diri, '') AS image,
+        0 AS unggulan,
+        p.updated_at
+      FROM pengajuan_sdm_pariwisata p
+      WHERE p.status_pengajuan = 'Disetujui'
+        AND p.persetujuan_publikasi = 1
+        ${searchSql}
+      ORDER BY p.tanggal_verifikasi DESC, p.updated_at DESC, p.id DESC
+      LIMIT ? OFFSET ?
+    `, [...params, safePerPage, offset]);
+
+    const items: PublicDirectoryListItem[] = (rows as (RowDataPacket & PublicDirectoryListItem)[]).map((row) => ({
+      id: Number(row.id),
+      type: "sdm",
+      title: String(row.title ?? "SDM Pariwisata"),
+      subtitle: row.subtitle ? String(row.subtitle) : null,
+      category: row.category ? String(row.category) : "SDM Pariwisata",
+      location: row.location ? String(row.location) : null,
+      description: row.description ? String(row.description) : null,
+      image: publicImage("sdm", Number(row.id), row.image),
+      unggulan: 0,
+      updated_at: row.updated_at ? String(row.updated_at) : null,
+    }));
+
+    return { items, total, page, perPage: safePerPage, totalPages };
+  }
+
+  // type === "komunitas"
+  const params: unknown[] = [];
+  let searchSql = "";
+  if (trimmedQuery) {
+    const term = `%${trimmedQuery}%`;
+    searchSql = `AND (
+      p.nama_organisasi LIKE ?
+      OR p.kategori LIKE ?
+      OR s.nama_subsektor LIKE ?
+      OR p.rincian LIKE ?
+      OR k.nama_kecamatan LIKE ?
+      OR l.nama_kelurahan LIKE ?
+    )`;
+    params.push(term, term, term, term, term, term);
+  }
+
+  const [countRows] = await db().query<(RowDataPacket & { total: number })[]>(`
+    SELECT COUNT(*) AS total
+    FROM pengajuan_komunitas_asosiasi p
+    LEFT JOIN master_subsektor_ekraf s ON s.id = p.subsektor_id
+    LEFT JOIN master_kecamatan k ON k.id = p.kecamatan_id
+    LEFT JOIN master_kelurahan l ON l.id = p.kelurahan_id
+    WHERE p.status_pengajuan = 'Disetujui'
+      AND p.persetujuan_publikasi = 1
+      ${searchSql}
+  `, params);
+
+  const total = Number(countRows[0]?.total ?? 0);
+  const totalPages = Math.max(1, Math.ceil(total / safePerPage));
+  const page = Math.min(totalPages, Math.max(1, Math.floor(requestedPage)));
+  const offset = (page - 1) * safePerPage;
+
+  const [rows] = await db().query<RowDataPacket[]>(`
+    SELECT
+      p.id,
+      'komunitas' AS type,
+      p.nama_organisasi AS title,
+      p.kategori AS subtitle,
+      COALESCE(s.nama_subsektor, p.kategori) AS category,
+      CONCAT_WS(', ', NULLIF(l.nama_kelurahan, ''), NULLIF(k.nama_kecamatan, '')) AS location,
+      NULLIF(p.rincian, '') AS description,
+      COALESCE(NULLIF(p.file_logo_organisasi, ''), NULLIF(p.file_foto_dokumentasi, '')) AS image,
+      0 AS unggulan,
+      p.updated_at
+    FROM pengajuan_komunitas_asosiasi p
+    LEFT JOIN master_subsektor_ekraf s ON s.id = p.subsektor_id
+    LEFT JOIN master_kecamatan k ON k.id = p.kecamatan_id
+    LEFT JOIN master_kelurahan l ON l.id = p.kelurahan_id
+    WHERE p.status_pengajuan = 'Disetujui'
+      AND p.persetujuan_publikasi = 1
+      ${searchSql}
+    ORDER BY p.tanggal_verifikasi DESC, p.updated_at DESC, p.id DESC
+    LIMIT ? OFFSET ?
+  `, [...params, safePerPage, offset]);
+
+  const items: PublicDirectoryListItem[] = (rows as (RowDataPacket & PublicDirectoryListItem)[]).map((row) => ({
+    id: Number(row.id),
+    type: "komunitas",
+    title: String(row.title ?? "Komunitas"),
+    subtitle: row.subtitle ? String(row.subtitle) : null,
+    category: row.category ? String(row.category) : "Komunitas",
+    location: row.location ? String(row.location) : null,
+    description: row.description ? String(row.description) : null,
+    image: publicImage("komunitas", Number(row.id), row.image),
+    unggulan: 0,
+    updated_at: row.updated_at ? String(row.updated_at) : null,
+  }));
+
+  return { items, total, page, perPage: safePerPage, totalPages };
+}

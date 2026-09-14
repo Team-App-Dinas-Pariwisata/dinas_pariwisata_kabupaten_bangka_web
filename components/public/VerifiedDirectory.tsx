@@ -101,7 +101,9 @@ export default function VerifiedDirectory() {
             <span className="section-kicker">Direktori Terverifikasi Kabupaten Bangka</span>
             <h2 id="verified-directory-title">Temukan pelaku, SDM pariwisata, dan komunitas.</h2>
           </div>
-          <p>Daftar ini hanya menampilkan data yang sudah disetujui petugas. Pelaku Ekraf berstatus unggulan otomatis ditempatkan lebih awal.</p>
+          <p>
+            Daftar pada slide ini hanya menampilkan 30 pelaku terakhir yang telah disetujui petugas. Pelaku Ekraf berstatus unggulan otomatis ditempatkan lebih awal. Untuk melihat data lengkapnya, silakan klik menu <strong>Pelaku Ekraf</strong>, <strong>Pelaku SDM</strong>, atau <strong>Komunitas</strong> pada navigasi di atas.
+          </p>
         </div>
 
         <form className="directory-search" onSubmit={submitSearch} role="search">

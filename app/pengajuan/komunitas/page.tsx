@@ -1,3 +1,3 @@
 import { redirect } from "next/navigation";
-export const metadata = { title: "Pengajuan Komunitas | SI PARIK BANGKA" };
-export default function Page() { redirect("/akun/pengajuan/komunitas"); }
+export const metadata = { title: "Komunitas / Asosiasi | SI PARIK BANGKA" };
+export default function Page() { redirect("/direktori/komunitas"); }
