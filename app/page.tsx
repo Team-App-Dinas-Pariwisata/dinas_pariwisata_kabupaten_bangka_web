@@ -527,26 +527,25 @@ export default function Home() {
 
           <div className="footer-column">
             <strong>Layanan</strong>
-            <a href="#dokumen">Dokumen Pengajuan</a>
-            <a href="#pelaku-ekraf">Komunitas & Asosiasi</a>
+            {/* <a href="#dokumen">Dokumen Pengajuan</a> */}
+            {/* <a href="#pelaku-ekraf">Komunitas & Asosiasi</a> */}
             <a href="/berita">Berita</a>
             <a href="/acara">Acara</a>
             <a href="#kontak">Kontak Kami</a>
             <a href="/akun/masuk">Akun Pengaju</a>
-            <a href="/petugas">Portal Admin & Petugas</a>
+            {/* <a href="/petugas">Portal Admin & Petugas</a> */}
           </div>
 
           <div className="footer-column footer-contact">
             <strong>Dinas Pariwisata & Kebudayaan</strong>
             <span>Kabupaten Bangka</span>
             <span>Provinsi Kepulauan Bangka Belitung</span>
-            <a href="#beranda">exotic.bangka.go.id</a>
           </div>
         </div>
 
         <div className="page-container footer-bottom">
           <span>© 2026 SI PARIK BANGKA Kabupaten Bangka</span>
-          <span>Dirancang untuk layanan publik yang lebih sederhana.</span>
+          {/* <span>Dirancang untuk layanan publik yang lebih sederhana.</span> */}
         </div>
       </footer>
 

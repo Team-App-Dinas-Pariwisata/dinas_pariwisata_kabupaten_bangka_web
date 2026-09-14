@@ -59,6 +59,8 @@ const userMenu: MenuItem[] = [
 
 const adminMenu: MenuItem[] = [
   { key: "petugas", href: "/admin/petugas", label: "Kelola Petugas", icon: "users" },
+  { key: "notifikasi", href: "/admin/notifikasi", label: "Semua Notifikasi", icon: "bell" },
+  { key: "pengaturan", href: "/admin/pengaturan", label: "Pengaturan Fitur", icon: "settings" },
   { key: "whatsapp", href: "/admin/whatsapp", label: "Koneksi WhatsApp", icon: "whatsapp" },
 ];
 

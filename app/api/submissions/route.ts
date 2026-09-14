@@ -5,7 +5,8 @@ import { db } from "@/lib/db";
 import { notifySubmissionDecision } from "@/lib/submission-notifications";
 import { notifyApplicantDecision, notifyVerificationAction } from "@/lib/notifications";
 import type { SubmissionType } from "@/lib/submission-config";
-import { deleteSubmissionWithManagedFiles, isSubmissionType } from "@/lib/staff-record-cleanup";
+import { deleteSubmissionsWithManagedFiles, isSubmissionType } from "@/lib/staff-record-cleanup";
+import { isPetugasMassDeleteEnabled } from "@/lib/system-settings";
 
 const listQueries: Record<SubmissionType, string> = {
   ekraf: `
@@ -53,7 +54,8 @@ export async function GET(request: NextRequest) {
   if (!validType(type)) return NextResponse.json({ message: "Jenis pengajuan tidak valid." }, { status: 400 });
   try {
     const [rows] = await db().query<RowDataPacket[]>(listQueries[type]);
-    return NextResponse.json({ data: rows });
+    const massDeleteEnabled = await isPetugasMassDeleteEnabled();
+    return NextResponse.json({ data: rows, massDeleteEnabled });
   } catch (error) {
     console.error("Submission list error:", error);
     return NextResponse.json({ message: "Data pengajuan gagal dimuat dari database." }, { status: 500 });
@@ -214,21 +216,38 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
   }
 
+  const isEnabled = await isPetugasMassDeleteEnabled();
+  if (!isEnabled) {
+    return NextResponse.json(
+      { message: "Fitur hapus massal pengajuan dinonaktifkan oleh Administrator." },
+      { status: 403 },
+    );
+  }
+
   try {
     const body = await request.json();
     const type = body?.type;
-    const id = Number(body?.id);
-    if (!isSubmissionType(type) || !Number.isSafeInteger(id) || id <= 0) {
-      return NextResponse.json({ message: "Pengajuan yang akan dihapus tidak valid." }, { status: 400 });
+    if (!isSubmissionType(type)) {
+      return NextResponse.json({ message: "Jenis pengajuan tidak valid." }, { status: 400 });
     }
 
-    const result = await deleteSubmissionWithManagedFiles(type, id);
-    if (!result) return NextResponse.json({ message: "Pengajuan tidak ditemukan." }, { status: 404 });
+    const ids: number[] = Array.isArray(body?.ids)
+      ? body.ids.map(Number).filter((id: number) => Number.isSafeInteger(id) && id > 0)
+      : (Number.isSafeInteger(Number(body?.id)) && Number(body?.id) > 0 ? [Number(body.id)] : []);
+
+    if (ids.length === 0) {
+      return NextResponse.json({ message: "Daftar pengajuan yang akan dihapus tidak valid." }, { status: 400 });
+    }
+
+    const result = await deleteSubmissionsWithManagedFiles(type, ids);
+    if (result.deletedCount === 0) {
+      return NextResponse.json({ message: "Pengajuan tidak ditemukan atau sudah dihapus." }, { status: 404 });
+    }
 
     return NextResponse.json({
       message: result.failedFiles
-        ? "Pengajuan berhasil dihapus. Sebagian file R2 belum dapat dibersihkan dan sudah dicatat pada log server."
-        : "Pengajuan dan file terkait berhasil dihapus permanen.",
+        ? `Berhasil menghapus ${result.deletedCount} pengajuan. Namun ${result.failedFiles} berkas R2 belum dapat dibersihkan.`
+        : `Berhasil menghapus ${result.deletedCount} pengajuan beserta berkas R2 terkait (histori notifikasi tetap tersimpan untuk arsip admin).`,
       data: result,
     });
   } catch (error) {
