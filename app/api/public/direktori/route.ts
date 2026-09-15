@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { keyFromR2SubmissionStorageReference } from "@/lib/r2";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 type DirectoryType = "ekraf" | "sdm" | "komunitas";
 
@@ -17,6 +18,7 @@ type DirectoryItem = {
   description: string | null;
   image: string | null;
   unggulan: number;
+  tanggal_verifikasi: string | null;
   updated_at: string | null;
 };
 
@@ -56,6 +58,12 @@ function like(value: string) {
   return `%${value}%`;
 }
 
+function parseTime(value: string | null | undefined): number {
+  if (!value) return 0;
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) ? time : 0;
+}
+
 async function loadEkraf(query: string, limit: number, featuredOnly: boolean) {
   const params: unknown[] = [];
   let searchSql = "";
@@ -87,6 +95,7 @@ async function loadEkraf(query: string, limit: number, featuredOnly: boolean) {
       COALESCE(NULLIF(p.deskripsi_usaha, ''), NULLIF(p.produk_jasa, '')) AS description,
       COALESCE(NULLIF(p.file_logo_usaha, ''), NULLIF(p.file_foto_dokumentasi, ''), NULLIF(p.file_foto_diri, '')) AS image,
       p.unggulan,
+      p.tanggal_verifikasi,
       p.updated_at
     FROM pengajuan_ekraf p
     LEFT JOIN master_subsektor_ekraf s ON s.id = p.subsektor_id
@@ -125,6 +134,7 @@ async function loadSdm(query: string, limit: number) {
       CONCAT('Bertugas sebagai ', p.jabatan, ' di ', p.tempat_bertugas, '.') AS description,
       NULLIF(p.file_foto_diri, '') AS image,
       0 AS unggulan,
+      p.tanggal_verifikasi,
       p.updated_at
     FROM pengajuan_sdm_pariwisata p
     WHERE p.status_pengajuan = 'Disetujui'
@@ -164,6 +174,7 @@ async function loadKomunitas(query: string, limit: number) {
       NULLIF(p.rincian, '') AS description,
       COALESCE(NULLIF(p.file_logo_organisasi, ''), NULLIF(p.file_foto_dokumentasi, '')) AS image,
       0 AS unggulan,
+      p.tanggal_verifikasi,
       p.updated_at
     FROM pengajuan_komunitas_asosiasi p
     LEFT JOIN master_subsektor_ekraf s ON s.id = p.subsektor_id
@@ -184,19 +195,21 @@ export async function GET(request: NextRequest) {
   const featuredOnly = request.nextUrl.searchParams.get("unggulan") === "1";
   const limit = safeLimit(request.nextUrl.searchParams.get("limit"));
 
+  const noCacheHeaders = { "Cache-Control": "no-store, max-age=0" };
+
   if (requestedType && !validType(requestedType)) {
-    return NextResponse.json({ message: "Jenis direktori tidak valid." }, { status: 400 });
+    return NextResponse.json({ message: "Jenis direktori tidak valid." }, { status: 400, headers: noCacheHeaders });
   }
 
   try {
     if (requestedType === "ekraf") {
-      return NextResponse.json({ data: await loadEkraf(query, limit, featuredOnly) });
+      return NextResponse.json({ data: await loadEkraf(query, limit, featuredOnly) }, { headers: noCacheHeaders });
     }
     if (requestedType === "sdm") {
-      return NextResponse.json({ data: await loadSdm(query, limit) });
+      return NextResponse.json({ data: await loadSdm(query, limit) }, { headers: noCacheHeaders });
     }
     if (requestedType === "komunitas") {
-      return NextResponse.json({ data: await loadKomunitas(query, limit) });
+      return NextResponse.json({ data: await loadKomunitas(query, limit) }, { headers: noCacheHeaders });
     }
 
     const perTypeLimit = Math.min(30, limit);
@@ -208,16 +221,19 @@ export async function GET(request: NextRequest) {
 
     const data = [...ekraf, ...sdm, ...komunitas]
       .sort((a, b) => {
-        if (b.unggulan !== a.unggulan) return b.unggulan - a.unggulan;
-        const aTime = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-        const bTime = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+        const aUnggulan = Number(a.unggulan) || 0;
+        const bUnggulan = Number(b.unggulan) || 0;
+        if (bUnggulan !== aUnggulan) return bUnggulan - aUnggulan;
+
+        const aTime = Math.max(parseTime(a.tanggal_verifikasi), parseTime(a.updated_at));
+        const bTime = Math.max(parseTime(b.tanggal_verifikasi), parseTime(b.updated_at));
         return bTime - aTime;
       })
       .slice(0, limit);
 
-    return NextResponse.json({ data });
+    return NextResponse.json({ data }, { headers: noCacheHeaders });
   } catch (error) {
     console.error("Public directory error:", error);
-    return NextResponse.json({ message: "Direktori terverifikasi belum dapat dimuat." }, { status: 500 });
+    return NextResponse.json({ message: "Direktori terverifikasi belum dapat dimuat." }, { status: 500, headers: noCacheHeaders });
   }
 }
