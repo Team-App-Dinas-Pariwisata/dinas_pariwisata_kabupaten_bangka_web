@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { submissionConfigs, type SubmissionField, type SubmissionType } from "@/lib/submission-config";
 import { PortalIcon } from "./PortalIcon";
 import { compareTableValues, SortableTableHeader, TablePagination, type SortDirection } from "./DataTableControls";
+import { startPortalLoading, stopPortalLoading } from "./PortalPreloader";
 
 type Row = Record<string, unknown> & { id: number; status_label?: string; created_at?: string; no_registrasi?: string };
 
@@ -213,6 +214,7 @@ export function SubmissionManager({ type }: Props) {
     setIsDeleting(true);
     setError("");
     setDeleteNotice("");
+    startPortalLoading("Sedang menghapus pengajuan…");
     try {
       const response = await fetch("/api/submissions", {
         method: "DELETE",
@@ -232,6 +234,7 @@ export function SubmissionManager({ type }: Props) {
       setError(err instanceof Error ? err.message : "Penghapusan massal pengajuan gagal.");
     } finally {
       setIsDeleting(false);
+      stopPortalLoading();
     }
   }
 
@@ -250,10 +253,12 @@ export function SubmissionManager({ type }: Props) {
   }
 
   function openReview(row: Row) {
+    startPortalLoading("Membuka detail pengajuan…");
     setSelected(row);
     setDetailStep(0);
     setNote(String(row.catatan_verifikasi ?? row.alasan_penolakan ?? ""));
     setError("");
+    setTimeout(() => stopPortalLoading(), 280);
   }
 
   async function toggleFeatured(row: Row) {

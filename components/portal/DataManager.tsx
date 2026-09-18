@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormE
 import type { ResourceField } from "@/lib/resources";
 import { PortalIcon } from "./PortalIcon";
 import { compareTableValues, SortableTableHeader, TablePagination, type SortDirection } from "./DataTableControls";
+import { startPortalLoading, stopPortalLoading } from "./PortalPreloader";
 
 type Row = Record<string, unknown> & { id: number };
 type LookupOption = { label: string; value: string | number; parentValue?: string | number; groupName?: string };
@@ -234,12 +235,14 @@ export function DataManager({ resource, title, description, label, fields, colum
   }
 
   function openEdit(row: Row) {
+    startPortalLoading(`Menyiapkan form edit ${label.toLowerCase()}…`);
     const data: Record<string, unknown> = {};
     fields.forEach((field) => { data[field.key] = inputValue(field, row[field.key]); });
     setEditing(row);
     setForm(data);
     setError("");
     setModalOpen(true);
+    setTimeout(() => stopPortalLoading(), 280);
   }
 
   async function save(event: FormEvent) {
@@ -302,6 +305,7 @@ export function DataManager({ resource, title, description, label, fields, colum
   async function remove(row: Row) {
     if (!window.confirm(`Hapus ${label.toLowerCase()} ini? Tindakan ini tidak dapat dibatalkan.`)) return;
     setError("");
+    startPortalLoading(`Sedang menghapus ${label.toLowerCase()}…`);
     try {
       const response = await fetch("/api/crud", {
         method: "DELETE",
@@ -314,6 +318,8 @@ export function DataManager({ resource, title, description, label, fields, colum
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Data gagal dihapus.");
+    } finally {
+      stopPortalLoading();
     }
   }
 

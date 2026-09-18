@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { PortalIcon, type PortalIconName } from "./PortalIcon";
 import StaffFloatingChat from "./StaffFloatingChat";
+import PortalPreloader from "./PortalPreloader";
 
 type Props = {
   children: ReactNode;
@@ -223,6 +224,7 @@ export function PortalShell({ children, role, userName, isLiveServer }: Props) {
 
   return (
     <div className="portal-app">
+      <PortalPreloader />
       <aside className={`portal-sidebar ${mobileOpen ? "is-open" : ""}`}>
         <div className="portal-brand">
           <img className="portal-brand-logo" src="/logo-si-parik-preloader.png" alt="Logo SI PARIK BANGKA" />

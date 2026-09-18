@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { PortalIcon, type PortalIconName } from "./PortalIcon";
 import { submissionConfigs, type SubmissionField, type SubmissionType } from "@/lib/submission-config";
+import { startPortalLoading, stopPortalLoading } from "./PortalPreloader";
 
 type Recent = { id:number; jenis:"ekraf"|"sdm"|"komunitas"; no_registrasi:string|null; nama:string; detail:string; status:string; created_at:string };
 type Summary = { total:number; menunggu:number; disetujui:number; ditolak:number; ekraf:number; sdm:number; komunitas:number; berita:number; acara:number };
@@ -113,6 +114,7 @@ export function DashboardOverview(){
   const reviewKey = `${jenis}-${id}`;
   setLoadingReview(reviewKey);
   setError("");
+  startPortalLoading("Memuat data tinjauan…");
   try {
    const r = await fetch(`/api/submissions?type=${jenis}`, { cache: "no-store" });
    const p = await r.json();
@@ -128,6 +130,7 @@ export function DashboardOverview(){
    setError(e instanceof Error ? e.message : "Gagal memuat detail pengajuan.");
   } finally {
    setLoadingReview(null);
+   stopPortalLoading();
   }
  }, []);
 
@@ -146,13 +149,17 @@ export function DashboardOverview(){
  async function remove(row:Recent){
   if(!confirm(`Hapus pengajuan ${row.nama}?`)) return;
   setLoadingDelete(row.id);
+  startPortalLoading("Sedang menghapus pengajuan…");
   try{
    const r=await fetch("/api/submissions",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:row.jenis,id:row.id})});
    const p=await r.json();
    if(!r.ok) throw new Error(p.message);
-   load();
+   await load();
   }catch(e){setError(e instanceof Error?e.message:"Gagal menghapus");}
-  finally{setLoadingDelete(null);}
+  finally{
+   setLoadingDelete(null);
+   stopPortalLoading();
+  }
  }
 
 

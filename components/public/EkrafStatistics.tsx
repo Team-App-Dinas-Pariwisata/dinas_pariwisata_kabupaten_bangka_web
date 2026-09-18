@@ -69,7 +69,8 @@ export default function EkrafStatistics() {
     setLoading(true);
     setError("");
 
-    fetch("/api/public/statistik-ekraf", { cache: "no-store", signal: controller.signal })
+    const url = `/api/public/statistik-ekraf?t=${Date.now()}`;
+    fetch(url, { cache: "no-store", signal: controller.signal })
       .then(async (response) => {
         const payload = (await response.json()) as StatistikPayload;
         if (!response.ok) throw new Error(payload.message || "Statistik gagal dimuat.");

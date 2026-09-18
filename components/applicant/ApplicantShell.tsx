@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { PortalIcon } from "@/components/portal/PortalIcon";
+import PortalPreloader, { startPortalLoading } from "@/components/portal/PortalPreloader";
 
 type Props = {
   children: ReactNode;
@@ -114,6 +115,7 @@ export function ApplicantShell({ children, userName, userEmail, avatarUrl }: Pro
           : notif.referensi_tipe === "sdm"
           ? "sdm-pariwisata"
           : "komunitas";
+      startPortalLoading("Memuat detail pengajuan…");
       router.push(`/akun/pengajuan/${segment}/${notif.referensi_id}/edit`);
     }
   }
@@ -135,6 +137,7 @@ export function ApplicantShell({ children, userName, userEmail, avatarUrl }: Pro
 
   return (
     <div className="applicant-app">
+      <PortalPreloader />
       <aside className={`applicant-sidebar ${mobileOpen ? "is-open" : ""}`}>
         <Link href="/" className="applicant-brand" onClick={() => setMobileOpen(false)}>
           <img src="/logo-si-parik-preloader.png" alt="SI PARIK BANGKA" />

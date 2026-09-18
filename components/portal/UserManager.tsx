@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { PortalIcon } from "./PortalIcon";
 import { compareTableValues, SortableTableHeader, TablePagination, type SortDirection } from "./DataTableControls";
+import { startPortalLoading, stopPortalLoading } from "./PortalPreloader";
 
 type User = {
   id: number;
@@ -88,10 +89,12 @@ export function UserManager() {
   }
 
   function edit(user: User) {
+    startPortalLoading("Menyiapkan data petugas…");
     setEditing(user);
     setForm({ name: user.name, email: user.email, phone: user.phone ?? "", password: "", status: user.status });
     setError("");
     setOpen(true);
+    setTimeout(() => stopPortalLoading(), 280);
   }
 
   async function save(event: FormEvent) {
@@ -117,17 +120,22 @@ export function UserManager() {
 
   async function remove(user: User) {
     if (!window.confirm(`Hapus petugas ${user.name}?`)) return;
-    const response = await fetch("/api/admin/users", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: user.id }),
-    });
-    const result = await response.json();
-    if (!response.ok) {
-      setError(result.message || "Gagal menghapus petugas.");
-      return;
+    startPortalLoading("Menghapus petugas…");
+    try {
+      const response = await fetch("/api/admin/users", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: user.id }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        setError(result.message || "Gagal menghapus petugas.");
+        return;
+      }
+      await load();
+    } finally {
+      stopPortalLoading();
     }
-    await load();
   }
 
   return (

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useMemo } from "react";
 import { PortalIcon } from "@/components/portal/PortalIcon";
 import { TablePagination } from "@/components/portal/DataTableControls";
+import { startPortalLoading } from "@/components/portal/PortalPreloader";
 
 export type SubmissionItem = {
   id: number;
@@ -70,19 +71,35 @@ export function ApplicantHistory({ items }: { items: SubmissionItem[] }) {
                 <div className="applicant-history-actions">
                   <span className={`applicant-status ${statusClass(item.status)}`}>{item.status}</span>
                   {item.status === "Disetujui" ? (
-                    <Link href={editHref(item.type, item.id)} className="applicant-edit-button">
+                    <Link
+                      href={editHref(item.type, item.id)}
+                      className="applicant-edit-button"
+                      onClick={() => startPortalLoading("Memuat detail pengajuan…")}
+                    >
                       <PortalIcon name="eye" /> Lihat Pengajuan
                     </Link>
                   ) : item.status === "Ditolak" || item.status === "Perlu Perbaikan" ? (
-                    <Link href={editHref(item.type, item.id)} className="applicant-edit-button">
+                    <Link
+                      href={editHref(item.type, item.id)}
+                      className="applicant-edit-button"
+                      onClick={() => startPortalLoading("Menyiapkan revisi pengajuan…")}
+                    >
                       <PortalIcon name="edit" /> Revisi Pengajuan
                     </Link>
                   ) : item.canEdit ? (
-                    <Link href={editHref(item.type, item.id)} className="applicant-edit-button">
+                    <Link
+                      href={editHref(item.type, item.id)}
+                      className="applicant-edit-button"
+                      onClick={() => startPortalLoading("Menyiapkan formulir edit…")}
+                    >
                       <PortalIcon name="edit" /> Edit Pengajuan
                     </Link>
                   ) : (
-                    <Link href={editHref(item.type, item.id)} className="applicant-edit-button">
+                    <Link
+                      href={editHref(item.type, item.id)}
+                      className="applicant-edit-button"
+                      onClick={() => startPortalLoading("Memuat detail pengajuan…")}
+                    >
                       <PortalIcon name="eye" /> Lihat Pengajuan
                     </Link>
                   )}
