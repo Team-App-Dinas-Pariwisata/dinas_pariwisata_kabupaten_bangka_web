@@ -89,7 +89,7 @@ export function PortalShell({ children, role, userName, isLiveServer }: Props) {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const hostname = window.location.hostname;
-      if (hostname && !["localhost", "127.0.0.1", "0.0.0.0"].includes(hostname)) {
+      if (hostname && (!["localhost", "127.0.0.1", "0.0.0.0"].includes(hostname) || hostname.includes("siparik.bangka.go.id"))) {
         setIsLive(true);
       }
     }
@@ -97,7 +97,7 @@ export function PortalShell({ children, role, userName, isLiveServer }: Props) {
 
   const menu = role === "admin"
     ? adminMenu.filter((item) => !(isLive && item.key === "whatsapp"))
-    : userMenu;
+    : userMenu.filter((item) => !(isLive && item.key === "monitoring-sampah"));
 
   // Notification state
   const [notifOpen, setNotifOpen] = useState(false);

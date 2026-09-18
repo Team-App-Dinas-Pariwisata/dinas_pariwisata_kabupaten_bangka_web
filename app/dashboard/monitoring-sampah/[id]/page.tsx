@@ -1,7 +1,8 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { RowDataPacket } from "mysql2";
 import { db } from "@/lib/db";
 import { requirePageRole } from "@/lib/auth";
+import { checkIsLiveServer } from "@/lib/is-live";
 import Link from "next/link";
 
 interface PageProps {
@@ -19,6 +20,10 @@ export default async function DetailMonitoringSampah({
   const { id } = await params;
 
   await requirePageRole("petugas");
+
+  if (await checkIsLiveServer()) {
+    redirect("/dashboard");
+  }
 
 
   const [rows] = await db().execute<RowDataPacket[]>(

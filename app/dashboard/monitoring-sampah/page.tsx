@@ -1,12 +1,17 @@
 import MonitoringSampahTable from "@/components/portal/MonitoringSampahTable";
 import { requirePageRole } from "@/lib/auth";
+import { checkIsLiveServer } from "@/lib/is-live";
 import { db } from "@/lib/db";
+import { redirect } from "next/navigation";
 import type { RowDataPacket } from "mysql2/promise";
 
 export const metadata={title:"Monitoring Sampah | SI PARIK BANGKA"};
 
 export default async function MonitoringSampahPage(){
  await requirePageRole("petugas");
+ if (await checkIsLiveServer()) {
+   redirect("/dashboard");
+ }
  const [rows]=await db().execute<RowDataPacket[]>(`SELECT id,nama_pelapor,lokasi_nama,lokasi_jenis,deteksi_utama,confidence,status,created_at FROM laporan_deteksi ORDER BY created_at DESC LIMIT 100`);
  return <main className="portal-content">
    <section className="portal-page-head">
