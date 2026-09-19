@@ -109,14 +109,19 @@ export function ApplicantShell({ children, userName, userEmail, avatarUrl }: Pro
     setNotifOpen(false);
 
     if (notif.referensi_tipe && notif.referensi_id) {
-      const segment =
-        notif.referensi_tipe === "ekraf"
-          ? "pelaku-ekraf"
-          : notif.referensi_tipe === "sdm"
-          ? "sdm-pariwisata"
-          : "komunitas";
-      startPortalLoading("Memuat detail pengajuan…");
-      router.push(`/akun/pengajuan/${segment}/${notif.referensi_id}/edit`);
+      if (pathname === "/akun") {
+        window.dispatchEvent(
+          new CustomEvent("openApplicantSubmissionReview", {
+            detail: {
+              jenis: notif.referensi_tipe,
+              id: notif.referensi_id,
+            },
+          }),
+        );
+      } else {
+        startPortalLoading("Membuka dashboard pengajuan…");
+        router.push(`/akun?reviewType=${notif.referensi_tipe}&reviewId=${notif.referensi_id}`);
+      }
     }
   }
 

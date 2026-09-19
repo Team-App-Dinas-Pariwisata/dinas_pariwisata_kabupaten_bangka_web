@@ -134,17 +134,29 @@ export function DashboardOverview(){
   }
  }, []);
 
- // Listen for custom event from notification bell
- useEffect(() => {
-  function handleOpenReview(e: Event) {
-   const detail = (e as CustomEvent).detail as { jenis: "ekraf" | "sdm" | "komunitas"; id: number } | undefined;
-   if (detail?.jenis && detail?.id) {
-    void openReviewById(detail.jenis, detail.id);
+  // Listen for custom event from notification bell or URL query parameters
+  useEffect(() => {
+   function handleOpenReview(e: Event) {
+    const detail = (e as CustomEvent).detail as { jenis: "ekraf" | "sdm" | "komunitas"; id: number } | undefined;
+    if (detail?.jenis && detail?.id) {
+     void openReviewById(detail.jenis, detail.id);
+    }
    }
-  }
-  window.addEventListener("openSubmissionReview", handleOpenReview);
-  return () => window.removeEventListener("openSubmissionReview", handleOpenReview);
- }, [openReviewById]);
+   window.addEventListener("openSubmissionReview", handleOpenReview);
+
+   // Check URL parameters when redirected from another page
+   if (typeof window !== "undefined") {
+    const params = new URLSearchParams(window.location.search);
+    const reviewType = params.get("reviewType") as "ekraf" | "sdm" | "komunitas" | null;
+    const reviewId = Number(params.get("reviewId"));
+    if (reviewType && ["ekraf", "sdm", "komunitas"].includes(reviewType) && Number.isInteger(reviewId) && reviewId > 0) {
+     void openReviewById(reviewType, reviewId);
+     window.history.replaceState({}, "", "/dashboard");
+    }
+   }
+
+   return () => window.removeEventListener("openSubmissionReview", handleOpenReview);
+  }, [openReviewById]);
 
  async function remove(row:Recent){
   if(!confirm(`Hapus pengajuan ${row.nama}?`)) return;

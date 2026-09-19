@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
+import { startGuestNavigation } from "@/components/Preloader";
 
 export type PublicDirectoryItem = {
   id: number;
@@ -76,6 +77,7 @@ export default function VerifiedDirectory() {
     const targetUrl = query
       ? `/direktori/${searchTarget}?q=${encodeURIComponent(query)}`
       : `/direktori/${searchTarget}`;
+    startGuestNavigation();
     router.push(targetUrl);
   }
 

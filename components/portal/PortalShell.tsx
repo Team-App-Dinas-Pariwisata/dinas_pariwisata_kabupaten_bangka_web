@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { PortalIcon, type PortalIconName } from "./PortalIcon";
 import StaffFloatingChat from "./StaffFloatingChat";
-import PortalPreloader from "./PortalPreloader";
+import PortalPreloader, { startPortalLoading } from "./PortalPreloader";
 
 type Props = {
   children: ReactNode;
@@ -82,6 +82,7 @@ function formatNotifDate(value: string) {
 
 export function PortalShell({ children, role, userName, isLiveServer }: Props) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [submissionOpen, setSubmissionOpen] = useState(pathname.startsWith("/dashboard/pengajuan"));
   const [isLive, setIsLive] = useState(isLiveServer ?? false);
@@ -159,16 +160,21 @@ export function PortalShell({ children, role, userName, isLiveServer }: Props) {
       }
     }
 
-    // If has reference, dispatch custom event to open submission review
+    // If has reference, dispatch custom event to open submission review or redirect to dashboard
     if (notif.referensi_tipe && notif.referensi_id) {
-      window.dispatchEvent(
-        new CustomEvent("openSubmissionReview", {
-          detail: {
-            jenis: notif.referensi_tipe,
-            id: notif.referensi_id,
-          },
-        }),
-      );
+      if (pathname === "/dashboard") {
+        window.dispatchEvent(
+          new CustomEvent("openSubmissionReview", {
+            detail: {
+              jenis: notif.referensi_tipe,
+              id: notif.referensi_id,
+            },
+          }),
+        );
+      } else {
+        startPortalLoading("Membuka pengajuan…");
+        router.push(`/dashboard?reviewType=${notif.referensi_tipe}&reviewId=${notif.referensi_id}`);
+      }
       setNotifOpen(false);
     }
   }
