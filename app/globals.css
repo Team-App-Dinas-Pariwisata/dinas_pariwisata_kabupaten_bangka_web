@@ -3821,6 +3821,7 @@ a {
   gap: 9px;
   margin-top: 22px;
   padding-top: 17px;
+  margin-bottom: 10px;
   border-top: 1px solid #e7edef;
 }
 
@@ -5304,6 +5305,19 @@ a {
   margin-left: auto;
   color: #83939a;
   font-size: 12px;
+}
+
+.info-note-icon,
+.verification-modal svg[data-icon="info"] {
+  width: 25px !important;
+  height: 25px !important;
+  min-width: 25px !important;
+  min-height: 25px !important;
+  max-width: 25px !important;
+  max-height: 25px !important;
+  flex-shrink: 0 !important;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .verification-steps {
@@ -7617,6 +7631,7 @@ a {
     opacity: 0;
     transform: translateY(8px) scale(0.96);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -19388,8 +19403,15 @@ body {
 }
 
 @keyframes preloader-bar-pulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
+
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }
 
 .portal-preloader-pill {
@@ -19416,6 +19438,7 @@ body {
     opacity: 0;
     transform: translate(-50%, -8px) scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: translate(-50%, 0) scale(1);
@@ -19434,7 +19457,9 @@ body {
 }
 
 @keyframes preloader-pill-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .portal-preloader-text {

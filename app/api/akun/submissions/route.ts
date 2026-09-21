@@ -10,6 +10,10 @@ import {
   uploadSubmissionFileToR2,
 } from "@/lib/r2";
 import { notifyNewSubmission, notifySubmissionRevised } from "@/lib/notifications";
+import {
+  notifyApplicantSubmissionCreated,
+  notifyApplicantSubmissionRevised,
+} from "@/lib/submission-notifications";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -212,6 +216,18 @@ export async function POST(request: NextRequest) {
       noRegistrasi: String(data.no_registrasi ?? ""),
     });
 
+    // Notifikasi email konfirmasi ke pemohon (best-effort)
+    const recipientEmail = String(data.email ?? user.email ?? "").trim();
+    if (recipientEmail) {
+      void notifyApplicantSubmissionCreated({
+        type,
+        id: result.insertId,
+        recipientEmail,
+        applicantName,
+        noRegistrasi: String(data.no_registrasi ?? ""),
+      });
+    }
+
     return NextResponse.json({
       message: "Pengajuan berhasil dikirim dan terhubung ke akun Google Anda.",
       data: { id: result.insertId, no_registrasi: data.no_registrasi },
@@ -308,6 +324,18 @@ export async function PATCH(request: NextRequest) {
       applicantName: reviserName,
       noRegistrasi: existing.no_registrasi,
     });
+
+    // Notifikasi email konfirmasi perbaikan ke pemohon (best-effort)
+    const recipientEmail = String(data.email ?? existing.email ?? user.email ?? "").trim();
+    if (recipientEmail) {
+      void notifyApplicantSubmissionRevised({
+        type,
+        id,
+        recipientEmail,
+        applicantName: reviserName,
+        noRegistrasi: existing.no_registrasi,
+      });
+    }
 
     return NextResponse.json({
       message: "Perubahan pengajuan berhasil disimpan dan dikirim kembali untuk verifikasi.",

@@ -264,8 +264,14 @@ export function ApplicantHistory({ items }: { items: SubmissionItem[] }) {
                   color: "#92400e",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 700, marginBottom: "4px" }}>
-                  <PortalIcon name="info" />
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 700, marginBottom: "4px" }}>
+                  <PortalIcon
+                    name="info"
+                    width={25}
+                    height={25}
+                    className="info-note-icon"
+                    style={{ width: "25px", height: "25px", minWidth: "25px", minHeight: "25px", flexShrink: 0 }}
+                  />
                   <span>Catatan dari Petugas / Verifikator:</span>
                 </div>
                 <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.5 }}>

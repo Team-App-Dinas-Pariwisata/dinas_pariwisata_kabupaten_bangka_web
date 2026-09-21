@@ -30,13 +30,19 @@ type DatabaseValue = string | number | boolean | null;
 function normalizeData(config: ResourceConfig, raw: Record<string, unknown>): Record<string, DatabaseValue> {
   const out: Record<string, DatabaseValue> = {};
   for (const key of config.writable) {
-    if (!(key in raw)) continue;
     const field = config.fields.find((item) => item.key === key);
+    if (!(key in raw)) {
+      if (field?.defaultValue !== undefined) {
+        out[key] = field.defaultValue as DatabaseValue;
+      }
+      continue;
+    }
     let value = raw[key];
     if (field?.type === "checkbox") value = value ? 1 : 0;
     else if (field?.type === "number") {
-      if (value === "" || value === null || value === undefined) value = null;
-      else {
+      if (value === "" || value === null || value === undefined) {
+        value = field.defaultValue !== undefined ? Number(field.defaultValue) : null;
+      } else {
         const numberValue = Number(value);
         if (!Number.isFinite(numberValue)) throw new Error(`Nilai ${field.label} harus berupa angka yang valid.`);
         value = numberValue;
@@ -188,6 +194,9 @@ export async function POST(request: NextRequest) {
     if (slugSource) data.slug = `${slugify(String(slugSource))}-${Date.now().toString().slice(-7)}`;
     if ("dipublikasikan" in data && Number(data.dipublikasikan) === 1 && !data.tanggal_publikasi) {
       data.tanggal_publikasi = nowMysql();
+    }
+    if ((config.table === "berita" || config.table === "acara") && (data.urutan_tampil === null || data.urutan_tampil === undefined)) {
+      data.urutan_tampil = 0;
     }
     data.created_by = user.id;
     data.updated_by = user.id;

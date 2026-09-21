@@ -24,6 +24,7 @@ export type ResourceField = {
   min?: number;
   max?: number;
   step?: number | "any";
+  hidden?: boolean;
 };
 
 export type ResourceConfig = {
@@ -67,7 +68,7 @@ export const resourceConfigs: Record<string, ResourceConfig> = {
       { key: "foto_alt", label: "Teks Alternatif Foto" },
       { key: "kata_kunci", label: "Kata Kunci", placeholder: "ekraf, bangka, pariwisata" },
       { key: "headline", label: "Jadikan Headline", type: "checkbox" },
-      { key: "urutan_tampil", label: "Urutan Tampil", type: "number" },
+      { key: "urutan_tampil", label: "Urutan Tampil", type: "number", defaultValue: 0, hidden: true },
       { key: "dipublikasikan", label: "Dipublikasikan", type: "checkbox" },
       { key: "tanggal_publikasi", label: "Tanggal Publikasi", type: "datetime-local" },
       { key: "aktif", label: "Aktif", type: "checkbox", defaultValue: true },
@@ -138,7 +139,7 @@ export const resourceConfigs: Record<string, ResourceConfig> = {
       { key: "video_url", label: "URL Video", type: "url", placeholder: "https://..." },
       { key: "kata_kunci", label: "Kata Kunci" },
       { key: "unggulan", label: "Acara Unggulan", type: "checkbox" },
-      { key: "urutan_tampil", label: "Urutan Tampil", type: "number" },
+      { key: "urutan_tampil", label: "Urutan Tampil", type: "number", defaultValue: 0, hidden: true },
       { key: "dipublikasikan", label: "Dipublikasikan", type: "checkbox" },
       { key: "tanggal_publikasi", label: "Tanggal Publikasi", type: "datetime-local" },
       { key: "aktif", label: "Aktif", type: "checkbox", defaultValue: true },

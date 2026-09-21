@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { allSubmissionFields, submissionConfigs, type SubmissionField, type SubmissionType } from "@/lib/submission-config";
 import { uploadSubmissionFileToR2 } from "@/lib/r2";
+import { notifyApplicantSubmissionCreated } from "@/lib/submission-notifications";
 
 export const runtime = "nodejs";
 
@@ -113,6 +114,21 @@ export async function POST(request: Request) {
       `INSERT INTO ${config.table} (${keys.join(", ")}) VALUES (${keys.map(() => "?").join(", ")})`,
       keys.map((key) => data[key]),
     );
+
+    const recipientEmail = String(data.email ?? "").trim();
+    const applicantName = type === "komunitas"
+      ? String(data.nama_organisasi ?? "Pemohon")
+      : String(data.nama_lengkap ?? "Pemohon");
+
+    if (recipientEmail) {
+      void notifyApplicantSubmissionCreated({
+        type,
+        id: result.insertId,
+        recipientEmail,
+        applicantName,
+        noRegistrasi: String(data.no_registrasi ?? ""),
+      });
+    }
 
     return NextResponse.json({
       message: "Pengajuan berhasil dikirim dan menunggu verifikasi petugas.",

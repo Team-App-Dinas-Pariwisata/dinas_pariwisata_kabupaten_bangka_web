@@ -237,7 +237,12 @@ export function DataManager({ resource, title, description, label, fields, colum
   function openEdit(row: Row) {
     startPortalLoading(`Menyiapkan form edit ${label.toLowerCase()}…`);
     const data: Record<string, unknown> = {};
-    fields.forEach((field) => { data[field.key] = inputValue(field, row[field.key]); });
+    fields.forEach((field) => {
+      const val = inputValue(field, row[field.key]);
+      data[field.key] = field.hidden && (val === "" || val === null || val === undefined)
+        ? (field.defaultValue ?? 0)
+        : val;
+    });
     setEditing(row);
     setForm(data);
     setError("");
@@ -253,6 +258,11 @@ export function DataManager({ resource, title, description, label, fields, colum
 
     try {
       const data: Record<string, unknown> = { ...form };
+      fields.forEach((field) => {
+        if (field.hidden && (data[field.key] === undefined || data[field.key] === "" || data[field.key] === null)) {
+          if (field.defaultValue !== undefined) data[field.key] = field.defaultValue;
+        }
+      });
       for (const field of fields) {
         const value = data[field.key];
         if (field.type !== "image" || !(value instanceof File)) continue;
@@ -336,7 +346,7 @@ export function DataManager({ resource, title, description, label, fields, colum
       {!loading && totalItems > 0 && <TablePagination totalItems={totalItems} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={handlePageSize} />}
 
       {modalOpen && <div className="portal-modal-layer" role="dialog" aria-modal="true"><button className="portal-modal-backdrop" type="button" onClick={() => setModalOpen(false)} aria-label="Tutup" /><form className="portal-modal" onSubmit={save}><div className="portal-modal-head"><div><p>{editing ? "Edit data" : "Data baru"}</p><h2>{editing ? `Ubah ${label}` : `Tambah ${label}`}</h2></div><button type="button" onClick={() => setModalOpen(false)}><PortalIcon name="x" /></button></div><div className="portal-form-grid">
-        {fields.map((field) => <div className={`portal-field ${field.type === "textarea" || field.type === "image" || field.type === "multicheck" ? "full" : ""}`} key={field.key}><span>{field.label}{field.required ? <b className="required-mark"> *</b> : ""}</span>{field.type === "textarea" ? <textarea value={String(form[field.key] ?? "")} onChange={(e) => setForm((old) => ({ ...old, [field.key]: e.target.value }))} required={field.required} rows={4} placeholder={field.placeholder} /> : field.type === "select" ? <select value={String(form[field.key] ?? "")} onChange={(e) => setForm((old) => {
+        {fields.filter((field) => !field.hidden).map((field) => <div className={`portal-field ${field.type === "textarea" || field.type === "image" || field.type === "multicheck" ? "full" : ""}`} key={field.key}><span>{field.label}{field.required ? <b className="required-mark"> *</b> : ""}</span>{field.type === "textarea" ? <textarea value={String(form[field.key] ?? "")} onChange={(e) => setForm((old) => ({ ...old, [field.key]: e.target.value }))} required={field.required} rows={4} placeholder={field.placeholder} /> : field.type === "select" ? <select value={String(form[field.key] ?? "")} onChange={(e) => setForm((old) => {
           const next = { ...old, [field.key]: e.target.value };
           fields.filter((candidate) => candidate.dependsOn === field.key).forEach((candidate) => { next[candidate.key] = ""; });
           return next;

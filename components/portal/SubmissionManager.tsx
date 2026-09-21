@@ -499,6 +499,33 @@ export function SubmissionManager({ type }: Props) {
               <small>Dikirim {formatDate(selected.created_at, true)}</small>
             </div>
 
+            {(selected.catatan_verifikasi || (selected as unknown as Record<string, unknown>).alasan_penolakan) ? (
+              <div
+                style={{
+                  margin: "14px 0",
+                  padding: "12px 16px",
+                  borderRadius: "8px",
+                  background: "#fffbeb",
+                  border: "1px solid #fde68a",
+                  color: "#92400e",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 700, marginBottom: "4px" }}>
+                  <PortalIcon
+                    name="info"
+                    width={25}
+                    height={25}
+                    className="info-note-icon"
+                    style={{ width: "25px", height: "25px", minWidth: "25px", minHeight: "25px", flexShrink: 0 }}
+                  />
+                  <span>Catatan Verifikasi / Alasan Penolakan:</span>
+                </div>
+                <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.5 }}>
+                  {String(selected.catatan_verifikasi || (selected as unknown as Record<string, unknown>).alasan_penolakan)}
+                </p>
+              </div>
+            ) : null}
+
             <div className="verification-steps" role="tablist" aria-label="Tahapan data pengajuan">
               {config.steps.map((step, index) => <button key={step.shortTitle} type="button" className={detailStep === index ? "active" : ""} onClick={() => setDetailStep(index)}><span>{index + 1}</span>{step.shortTitle}</button>)}
             </div>
