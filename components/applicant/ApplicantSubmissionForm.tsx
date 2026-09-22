@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import { submissionConfigs, type SubmissionField, type SubmissionLookup, type SubmissionType } from "@/lib/submission-config";
 import { PortalIcon } from "@/components/portal/PortalIcon";
+import { startPortalLoading, stopPortalLoading } from "@/components/portal/PortalPreloader";
 
 type LookupOption = { value: number | string; label: string; kecamatan_id?: number };
 type LookupData = Record<SubmissionLookup, LookupOption[]>;
@@ -107,6 +108,7 @@ export function ApplicantSubmissionForm({ type, userName, userEmail, submissionI
     if (!editMode || !submissionId) return;
     let active = true;
     setLoadingSubmission(true);
+    startPortalLoading("Memuat data pengajuan…");
 
     fetch(`/api/akun/submissions?type=${encodeURIComponent(type)}&id=${submissionId}`, { cache: "no-store" })
       .then(async (response) => {
@@ -130,7 +132,12 @@ export function ApplicantSubmissionForm({ type, userName, userEmail, submissionI
           setError(err instanceof Error ? err.message : "Data pengajuan gagal dimuat.");
         }
       })
-      .finally(() => { if (active) setLoadingSubmission(false); });
+      .finally(() => {
+        if (active) {
+          setLoadingSubmission(false);
+          stopPortalLoading();
+        }
+      });
 
     return () => { active = false; };
   }, [editMode, submissionId, type, userName, userEmail]);
@@ -189,6 +196,7 @@ export function ApplicantSubmissionForm({ type, userName, userEmail, submissionI
 
     setSubmitting(true);
     setError("");
+    startPortalLoading(editMode ? "Menyimpan perubahan pengajuan…" : "Mengirimkan data pengajuan…");
     try {
       const body = new FormData();
       body.set("type", type);
@@ -213,6 +221,7 @@ export function ApplicantSubmissionForm({ type, userName, userEmail, submissionI
       setError(err instanceof Error ? err.message : (editMode ? "Perubahan pengajuan gagal disimpan." : "Pengajuan gagal dikirim."));
     } finally {
       setSubmitting(false);
+      stopPortalLoading();
     }
   }
 

@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
   const user = await getRequestUser(request);
   const destination = user?.role === "pengaju" ? "/akun/masuk" : "/petugas";
 
-  if (user && ["admin", "pengguna"].includes(user.role)) {
+  if (user && ["admin", "petugas"].includes(user.role)) {
     try {
       await deleteByKey("staff_chat_presence", user.id);
     } catch (error) {
@@ -16,7 +16,8 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const response = NextResponse.redirect(new URL(destination, request.url), 303);
+  const baseUrl = process.env.APP_BASE_URL || "https://siparik.bangka.go.id";
+  const response = NextResponse.redirect(new URL(destination, baseUrl), 303);
   response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
   response.cookies.set(SESSION_COOKIE, "", {
     ...sessionCookieOptions(),

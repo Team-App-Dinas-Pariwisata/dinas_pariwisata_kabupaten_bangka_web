@@ -15,19 +15,27 @@ export async function GET() {
       const user = userMap.get(userId);
       if (!user || String(user.status) !== "active") continue;
       const role = String(user.role ?? "");
-      if (!["super_admin", "admin", "operator", "verifikator", "pengguna"].includes(role)) continue;
+      if (!["super_admin", "admin", "operator", "verifikator", "petugas", "pengguna"].includes(role)) continue;
       if (toTime(row.last_seen_at) >= threshold) onlineIds.add(userId);
     }
-    return NextResponse.json({ data: { online_count: onlineIds.size, online_window_seconds: ONLINE_WINDOW_SECONDS } }, { headers: { "Cache-Control": "no-store, max-age=0" } });
+    return NextResponse.json(
+      { data: { online_count: onlineIds.size, online_window_seconds: ONLINE_WINDOW_SECONDS } },
+      { headers: { "Cache-Control": "no-store, max-age=0" } },
+    );
   } catch (error) {
     console.error("[chat/presence GET]", error);
-    return NextResponse.json({ data: { online_count: 0, online_window_seconds: ONLINE_WINDOW_SECONDS } }, { headers: { "Cache-Control": "no-store, max-age=0" } });
+    return NextResponse.json(
+      { data: { online_count: 0, online_window_seconds: ONLINE_WINDOW_SECONDS } },
+      { headers: { "Cache-Control": "no-store, max-age=0" } },
+    );
   }
 }
 
 export async function POST(request: NextRequest) {
   const user = await getRequestUser(request);
-  if (!user || !["admin", "pengguna"].includes(user.role)) return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+  if (!user || !["admin", "petugas", "pengguna"].includes(user.role)) {
+    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+  }
   try {
     const now = dbNow();
     const record: DbRecord = { user_id: user.id, last_seen_at: now, updated_at: now };
@@ -41,7 +49,9 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   const user = await getRequestUser(request);
-  if (!user || !["admin", "pengguna"].includes(user.role)) return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+  if (!user || !["admin", "petugas", "pengguna"].includes(user.role)) {
+    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+  }
   try {
     await deleteByKey("staff_chat_presence", user.id);
     return NextResponse.json({ data: { online: false } }, { headers: { "Cache-Control": "no-store, max-age=0" } });

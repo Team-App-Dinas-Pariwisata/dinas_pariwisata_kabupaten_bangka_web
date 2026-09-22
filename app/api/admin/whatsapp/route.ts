@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRequestRole } from "@/lib/auth";
-import { getWhatsAppStatus, sendWhatsAppMessage } from "@/lib/whatsapp";
+import {
+  controlWhatsApp,
+  getWhatsAppProvider,
+  getWhatsAppStatus,
+} from "@/lib/whatsapp";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function errorMessage(error: unknown) {
-  return error instanceof Error
-    ? error.message
-    : "FlazHost WhatsApp Gateway tidak dapat dihubungi.";
+  return error instanceof Error ? error.message : "Service WhatsApp tidak dapat dihubungi.";
 }
 
 export async function GET(request: NextRequest) {
@@ -18,10 +20,9 @@ export async function GET(request: NextRequest) {
 
   try {
     const status = await getWhatsAppStatus();
-    return NextResponse.json(
-      { status },
-      { headers: { "Cache-Control": "no-store" } },
-    );
+    return NextResponse.json({ status }, {
+      headers: { "Cache-Control": "no-store" },
+    });
   } catch (error) {
     return NextResponse.json(
       { message: errorMessage(error) },
@@ -30,61 +31,37 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/** Endpoint admin untuk menguji kirim pesan tanpa mengubah data pengajuan. */
 export async function POST(request: NextRequest) {
   if (!(await requireRequestRole(request, "admin"))) {
     return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
   }
 
   try {
-    const body = (await request.json()) as {
-      action?: unknown;
-      phone?: unknown;
-      message?: unknown;
-    };
+    if (getWhatsAppProvider() !== "webjs") {
+      return NextResponse.json(
+        { message: "Restart dan reset QR hanya tersedia saat provider Node.js dipilih." },
+        { status: 409 },
+      );
+    }
 
-    if (body.action !== "test") {
+    const body = (await request.json()) as { action?: unknown; confirmation?: unknown };
+    if (body.action !== "restart" && body.action !== "reset") {
       return NextResponse.json({ message: "Aksi tidak valid." }, { status: 400 });
     }
-
-    const phone = typeof body.phone === "string" ? body.phone.trim() : "";
-    const message = typeof body.message === "string" ? body.message.trim() : "";
-
-    if (!phone) {
+    if (body.action === "reset" && body.confirmation !== "RESET") {
       return NextResponse.json(
-        { message: "Nomor WhatsApp tujuan wajib diisi." },
-        { status: 400 },
-      );
-    }
-    if (!message) {
-      return NextResponse.json(
-        { message: "Pesan tes wajib diisi." },
-        { status: 400 },
-      );
-    }
-    if (message.length > 5_000) {
-      return NextResponse.json(
-        { message: "Pesan tes terlalu panjang." },
+        { message: "Konfirmasi RESET diperlukan untuk menghapus sesi." },
         { status: 400 },
       );
     }
 
-    const result = await sendWhatsAppMessage(phone, message);
-    if (!result.ok) {
-      return NextResponse.json(
-        {
-          message: result.reason,
-          code: result.code,
-          gatewayStatus: result.status,
-        },
-        { status: 502 },
-      );
-    }
-
+    const status = await controlWhatsApp(body.action);
     return NextResponse.json({
-      message: "Pesan tes berhasil dikirim melalui FlazHost.",
-      messageId: result.messageId || null,
-    });
+      message: body.action === "reset"
+        ? "Sesi lama dihapus. QR baru sedang disiapkan."
+        : "Koneksi WhatsApp sedang dimulai ulang.",
+      status,
+    }, { status: 202 });
   } catch (error) {
     return NextResponse.json({ message: errorMessage(error) }, { status: 502 });
   }

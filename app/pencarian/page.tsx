@@ -5,7 +5,7 @@ import TourismRecommendationSearch from "@/components/public/TourismRecommendati
 
 export const metadata: Metadata = {
   title: "Pencarian Rekomendasi | SI PARIK BANGKA Kabupaten Bangka",
-  description: "Pencarian rekomendasi tempat wisata, kuliner, hotel, dan satwa endemik berdasarkan kebutuhan dan prioritas pengguna.",
+  description: "Pencarian rekomendasi tempat wisata, kuliner, hotel, dan satwa endemik berdasarkan kebutuhan dan prioritas petugas.",
 };
 
 export default function PencarianPage() {

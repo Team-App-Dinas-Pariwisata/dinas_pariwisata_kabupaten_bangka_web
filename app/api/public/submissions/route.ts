@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { allSubmissionFields, submissionConfigs, type SubmissionField, type SubmissionType } from "@/lib/submission-config";
 import { uploadSubmissionFileToR2 } from "@/lib/r2";
 import { createNumeric } from "@/lib/realtime-db";
+import { notifyApplicantSubmissionCreated } from "@/lib/submission-notifications";
+import { notifyNewSubmission } from "@/lib/notifications";
 
 export const runtime = "nodejs";
 
@@ -93,6 +95,29 @@ export async function POST(request: Request) {
     if (type === "ekraf") data.status = "Menunggu";
 
     const id = await createNumeric(config.table, data);
+
+    const recipientEmail = String(data.email ?? "").trim();
+    const applicantName = type === "komunitas"
+      ? String(data.nama_organisasi ?? "Pemohon")
+      : String(data.nama_lengkap ?? "Pemohon");
+
+    if (recipientEmail) {
+      void notifyApplicantSubmissionCreated({
+        type,
+        id,
+        recipientEmail,
+        applicantName,
+        noRegistrasi: String(data.no_registrasi ?? ""),
+      });
+    }
+
+    void notifyNewSubmission({
+      type,
+      submissionId: id,
+      applicantName,
+      noRegistrasi: String(data.no_registrasi ?? ""),
+    });
+
     return NextResponse.json({
       message: "Pengajuan berhasil dikirim dan menunggu verifikasi petugas.",
       data: { id, no_registrasi: data.no_registrasi },

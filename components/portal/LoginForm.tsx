@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { InlineLoader } from "../InlineLoader";
 
 export function LoginForm() {
-  const [role, setRole] = useState<"admin" | "pengguna">("pengguna");
+  const router = useRouter();
+  const [role, setRole] = useState<"admin" | "petugas">("petugas");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -20,13 +21,10 @@ export function LoginForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role, email, password }),
-        cache: "no-store",
-        credentials: "same-origin",
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || "Login gagal.");
-      window.dispatchEvent(new Event("si-parik:navigation-start"));
-      window.location.replace(result.redirectTo);
+      router.replace(result.redirectTo);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login gagal.");
     } finally {
@@ -42,7 +40,7 @@ export function LoginForm() {
       <p className="auth-copy">Pilih jenis akun, lalu gunakan email dan kata sandi yang terdaftar pada database.</p>
 
       <div className="auth-role-tabs" role="tablist" aria-label="Jenis akun">
-        <button type="button" className={role === "pengguna" ? "active" : ""} onClick={() => setRole("pengguna")}>Petugas</button>
+        <button type="button" className={role === "petugas" ? "active" : ""} onClick={() => setRole("petugas")}>Petugas</button>
         <button type="button" className={role === "admin" ? "active" : ""} onClick={() => setRole("admin")}>Admin</button>
       </div>
 
@@ -50,7 +48,7 @@ export function LoginForm() {
       <label className="auth-field"><span>Kata sandi</span><input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Masukkan kata sandi" required /></label>
 
       {error && <div className="auth-error">{error}</div>}
-      <button className="auth-submit" type="submit" disabled={loading}>{loading ? <InlineLoader label="Memeriksa..." compact /> : `Masuk sebagai ${role === "admin" ? "Admin" : "Petugas"}`}</button>
+      <button className="auth-submit" type="submit" disabled={loading}>{loading ? "Memeriksa..." : `Masuk sebagai ${role === "admin" ? "Admin" : "Petugas"}`}</button>
       <Link className="auth-home-link" href="/">← Kembali ke halaman utama</Link>
     </form>
   );

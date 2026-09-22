@@ -26,12 +26,12 @@ type UserRow = {
 /**
  * Menormalkan role database lama maupun role portal versi sebelumnya.
  * - super_admin/admin => admin
- * - operator/verifikator/pengguna => pengguna (petugas)
+ * - operator/verifikator/pengguna/petugas => petugas
  * - pengaju => akun masyarakat/pemohon berbasis Google
  */
 export function normalizeDbRole(role: string): AppRole | null {
   if (["super_admin", "admin"].includes(role)) return "admin";
-  if (["operator", "verifikator", "pengguna"].includes(role)) return "pengguna";
+  if (["pengguna", "operator", "verifikator", "petugas"].includes(role)) return "petugas";
   if (role === "pengaju") return "pengaju";
   return null;
 }
@@ -39,10 +39,10 @@ export function normalizeDbRole(role: string): AppRole | null {
 async function readUser(uid: number): Promise<AuthUser | null> {
   const row = await getById<UserRow & Record<string, unknown>>("pengguna", uid);
   if (!row || row.status !== "active") return null;
-  const role = normalizeDbRole(row.role);
+  const role = normalizeDbRole(String(row.role ?? ""));
   if (!role) return null;
   return {
-    id: Number(row.id),
+    id: Number(row.id ?? uid),
     role,
     name: String(row.name ?? ""),
     email: String(row.email ?? ""),
@@ -52,7 +52,17 @@ async function readUser(uid: number): Promise<AuthUser | null> {
 }
 
 export async function getRequestUser(request: NextRequest): Promise<AuthUser | null> {
-  const payload = verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value);
+  let token = request.cookies.get(SESSION_COOKIE)?.value;
+
+  // Support Flutter/mobile Bearer Token
+  if (!token) {
+    const authorization = request.headers.get("authorization");
+    if (authorization?.startsWith("Bearer ")) {
+      token = authorization.replace("Bearer ", "").trim();
+    }
+  }
+
+  const payload = verifySessionToken(token);
   if (!payload) return null;
   const user = await readUser(payload.uid);
   if (!user || user.role !== payload.role) return null;
@@ -61,8 +71,10 @@ export async function getRequestUser(request: NextRequest): Promise<AuthUser | n
 
 export async function requireRequestRole(request: NextRequest, role: AppRole) {
   const user = await getRequestUser(request);
-  if (!user || user.role !== role) return null;
-  return user;
+  if (!user) return null;
+  if (user.role === role) return user;
+  if (role === "pengguna" && (user.role === "petugas" || user.role === "admin")) return user;
+  return null;
 }
 
 export async function getPageUser(): Promise<AuthUser | null> {
@@ -81,8 +93,8 @@ export async function requirePageRole(role: AppRole): Promise<AuthUser> {
     throw new Error("Redirecting unauthenticated user");
   }
   if (user.role !== role) {
-    if (user.role === "admin") redirect("/admin/pengguna");
-    if (user.role === "pengguna") redirect("/dashboard");
+    if (user.role === "admin") redirect("/admin/petugas");
+    if (user.role === "petugas") redirect("/dashboard");
     redirect("/akun");
     throw new Error("Redirecting unauthorized user");
   }

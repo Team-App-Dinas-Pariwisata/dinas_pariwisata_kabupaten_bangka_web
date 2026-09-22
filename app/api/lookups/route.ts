@@ -21,7 +21,7 @@ function facilityOptions(rows: DbRecord[], table: "hotel" | "kuliner" | "tempat_
 }
 
 export async function GET(request: NextRequest) {
-  if (!(await requireRequestRole(request, "pengguna"))) {
+  if (!(await requireRequestRole(request, "petugas"))) {
     return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
   }
 
@@ -47,14 +47,34 @@ export async function GET(request: NextRequest) {
     getAll("master_fasilitas"),
   ]);
 
-  const kategoriBerita = active(kategoriBeritaRaw).sort((a, b) => Number(a.urutan ?? 0) - Number(b.urutan ?? 0) || alpha(a.nama_kategori, b.nama_kategori)).map((r) => ({ value: Number(r.id), label: r.nama_kategori }));
-  const kategoriAcara = active(kategoriAcaraRaw).sort((a, b) => Number(a.urutan ?? 0) - Number(b.urutan ?? 0) || alpha(a.nama_kategori, b.nama_kategori)).map((r) => ({ value: Number(r.id), label: r.nama_kategori }));
-  const kategoriWisata = active(kategoriWisataRaw).sort((a, b) => alpha(a.nama_kategori, b.nama_kategori)).map((r) => ({ value: Number(r.id), label: r.nama_kategori }));
-  const kategoriKuliner = active(kategoriKulinerRaw).sort((a, b) => alpha(a.nama_kategori, b.nama_kategori)).map((r) => ({ value: Number(r.id), label: r.nama_kategori }));
-  const jenisHotel = active(jenisHotelRaw).sort((a, b) => alpha(a.nama_jenis, b.nama_jenis)).map((r) => ({ value: Number(r.id), label: r.nama_jenis }));
-  const kecamatan = active(kecamatanRaw).sort((a, b) => alpha(a.nama_kecamatan, b.nama_kecamatan)).map((r) => ({ value: Number(r.id), label: r.nama_kecamatan }));
-  const kelurahan = [...kelurahanRaw].sort((a, b) => alpha(a.nama_kelurahan, b.nama_kelurahan)).map((r) => ({ value: Number(r.id), label: `${r.jenis ?? ""} ${r.nama_kelurahan ?? ""}`.trim(), parentValue: Number(r.kecamatan_id) }));
-  const statusKonservasi = active(statusKonservasiRaw).sort((a, b) => Number(a.urutan_prioritas ?? 0) - Number(b.urutan_prioritas ?? 0) || alpha(a.nama_status, b.nama_status)).map((r) => ({ value: Number(r.id), label: `${r.kode ?? ""} - ${r.nama_status ?? ""}`.trim() }));
+  const kategoriBerita = active(kategoriBeritaRaw)
+    .sort((a, b) => Number(a.urutan ?? 0) - Number(b.urutan ?? 0) || alpha(a.nama_kategori, b.nama_kategori))
+    .map((r) => ({ value: Number(r.id), label: r.nama_kategori }));
+  const kategoriAcara = active(kategoriAcaraRaw)
+    .sort((a, b) => Number(a.urutan ?? 0) - Number(b.urutan ?? 0) || alpha(a.nama_kategori, b.nama_kategori))
+    .map((r) => ({ value: Number(r.id), label: r.nama_kategori }));
+  const kategoriWisata = active(kategoriWisataRaw)
+    .sort((a, b) => alpha(a.nama_kategori, b.nama_kategori))
+    .map((r) => ({ value: Number(r.id), label: r.nama_kategori }));
+  const kategoriKuliner = active(kategoriKulinerRaw)
+    .sort((a, b) => alpha(a.nama_kategori, b.nama_kategori))
+    .map((r) => ({ value: Number(r.id), label: r.nama_kategori }));
+  const jenisHotel = active(jenisHotelRaw)
+    .sort((a, b) => alpha(a.nama_jenis, b.nama_jenis))
+    .map((r) => ({ value: Number(r.id), label: r.nama_jenis }));
+  const kecamatan = active(kecamatanRaw)
+    .sort((a, b) => alpha(a.nama_kecamatan, b.nama_kecamatan))
+    .map((r) => ({ value: Number(r.id), label: r.nama_kecamatan }));
+  const kelurahan = [...kelurahanRaw]
+    .sort((a, b) => alpha(a.nama_kelurahan, b.nama_kelurahan))
+    .map((r) => ({
+      value: Number(r.id),
+      label: `${r.jenis ?? ""} ${r.nama_kelurahan ?? ""}`.trim(),
+      parentValue: Number(r.kecamatan_id),
+    }));
+  const statusKonservasi = active(statusKonservasiRaw)
+    .sort((a, b) => Number(a.urutan_prioritas ?? 0) - Number(b.urutan_prioritas ?? 0) || alpha(a.nama_status, b.nama_status))
+    .map((r) => ({ value: Number(r.id), label: `${r.kode ?? ""} - ${r.nama_status ?? ""}`.trim() }));
 
   return NextResponse.json({
     data: {

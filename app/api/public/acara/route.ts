@@ -7,9 +7,13 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const result = await getPublicEventList(1, 6);
-    return NextResponse.json({ data: result.items }, { headers: { "Cache-Control": "no-store, max-age=0" } });
+    const data = result.items.map(({ deskripsi: _deskripsi, syarat_ketentuan: _syarat, tautan_pendaftaran: _tautan, ...row }) => row);
+    return NextResponse.json({ data }, { headers: { "Cache-Control": "no-store, max-age=0" } });
   } catch (error) {
     console.error("Public acara error:", error);
-    return NextResponse.json({ message: "Acara belum dapat dimuat saat ini.", data: [] }, { status: 500, headers: { "Cache-Control": "no-store, max-age=0" } });
+    return NextResponse.json(
+      { message: "Acara belum dapat dimuat saat ini.", data: [] },
+      { status: 500, headers: { "Cache-Control": "no-store, max-age=0" } },
+    );
   }
 }

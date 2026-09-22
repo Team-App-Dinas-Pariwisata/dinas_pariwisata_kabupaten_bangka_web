@@ -7,6 +7,11 @@ import {
   keyFromR2SubmissionStorageReference,
   uploadSubmissionFileToR2,
 } from "@/lib/r2";
+import { notifyNewSubmission, notifySubmissionRevised } from "@/lib/notifications";
+import {
+  notifyApplicantSubmissionCreated,
+  notifyApplicantSubmissionRevised,
+} from "@/lib/submission-notifications";
 import { createNumeric, getById, updateById, type DbRecord } from "@/lib/realtime-db";
 
 export const runtime = "nodejs";
@@ -14,8 +19,8 @@ export const dynamic = "force-dynamic";
 
 type ApplicantSubmissionRow = DbRecord & {
   id: number;
-  created_by: number | null;
-  no_registrasi: string | null;
+  created_by?: number | null;
+  no_registrasi?: string | null;
   status?: string | null;
   status_pengajuan?: string | null;
 };
@@ -24,17 +29,36 @@ function text(form: FormData, key: string) {
   const value = form.get(key);
   return typeof value === "string" ? value.trim() : "";
 }
-function checked(form: FormData, key: string) { return ["1", "true", "on", "yes"].includes(text(form, key).toLowerCase()); }
+
+function checked(form: FormData, key: string) {
+  return ["1", "true", "on", "yes"].includes(text(form, key).toLowerCase());
+}
+
 function registration(prefix: string) {
   const stamp = Date.now().toString(36).toUpperCase();
   const random = Math.random().toString(36).slice(2, 6).toUpperCase();
   return `${prefix}-${new Date().getFullYear()}-${stamp.slice(-7)}${random}`.slice(0, 30);
 }
-function validType(value: string | null | undefined): value is SubmissionType { return value === "ekraf" || value === "sdm" || value === "komunitas"; }
-function statusColumn(type: SubmissionType) { return type === "ekraf" ? "status" : "status_pengajuan"; }
-function currentStatus(type: SubmissionType, row: ApplicantSubmissionRow) { return String(type === "ekraf" ? row.status ?? "Menunggu" : row.status_pengajuan ?? "Menunggu"); }
-function canApplicantEdit(status: string) { return ["Menunggu", "Perlu Perbaikan", "Ditolak"].includes(status); }
-async function saveFile(file: File, type: SubmissionType, key: string, ownerId?: number | null) { return uploadSubmissionFileToR2(file, type, key, ownerId); }
+
+function validType(value: string | null | undefined): value is SubmissionType {
+  return value === "ekraf" || value === "sdm" || value === "komunitas";
+}
+
+function statusColumn(type: SubmissionType) {
+  return type === "ekraf" ? "status" : "status_pengajuan";
+}
+
+function currentStatus(type: SubmissionType, row: ApplicantSubmissionRow) {
+  return String(type === "ekraf" ? row.status ?? "Menunggu" : row.status_pengajuan ?? "Menunggu");
+}
+
+function canApplicantEdit(status: string) {
+  return ["Menunggu", "Perlu Perbaikan", "Ditolak"].includes(status);
+}
+
+async function saveFile(file: File, type: SubmissionType, key: string, ownerId?: number | null) {
+  return uploadSubmissionFileToR2(file, type, key, ownerId);
+}
 
 function validateFileForField(file: File, field: SubmissionField) {
   const mime = file.type.toLowerCase().split(";", 1)[0].trim();
@@ -42,6 +66,7 @@ function validateFileForField(file: File, field: SubmissionField) {
   const isJpeg = mime === "image/jpeg" || mime === "image/jpg" || ext === "jpg" || ext === "jpeg";
   const isPng = mime === "image/png" || ext === "png";
   const isPdf = mime === "application/pdf" || ext === "pdf";
+
   if (field.fileKind === "document") {
     if (!(isPdf || isJpeg || isPng)) throw new Error(`${field.label}: format dokumen harus PDF, JPG/JPEG, atau PNG.`);
     return;
@@ -63,6 +88,7 @@ function dbErrorMessage(error: unknown) {
   if (error instanceof Error && /(maksimal|format|cloudflare r2|r2|upload)/i.test(error.message)) return error.message;
   return "Pengajuan belum dapat disimpan. Periksa data dan konfigurasi Firebase Realtime Database.";
 }
+
 function normalizeFieldValue(form: FormData, field: SubmissionField): string | number | null {
   if (field.type === "checkbox") return checked(form, field.key) ? 1 : 0;
   const value = text(form, field.key);
@@ -77,10 +103,16 @@ async function getOwnedSubmission(type: SubmissionType, id: number, userId: numb
 
 export async function GET(request: NextRequest) {
   const user = await requireRequestRole(request, "pengaju");
-  if (!user) return NextResponse.json({ message: "Sesi akun pengaju tidak valid. Silakan masuk kembali dengan Google." }, { status: 401 });
+  if (!user) {
+    return NextResponse.json({ message: "Sesi akun pengaju tidak valid. Silakan masuk kembali dengan Google." }, { status: 401 });
+  }
+
   const type = request.nextUrl.searchParams.get("type");
   const id = Number(request.nextUrl.searchParams.get("id"));
-  if (!validType(type) || !Number.isInteger(id) || id <= 0) return NextResponse.json({ message: "Pengajuan tidak valid." }, { status: 400 });
+  if (!validType(type) || !Number.isInteger(id) || id <= 0) {
+    return NextResponse.json({ message: "Pengajuan tidak valid." }, { status: 400 });
+  }
+
   try {
     const row = await getOwnedSubmission(type, id, user.id);
     if (!row) return NextResponse.json({ message: "Pengajuan tidak ditemukan pada akun Anda." }, { status: 404 });
@@ -94,34 +126,77 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const user = await requireRequestRole(request, "pengaju");
-  if (!user) return NextResponse.json({ message: "Sesi akun pengaju tidak valid. Silakan masuk kembali dengan Google." }, { status: 401 });
+  if (!user) {
+    return NextResponse.json({ message: "Sesi akun pengaju tidak valid. Silakan masuk kembali dengan Google." }, { status: 401 });
+  }
+
   try {
     const form = await request.formData();
     const type = text(form, "type") as SubmissionType;
     const config = submissionConfigs[type];
     if (!config) return NextResponse.json({ message: "Jenis pengajuan tidak valid." }, { status: 400 });
+
     const fields = allSubmissionFields(type);
     const missing = fields.find((field) => requiredMissing(form, field));
     if (missing) return NextResponse.json({ message: `${missing.label} wajib diisi.` }, { status: 400 });
-    if (["ekraf", "sdm"].includes(type) && text(form, "nik").replace(/\D/g, "").length !== 16) {
-      return NextResponse.json({ message: "NIK wajib terdiri dari 16 digit." }, { status: 400 });
+
+    if (["ekraf", "sdm"].includes(type)) {
+      const nik = text(form, "nik").replace(/\D/g, "");
+      if (nik.length !== 16) return NextResponse.json({ message: "NIK wajib terdiri dari 16 digit." }, { status: 400 });
     }
 
-    const data: Record<string, string | number | null> = { no_registrasi: registration(config.registrationPrefix), created_by: user.id, updated_by: user.id };
+    const data: Record<string, string | number | null> = {
+      no_registrasi: registration(config.registrationPrefix),
+      created_by: user.id,
+      updated_by: user.id,
+    };
+
     for (const field of fields) {
       if (field.key === "konfirmasi_kebenaran") continue;
       if (field.type === "file") {
         const entry = form.get(field.key);
         if (entry instanceof File && entry.size > 0) {
           validateFileForField(entry, field);
-          data[field.key] = (await saveFile(entry, type, field.key, user.id)).storageUrl;
+          const uploaded = await saveFile(entry, type, field.key, user.id);
+          data[field.key] = uploaded.storageUrl;
         }
-      } else data[field.key] = normalizeFieldValue(form, field);
+        continue;
+      }
+      data[field.key] = normalizeFieldValue(form, field);
     }
+
     if (type === "sdm" || type === "komunitas") data.status_pengajuan = "Menunggu";
     if (type === "ekraf") data.status = "Menunggu";
-    const id = await createNumeric(config.table, data);
-    return NextResponse.json({ message: "Pengajuan berhasil dikirim dan terhubung ke akun Google Anda.", data: { id, no_registrasi: data.no_registrasi } }, { status: 201 });
+
+    const newId = await createNumeric(config.table, data);
+
+    // Notifikasi internal ke petugas
+    const applicantName = type === "komunitas"
+      ? String(data.nama_organisasi ?? user.name)
+      : String(data.nama_lengkap ?? user.name);
+    void notifyNewSubmission({
+      type,
+      submissionId: newId,
+      applicantName,
+      noRegistrasi: String(data.no_registrasi ?? ""),
+    });
+
+    // Notifikasi email konfirmasi ke pemohon
+    const recipientEmail = String(data.email ?? user.email ?? "").trim();
+    if (recipientEmail) {
+      void notifyApplicantSubmissionCreated({
+        type,
+        id: newId,
+        recipientEmail,
+        applicantName,
+        noRegistrasi: String(data.no_registrasi ?? ""),
+      });
+    }
+
+    return NextResponse.json({
+      message: "Pengajuan berhasil dikirim dan terhubung ke akun Google Anda.",
+      data: { id: newId, no_registrasi: data.no_registrasi },
+    }, { status: 201 });
   } catch (error) {
     console.error("Applicant submission error:", error);
     return NextResponse.json({ message: dbErrorMessage(error) }, { status: 400 });
@@ -130,26 +205,41 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   const user = await requireRequestRole(request, "pengaju");
-  if (!user) return NextResponse.json({ message: "Sesi akun pengaju tidak valid. Silakan masuk kembali dengan Google." }, { status: 401 });
+  if (!user) {
+    return NextResponse.json({ message: "Sesi akun pengaju tidak valid. Silakan masuk kembali dengan Google." }, { status: 401 });
+  }
+
   const newlyUploadedKeys: string[] = [];
   const replacedOldKeys: string[] = [];
+
   try {
     const form = await request.formData();
     const type = text(form, "type") as SubmissionType;
     const id = Number(text(form, "id"));
-    if (!validType(type) || !Number.isInteger(id) || id <= 0) return NextResponse.json({ message: "Pengajuan yang akan diedit tidak valid." }, { status: 400 });
+    if (!validType(type) || !Number.isInteger(id) || id <= 0) {
+      return NextResponse.json({ message: "Pengajuan yang akan diedit tidak valid." }, { status: 400 });
+    }
+
     const config = submissionConfigs[type];
     const existing = await getOwnedSubmission(type, id, user.id);
     if (!existing) return NextResponse.json({ message: "Pengajuan tidak ditemukan pada akun Anda." }, { status: 404 });
+
     const status = currentStatus(type, existing);
-    if (!canApplicantEdit(status)) return NextResponse.json({ message: "Pengajuan yang sudah disetujui tetap dapat dilihat, tetapi tidak dapat diubah setelah verifikasi final." }, { status: 409 });
+    if (!canApplicantEdit(status)) {
+      return NextResponse.json({ message: "Pengajuan yang sudah disetujui tetap dapat dilihat, tetapi tidak dapat diubah setelah verifikasi final." }, { status: 409 });
+    }
 
     const fields = allSubmissionFields(type);
     const missing = fields.find((field) => requiredMissing(form, field, existing));
     if (missing) return NextResponse.json({ message: `${missing.label} wajib diisi.` }, { status: 400 });
-    if (["ekraf", "sdm"].includes(type) && text(form, "nik").replace(/\D/g, "").length !== 16) return NextResponse.json({ message: "NIK wajib terdiri dari 16 digit." }, { status: 400 });
+
+    if (["ekraf", "sdm"].includes(type)) {
+      const nik = text(form, "nik").replace(/\D/g, "");
+      if (nik.length !== 16) return NextResponse.json({ message: "NIK wajib terdiri dari 16 digit." }, { status: 400 });
+    }
 
     const data: Record<string, string | number | null> = { updated_by: user.id };
+
     for (const field of fields) {
       if (field.key === "konfirmasi_kebenaran") continue;
       if (field.type === "file") {
@@ -159,10 +249,13 @@ export async function PATCH(request: NextRequest) {
           const uploaded = await saveFile(entry, type, field.key, user.id);
           data[field.key] = uploaded.storageUrl;
           newlyUploadedKeys.push(uploaded.key);
+
           const oldKey = keyFromR2SubmissionStorageReference(String(existing[field.key] ?? ""));
           if (oldKey && applicantOwnsR2SubmissionKey(oldKey, user.id)) replacedOldKeys.push(oldKey);
         }
-      } else data[field.key] = normalizeFieldValue(form, field);
+        continue;
+      }
+      data[field.key] = normalizeFieldValue(form, field);
     }
 
     data[statusColumn(type)] = "Menunggu";
@@ -176,11 +269,36 @@ export async function PATCH(request: NextRequest) {
       data.token_perbaikan = null;
       data.token_perbaikan_kedaluwarsa = null;
     }
-    const latest = await getOwnedSubmission(type, id, user.id);
-    if (!latest) throw new Error("Pengajuan tidak ditemukan atau tidak berubah.");
+
     await updateById(config.table, id, data);
     await Promise.allSettled(replacedOldKeys.map((key) => deleteSubmissionFileFromR2(key)));
-    return NextResponse.json({ message: "Perubahan pengajuan berhasil disimpan dan dikirim kembali untuk verifikasi.", data: { id, no_registrasi: existing.no_registrasi, status: "Menunggu" } });
+
+    const reviserName = type === "komunitas"
+      ? String(existing.nama_organisasi ?? user.name)
+      : String(existing.nama_lengkap ?? user.name);
+
+    void notifySubmissionRevised({
+      type,
+      submissionId: id,
+      applicantName: reviserName,
+      noRegistrasi: existing.no_registrasi ? String(existing.no_registrasi) : null,
+    });
+
+    const recipientEmail = String(data.email ?? existing.email ?? user.email ?? "").trim();
+    if (recipientEmail) {
+      void notifyApplicantSubmissionRevised({
+        type,
+        id,
+        recipientEmail,
+        applicantName: reviserName,
+        noRegistrasi: existing.no_registrasi ? String(existing.no_registrasi) : null,
+      });
+    }
+
+    return NextResponse.json({
+      message: "Perubahan pengajuan berhasil disimpan dan dikirim kembali untuk verifikasi.",
+      data: { id, no_registrasi: existing.no_registrasi, status: "Menunggu" },
+    });
   } catch (error) {
     await Promise.allSettled(newlyUploadedKeys.map((key) => deleteSubmissionFileFromR2(key)));
     console.error("Applicant submission update error:", error);

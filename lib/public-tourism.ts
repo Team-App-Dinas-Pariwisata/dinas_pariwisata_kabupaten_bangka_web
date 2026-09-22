@@ -1,9 +1,9 @@
-import { facilityInfoForOwner, type FacilityInfo } from "@/lib/facilities";
 import { getAll, isPublishedRecord, isTruthyDb, toTime, type DbRecord } from "@/lib/realtime-db";
 import { browserSafeR2ImageUrl } from "@/lib/r2";
+import { facilityInfoForOwner, type FacilityInfo } from "@/lib/facilities";
 
-export type TourismKind = "tempat-wisata" | "kuliner" | "hotel" | "satwa-endemik";
-export type PublicFacility = FacilityInfo;
+export const TOURISM_KINDS = ["tempat-wisata", "kuliner", "hotel", "satwa-endemik"] as const;
+export type TourismKind = (typeof TOURISM_KINDS)[number];
 
 export type PublicTourismItem = {
   id: number;
@@ -24,12 +24,13 @@ export type PublicTourismItem = {
   latitude: number | null;
   longitude: number | null;
   published_at: string | null;
-  facilities: PublicFacility[];
-  unggulan?: number;
-  urutan_tampil?: number;
+  facilities: FacilityInfo[];
+  unggulan: number;
+  urutan_tampil: number;
 };
 
 export const tourismMeta: Record<TourismKind, {
+  label: string;
   menuLabel: string;
   eyebrow: string;
   title: string;
@@ -39,24 +40,44 @@ export const tourismMeta: Record<TourismKind, {
   detailTertiaryLabel: string;
 }> = {
   "tempat-wisata": {
-    menuLabel: "Tempat Wisata", eyebrow: "Jelajah Bangka", title: "Tempat wisata yang layak masuk rencana perjalanan.",
+    label: "Destinasi Wisata",
+    menuLabel: "Tempat Wisata",
+    eyebrow: "Jelajah Bangka",
+    title: "Tempat wisata yang layak masuk rencana perjalanan.",
     description: "Temukan pantai, ruang alam, budaya, dan destinasi pilihan di Kabupaten Bangka.",
-    detailPrimaryLabel: "Daya tarik utama", detailSecondaryLabel: "Akses transportasi", detailTertiaryLabel: "Informasi keselamatan",
+    detailPrimaryLabel: "Daya tarik utama",
+    detailSecondaryLabel: "Akses transportasi",
+    detailTertiaryLabel: "Informasi keselamatan",
   },
   kuliner: {
-    menuLabel: "Kuliner", eyebrow: "Cita Rasa Bangka", title: "Kuliner lokal dari warung hingga ruang makan modern.",
+    label: "Kuliner Khas",
+    menuLabel: "Kuliner",
+    eyebrow: "Cita Rasa Bangka",
+    title: "Kuliner lokal dari warung hingga ruang makan modern.",
     description: "Jelajahi usaha kuliner, menu unggulan, kisaran harga, dan pengalaman rasa khas Bangka.",
-    detailPrimaryLabel: "Cita rasa khas", detailSecondaryLabel: "Menu unggulan", detailTertiaryLabel: "Metode pembayaran",
+    detailPrimaryLabel: "Cita rasa khas",
+    detailSecondaryLabel: "Menu unggulan",
+    detailTertiaryLabel: "Metode pembayaran",
   },
   hotel: {
-    menuLabel: "Hotel", eyebrow: "Tempat Menginap", title: "Pilihan akomodasi untuk perjalanan yang lebih nyaman.",
+    label: "Akomodasi & Hotel",
+    menuLabel: "Hotel",
+    eyebrow: "Tempat Menginap",
+    title: "Pilihan akomodasi untuk perjalanan yang lebih nyaman.",
     description: "Temukan hotel dan penginapan dengan informasi lokasi, harga, fasilitas umum, dan reservasi.",
-    detailPrimaryLabel: "Informasi reservasi", detailSecondaryLabel: "Aksesibilitas", detailTertiaryLabel: "Kebijakan hotel",
+    detailPrimaryLabel: "Informasi reservasi",
+    detailSecondaryLabel: "Aksesibilitas",
+    detailTertiaryLabel: "Kebijakan hotel",
   },
   "satwa-endemik": {
-    menuLabel: "Satwa Endemik", eyebrow: "Kekayaan Hayati", title: "Kenali satwa khas dan fauna penting di Bangka.",
+    label: "Satwa Endemik & Biodiversitas",
+    menuLabel: "Satwa Endemik",
+    eyebrow: "Kekayaan Hayati",
+    title: "Kenali satwa khas dan fauna penting di Bangka.",
     description: "Pelajari habitat, persebaran, ciri, dan informasi konservasi satwa yang hidup di wilayah Bangka dan sekitarnya.",
-    detailPrimaryLabel: "Habitat", detailSecondaryLabel: "Persebaran", detailTertiaryLabel: "Fakta unik",
+    detailPrimaryLabel: "Habitat",
+    detailSecondaryLabel: "Persebaran",
+    detailTertiaryLabel: "Fakta unik",
   },
 };
 
@@ -232,7 +253,7 @@ function normalizeRows(rows: PublicTourismItem[]) {
   return rows.map((row) => ({ ...row, image: browserSafeR2ImageUrl(row.image) }));
 }
 
-export async function getPublicTourismList(kind: TourismKind, page = 1, pageSize = 9) {
+export async function getPublicTourismList(kind: TourismKind, page = 1, pageSize = 9, _limit?: number) {
   const safePage = normalizePage(page);
   const safeSize = Math.min(Math.max(Math.floor(pageSize), 1), 24);
   const offset = (safePage - 1) * safeSize;

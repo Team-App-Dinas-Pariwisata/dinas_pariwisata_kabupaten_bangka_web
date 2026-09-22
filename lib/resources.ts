@@ -24,6 +24,7 @@ export type ResourceField = {
   min?: number;
   max?: number;
   step?: number | "any";
+  hidden?: boolean;
 };
 
 export type ResourceConfig = {
@@ -67,7 +68,7 @@ export const resourceConfigs: Record<string, ResourceConfig> = {
       { key: "foto_alt", label: "Teks Alternatif Foto" },
       { key: "kata_kunci", label: "Kata Kunci", placeholder: "ekraf, bangka, pariwisata" },
       { key: "headline", label: "Jadikan Headline", type: "checkbox" },
-      { key: "urutan_tampil", label: "Urutan Tampil", type: "number" },
+      { key: "urutan_tampil", label: "Urutan Tampil", type: "number", defaultValue: 0, hidden: true },
       { key: "dipublikasikan", label: "Dipublikasikan", type: "checkbox" },
       { key: "tanggal_publikasi", label: "Tanggal Publikasi", type: "datetime-local" },
       { key: "aktif", label: "Aktif", type: "checkbox", defaultValue: true },
@@ -78,7 +79,7 @@ export const resourceConfigs: Record<string, ResourceConfig> = {
       { key: "penulis_tampil", label: "Penulis" },
       { key: "dipublikasikan", label: "Publik" },
       { key: "headline", label: "Headline" },
-      { key: "created_at", label: "Dibuat" },
+      { key: "tanggal_publikasi", label: "Tanggal Publish" },
     ],
   },
   acara: {
@@ -138,7 +139,7 @@ export const resourceConfigs: Record<string, ResourceConfig> = {
       { key: "video_url", label: "URL Video", type: "url", placeholder: "https://..." },
       { key: "kata_kunci", label: "Kata Kunci" },
       { key: "unggulan", label: "Acara Unggulan", type: "checkbox" },
-      { key: "urutan_tampil", label: "Urutan Tampil", type: "number" },
+      { key: "urutan_tampil", label: "Urutan Tampil", type: "number", defaultValue: 0, hidden: true },
       { key: "dipublikasikan", label: "Dipublikasikan", type: "checkbox" },
       { key: "tanggal_publikasi", label: "Tanggal Publikasi", type: "datetime-local" },
       { key: "aktif", label: "Aktif", type: "checkbox", defaultValue: true },
@@ -157,9 +158,9 @@ export const resourceConfigs: Record<string, ResourceConfig> = {
     label: "Tempat Wisata",
     select: [
       "id", "slug", "nama_tempat", "kategori_wisata_id",
-      "kategori_wisata",
+      "(SELECT nama_kategori FROM master_kategori_wisata WHERE id = kategori_wisata_id) AS kategori_wisata",
       "nama_pengelola", "jenis_pengelola", "deskripsi_singkat", "deskripsi", "sejarah", "daya_tarik_utama",
-      "alamat", "kecamatan_id", "kecamatan",
+      "alamat", "kecamatan_id", "(SELECT nama_kecamatan FROM master_kecamatan WHERE id = kecamatan_id) AS kecamatan",
       "kelurahan_id", "kode_pos", "latitude", "longitude", "telepon", "whatsapp", "email", "website", "instagram", "facebook", "tiktok",
       "harga_tiket_domestik_dewasa", "harga_tiket_domestik_anak", "harga_tiket_mancanegara", "biaya_parkir",
       "waktu_kunjungan_terbaik", "durasi_kunjungan", "durasi_kunjungan_menit", "cocok_anak", "cocok_keluarga", "ramah_lansia",
@@ -190,6 +191,7 @@ export const resourceConfigs: Record<string, ResourceConfig> = {
       { key: "sejarah", label: "Sejarah", type: "textarea" },
       { key: "daya_tarik_utama", label: "Daya Tarik Utama", type: "textarea" },
       { key: "alamat", label: "Alamat", type: "textarea", required: true },
+      { key: "fasilitas_ids", label: "Fasilitas Wisata", type: "multicheck", lookup: "fasilitas-wisata" },
       { key: "kecamatan_id", label: "Kecamatan", type: "select", lookup: "kecamatan" },
       { key: "kelurahan_id", label: "Desa/Kelurahan", type: "select", lookup: "kelurahan", dependsOn: "kecamatan_id" },
       { key: "kode_pos", label: "Kode Pos" },
@@ -209,7 +211,6 @@ export const resourceConfigs: Record<string, ResourceConfig> = {
         { label: "Sangat Mudah", value: "Sangat Mudah" }, { label: "Mudah", value: "Mudah" }, { label: "Sedang", value: "Sedang" }, { label: "Sulit", value: "Sulit" }, { label: "Sangat Sulit", value: "Sangat Sulit" },
       ] },
       { key: "akses_transportasi", label: "Akses Transportasi", type: "textarea" }, { key: "aksesibilitas", label: "Aksesibilitas", type: "textarea" },
-      { key: "fasilitas_ids", label: "Fasilitas Tempat Wisata", type: "multicheck", lookup: "fasilitas-wisata" },
       { key: "peraturan_pengunjung", label: "Peraturan Pengunjung", type: "textarea" }, { key: "informasi_keselamatan", label: "Informasi Keselamatan", type: "textarea" },
       { key: "kontak_darurat", label: "Kontak Darurat" },
       { key: "foto_utama", label: "Foto Utama", type: "image" }, { key: "video_url", label: "URL Video", type: "url", placeholder: "https://..." },
@@ -220,16 +221,16 @@ export const resourceConfigs: Record<string, ResourceConfig> = {
     ],
     columns: [
       { key: "foto_utama", label: "Gambar" }, { key: "nama_tempat", label: "Tempat Wisata" }, { key: "kategori_wisata", label: "Kategori" },
-      { key: "fasilitas", label: "Fasilitas" }, { key: "kecamatan", label: "Kecamatan" }, { key: "dipublikasikan", label: "Publik" }, { key: "aktif", label: "Aktif" },
+      { key: "kecamatan", label: "Kecamatan" }, { key: "dipublikasikan", label: "Publik" }, { key: "aktif", label: "Aktif" },
     ],
   },
   hotel: {
     table: "hotel",
     label: "Hotel",
     select: [
-      "id", "slug", "nama_hotel", "jenis_hotel_id", "jenis_hotel",
+      "id", "slug", "nama_hotel", "jenis_hotel_id", "(SELECT nama_jenis FROM master_jenis_hotel WHERE id = jenis_hotel_id) AS jenis_hotel",
       "klasifikasi_bintang", "nama_pengelola", "deskripsi_singkat", "deskripsi", "alamat", "kecamatan_id",
-      "kecamatan", "kelurahan_id", "kode_pos", "latitude", "longitude",
+      "(SELECT nama_kecamatan FROM master_kecamatan WHERE id = kecamatan_id) AS kecamatan", "kelurahan_id", "kode_pos", "latitude", "longitude",
       "telepon", "whatsapp", "email", "website", "instagram", "facebook", "jam_check_in", "jam_check_out", "jumlah_kamar", "harga_mulai", "harga_sampai",
       "informasi_reservasi", "kebijakan_hotel", "aksesibilitas", "nomor_izin_usaha", "nomor_sertifikat_chse", "foto_utama", "video_url",
       "unggulan", "urutan_tampil", "dipublikasikan", "tanggal_publikasi", "aktif", "created_at", "updated_at",
@@ -248,13 +249,13 @@ export const resourceConfigs: Record<string, ResourceConfig> = {
       { key: "klasifikasi_bintang", label: "Klasifikasi Bintang", type: "number", min: 0, max: 5 }, { key: "nama_pengelola", label: "Nama Pengelola" },
       { key: "deskripsi_singkat", label: "Deskripsi Singkat", type: "textarea" }, { key: "deskripsi", label: "Deskripsi Lengkap", type: "textarea" },
       { key: "alamat", label: "Alamat", type: "textarea", required: true }, { key: "kecamatan_id", label: "Kecamatan", type: "select", lookup: "kecamatan" },
+      { key: "fasilitas_ids", label: "Fasilitas Hotel", type: "multicheck", lookup: "fasilitas-hotel" },
       { key: "kelurahan_id", label: "Desa/Kelurahan", type: "select", lookup: "kelurahan", dependsOn: "kecamatan_id" }, { key: "kode_pos", label: "Kode Pos" },
       { key: "latitude", label: "Latitude", type: "number", min: -90, max: 90, step: "any" }, { key: "longitude", label: "Longitude", type: "number", min: -180, max: 180, step: "any" },
       { key: "telepon", label: "Telepon" }, { key: "whatsapp", label: "WhatsApp" }, { key: "email", label: "Email", type: "email" }, { key: "website", label: "Website", type: "url", placeholder: "https://..." },
       { key: "instagram", label: "Instagram" }, { key: "facebook", label: "Facebook" }, { key: "jam_check_in", label: "Jam Check-in", type: "time" }, { key: "jam_check_out", label: "Jam Check-out", type: "time" },
       { key: "jumlah_kamar", label: "Jumlah Kamar", type: "number", min: 0 }, { key: "harga_mulai", label: "Harga Mulai", type: "number", min: 0 }, { key: "harga_sampai", label: "Harga Sampai", type: "number", min: 0 },
       { key: "informasi_reservasi", label: "Informasi Reservasi", type: "textarea" }, { key: "kebijakan_hotel", label: "Kebijakan Hotel", type: "textarea" }, { key: "aksesibilitas", label: "Aksesibilitas", type: "textarea" },
-      { key: "fasilitas_ids", label: "Fasilitas Hotel", type: "multicheck", lookup: "fasilitas-hotel" },
       { key: "nomor_izin_usaha", label: "Nomor Izin Usaha" }, { key: "nomor_sertifikat_chse", label: "Nomor Sertifikat CHSE" },
       { key: "foto_utama", label: "Foto Utama", type: "image" }, { key: "video_url", label: "URL Video", type: "url", placeholder: "https://..." },
       { key: "unggulan", label: "Hotel Unggulan", type: "checkbox" }, { key: "urutan_tampil", label: "Urutan Tampil", type: "number", min: 0, defaultValue: 0 },
@@ -262,16 +263,16 @@ export const resourceConfigs: Record<string, ResourceConfig> = {
     ],
     columns: [
       { key: "foto_utama", label: "Gambar" }, { key: "nama_hotel", label: "Hotel" }, { key: "jenis_hotel", label: "Jenis" }, { key: "klasifikasi_bintang", label: "Bintang" },
-      { key: "fasilitas", label: "Fasilitas" }, { key: "kecamatan", label: "Kecamatan" }, { key: "dipublikasikan", label: "Publik" },
+      { key: "kecamatan", label: "Kecamatan" }, { key: "dipublikasikan", label: "Publik" },
     ],
   },
   kuliner: {
     table: "kuliner",
     label: "Kuliner",
     select: [
-      "id", "slug", "nama_usaha", "kategori_kuliner_id", "kategori_kuliner",
+      "id", "slug", "nama_usaha", "kategori_kuliner_id", "(SELECT nama_kategori FROM master_kategori_kuliner WHERE id = kategori_kuliner_id) AS kategori_kuliner",
       "nama_pemilik", "deskripsi_singkat", "deskripsi", "menu_unggulan", "cita_rasa_khas", "alamat", "kecamatan_id",
-      "kecamatan", "kelurahan_id", "kode_pos", "latitude", "longitude", "telepon", "whatsapp", "email",
+      "(SELECT nama_kecamatan FROM master_kecamatan WHERE id = kecamatan_id) AS kecamatan", "kelurahan_id", "kode_pos", "latitude", "longitude", "telepon", "whatsapp", "email",
       "website", "instagram", "facebook", "tiktok", "harga_mulai", "harga_sampai", "kapasitas_pengunjung", "tersedia_dine_in", "tersedia_takeaway", "tersedia_delivery",
       "menerima_reservasi", "status_halal", "nomor_sertifikat_halal", "nomor_pirt", "nomor_nib", "metode_pembayaran", "foto_utama", "video_url", "unggulan", "urutan_tampil",
       "dipublikasikan", "tanggal_publikasi", "aktif", "created_at", "updated_at",
@@ -290,6 +291,7 @@ export const resourceConfigs: Record<string, ResourceConfig> = {
       { key: "nama_pemilik", label: "Nama Pemilik/Pengelola" }, { key: "deskripsi_singkat", label: "Deskripsi Singkat", type: "textarea" }, { key: "deskripsi", label: "Deskripsi Lengkap", type: "textarea" },
       { key: "menu_unggulan", label: "Menu Unggulan", type: "textarea" }, { key: "cita_rasa_khas", label: "Cita Rasa Khas", type: "textarea" },
       { key: "alamat", label: "Alamat", type: "textarea", required: true }, { key: "kecamatan_id", label: "Kecamatan", type: "select", lookup: "kecamatan" },
+      { key: "fasilitas_ids", label: "Fasilitas Kuliner", type: "multicheck", lookup: "fasilitas-kuliner" },
       { key: "kelurahan_id", label: "Desa/Kelurahan", type: "select", lookup: "kelurahan", dependsOn: "kecamatan_id" }, { key: "kode_pos", label: "Kode Pos" },
       { key: "latitude", label: "Latitude", type: "number", min: -90, max: 90, step: "any" }, { key: "longitude", label: "Longitude", type: "number", min: -180, max: 180, step: "any" },
       { key: "telepon", label: "Telepon" }, { key: "whatsapp", label: "WhatsApp" }, { key: "email", label: "Email", type: "email" }, { key: "website", label: "Website", type: "url", placeholder: "https://..." },
@@ -302,14 +304,13 @@ export const resourceConfigs: Record<string, ResourceConfig> = {
         { label: "Tidak Halal", value: "Tidak Halal" }, { label: "Proses Sertifikasi", value: "Proses Sertifikasi" },
       ] },
       { key: "nomor_sertifikat_halal", label: "Nomor Sertifikat Halal" }, { key: "nomor_pirt", label: "Nomor PIRT" }, { key: "nomor_nib", label: "Nomor NIB" },
-      { key: "metode_pembayaran", label: "Metode Pembayaran", type: "textarea" },
-      { key: "fasilitas_ids", label: "Fasilitas Kuliner", type: "multicheck", lookup: "fasilitas-kuliner" }, { key: "foto_utama", label: "Foto Utama", type: "image" }, { key: "video_url", label: "URL Video", type: "url", placeholder: "https://..." },
+      { key: "metode_pembayaran", label: "Metode Pembayaran", type: "textarea" }, { key: "foto_utama", label: "Foto Utama", type: "image" }, { key: "video_url", label: "URL Video", type: "url", placeholder: "https://..." },
       { key: "unggulan", label: "Kuliner Unggulan", type: "checkbox" }, { key: "urutan_tampil", label: "Urutan Tampil", type: "number", min: 0, defaultValue: 0 },
       { key: "dipublikasikan", label: "Dipublikasikan", type: "checkbox" }, { key: "tanggal_publikasi", label: "Tanggal Publikasi", type: "datetime-local" }, { key: "aktif", label: "Aktif", type: "checkbox", defaultValue: true },
     ],
     columns: [
       { key: "foto_utama", label: "Gambar" }, { key: "nama_usaha", label: "Kuliner" }, { key: "kategori_kuliner", label: "Kategori" }, { key: "status_halal", label: "Status Halal" },
-      { key: "fasilitas", label: "Fasilitas" }, { key: "kecamatan", label: "Kecamatan" }, { key: "dipublikasikan", label: "Publik" },
+      { key: "kecamatan", label: "Kecamatan" }, { key: "dipublikasikan", label: "Publik" },
     ],
   },
   "satwa-endemik": {
@@ -317,7 +318,7 @@ export const resourceConfigs: Record<string, ResourceConfig> = {
     label: "Satwa Endemik",
     select: [
       "id", "slug", "nama_umum", "nama_lokal", "nama_ilmiah", "kingdom", "filum", "kelas", "ordo", "famili", "genus", "status_endemisitas", "wilayah_endemik",
-      "status_konservasi_id", "status_konservasi",
+      "status_konservasi_id", "(SELECT CONCAT(kode, ' - ', nama_status) FROM master_status_konservasi WHERE id = status_konservasi_id) AS status_konservasi",
       "status_perlindungan_indonesia", "nomor_peraturan_perlindungan", "deskripsi_singkat", "deskripsi", "ciri_fisik", "habitat", "persebaran", "makanan", "perilaku", "reproduksi",
       "ancaman", "upaya_konservasi", "fakta_unik", "panduan_pengamatan", "peringatan_interaksi", "foto_utama", "audio_url", "video_url", "sumber_ringkas", "unggulan", "urutan_tampil",
       "dipublikasikan", "tanggal_publikasi", "aktif", "created_at", "updated_at",

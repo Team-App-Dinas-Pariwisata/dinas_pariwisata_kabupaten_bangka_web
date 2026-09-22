@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
+import { startGuestNavigation } from "@/components/Preloader";
 
 export type PublicDirectoryItem = {
   id: number;
@@ -16,14 +18,7 @@ export type PublicDirectoryItem = {
   updated_at: string | null;
 };
 
-type FilterType = "all" | PublicDirectoryItem["type"];
-
-const filters: { id: FilterType; label: string }[] = [
-  { id: "all", label: "Semua" },
-  { id: "ekraf", label: "Pelaku Ekraf" },
-  { id: "sdm", label: "SDM Pariwisata" },
-  { id: "komunitas", label: "Komunitas" },
-];
+type SearchCategory = "ekraf" | "sdm" | "komunitas";
 
 const typeLabels: Record<PublicDirectoryItem["type"], string> = {
   ekraf: "Pelaku Ekraf",
@@ -41,19 +36,19 @@ function initials(value: string) {
 }
 
 export default function VerifiedDirectory() {
+  const router = useRouter();
   const trackRef = useRef<HTMLDivElement>(null);
-  const [filter, setFilter] = useState<FilterType>("all");
-  const [draftQuery, setDraftQuery] = useState("");
-  const [query, setQuery] = useState("");
+
+  const [searchTarget, setSearchTarget] = useState<SearchCategory>("ekraf");
+  const [searchQuery, setSearchQuery] = useState("");
+
   const [items, setItems] = useState<PublicDirectoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
-    const params = new URLSearchParams({ limit: "30" });
-    if (filter !== "all") params.set("type", filter);
-    if (query) params.set("q", query);
+    const params = new URLSearchParams({ limit: "10" });
 
     setLoading(true);
     setError("");
@@ -74,17 +69,16 @@ export default function VerifiedDirectory() {
       });
 
     return () => controller.abort();
-  }, [filter, query]);
+  }, []);
 
-  function submitSearch(event: FormEvent<HTMLFormElement>) {
+  function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setQuery(draftQuery.trim());
-    window.requestAnimationFrame(() => trackRef.current?.scrollTo({ left: 0, behavior: "smooth" }));
-  }
-
-  function changeFilter(next: FilterType) {
-    setFilter(next);
-    window.requestAnimationFrame(() => trackRef.current?.scrollTo({ left: 0, behavior: "smooth" }));
+    const query = searchQuery.trim();
+    const targetUrl = query
+      ? `/direktori/${searchTarget}?q=${encodeURIComponent(query)}`
+      : `/direktori/${searchTarget}`;
+    startGuestNavigation();
+    router.push(targetUrl);
   }
 
   function move(direction: -1 | 1) {
@@ -101,37 +95,48 @@ export default function VerifiedDirectory() {
             <span className="section-kicker">Direktori Terverifikasi Kabupaten Bangka</span>
             <h2 id="verified-directory-title">Temukan pelaku, SDM pariwisata, dan komunitas.</h2>
           </div>
-          <p>Daftar ini hanya menampilkan data yang sudah disetujui petugas. Pelaku Ekraf berstatus unggulan otomatis ditempatkan lebih awal.</p>
+          <p>
+            Daftar pada slide ini menampilkan 10 pelaku terakhir yang telah disetujui petugas. Pelaku Ekraf berstatus unggulan otomatis ditempatkan lebih awal. Untuk melihat data lengkapnya, silakan pilih kategori pencarian di atas atau klik menu direktori pada navigasi.
+          </p>
         </div>
 
-        <form className="directory-search" onSubmit={submitSearch} role="search">
+        <form className="directory-search directory-home-search" onSubmit={handleSearch} role="search">
+          <div className="directory-search-category">
+            <select
+              value={searchTarget}
+              onChange={(e) => setSearchTarget(e.target.value as SearchCategory)}
+              className="directory-category-select"
+              aria-label="Pilih kategori pencarian"
+            >
+              <option value="ekraf">Pelaku Ekraf</option>
+              <option value="sdm">SDM Pariwisata</option>
+              <option value="komunitas">Komunitas</option>
+            </select>
+            <span className="directory-category-arrow" aria-hidden="true">▾</span>
+          </div>
+
           <label>
             <span className="directory-search-icon" aria-hidden="true">⌕</span>
             <input
               type="search"
-              value={draftQuery}
-              onChange={(event) => setDraftQuery(event.target.value)}
-              placeholder="Cari nama usaha, pelaku, subsektor, SDM, atau komunitas..."
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder={
+                searchTarget === "ekraf"
+                  ? "Cari nama usaha, pelaku, produk, subsektor..."
+                  : searchTarget === "sdm"
+                    ? "Cari nama SDM, jabatan, tempat tugas..."
+                    : "Cari nama komunitas, kategori, rincian..."
+              }
               aria-label="Cari direktori terverifikasi"
             />
           </label>
           <button type="submit">Cari</button>
         </form>
 
-        <div className="directory-toolbar">
-          <div className="directory-filters" role="tablist" aria-label="Filter direktori">
-            {filters.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={filter === item.id ? "active" : ""}
-                onClick={() => changeFilter(item.id)}
-                role="tab"
-                aria-selected={filter === item.id}
-              >
-                {item.label}
-              </button>
-            ))}
+        <div className="directory-toolbar directory-toolbar-clean">
+          <div className="directory-toolbar-title">
+            <strong>10 Pelaku Terakhir Disetujui</strong>
           </div>
 
           <div className="directory-nav" aria-label="Navigasi daftar">
@@ -148,7 +153,7 @@ export default function VerifiedDirectory() {
             {[0, 1, 2].map((item) => <div className="directory-card directory-skeleton" key={item} />)}
           </div>
         ) : items.length === 0 ? (
-          <div className="directory-state">Belum ada profil yang sesuai dengan pencarian dan filter.</div>
+          <div className="directory-state">Belum ada profil pelaku terverifikasi yang tersedia.</div>
         ) : (
           <div className="directory-track" ref={trackRef}>
             {items.map((item) => (

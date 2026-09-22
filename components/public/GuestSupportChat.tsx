@@ -2,17 +2,13 @@
 
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
-import { InlineLoader } from "@/components/InlineLoader";
 
 const STORAGE_KEY = "si_parik_guest_chat_id_v1";
 const SEEN_KEY = "si_parik_guest_chat_seen_v1";
 const GUEST_POLL_MS = 4000;
 const PRESENCE_POLL_MS = 15000;
 
-// AI chat is allowed on local development/runtime only. On a deployed
-// production hostname (including Vercel), the widget becomes staff-only.
-
-type ChatTab = "staff" | "ai";
+type ChatTab = "staff";
 
 type ChatMessage = {
   id: number;
@@ -74,43 +70,31 @@ export default function GuestSupportChat() {
   const pathname = usePathname();
   const hidden = ["/dashboard", "/admin", "/petugas", "/login", "/akun"].some((prefix) => pathname.startsWith(prefix));
 
-  const [aiChatEnabled, setAiChatEnabled] = useState<boolean | null>(null);
   const [guestId, setGuestId] = useState("");
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<ChatTab>("staff");
+  const [activeTab] = useState<ChatTab>("staff");
   const [onlineStaffCount, setOnlineStaffCount] = useState<number | null>(null);
   const presenceResolvedRef = useRef(false);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [loadingMessages, setLoadingMessages] = useState(true);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState("");
   const [lastSeenId, setLastSeenId] = useState(0);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const chatContainerRef = useRef<HTMLDivElement | null>(null);
+  const previousMessagesRef = useRef<ChatMessage[]>([]);
+  const messageInitializedRef = useRef(false);
 
   const [aiQuestion, setAiQuestion] = useState("");
   const [aiSending, setAiSending] = useState(false);
   const [aiMessages, setAiMessages] = useState<AiChatMessage[]>([
     {
       role: "assistant",
-      text: "Halo! Saya dapat membantu penggunaan SI PARIK BANGKA, termasuk cara membuat pengajuan, syarat dokumen, cek status, revisi pengajuan, serta rekomendasi wisata sesuai kebutuhan Anda.",
+      text: "Halo! Saya dapat membantu petugasan SI PARIK BANGKA, termasuk cara membuat pengajuan, syarat dokumen, cek status, revisi pengajuan, serta rekomendasi wisata sesuai kebutuhan Anda.",
       suggestions: aiExamples,
     },
   ]);
-
-  useEffect(() => {
-    const hostname = window.location.hostname.toLowerCase();
-    const localHostname =
-      hostname === "localhost" ||
-      hostname === "127.0.0.1" ||
-      hostname === "::1" ||
-      hostname.endsWith(".localhost");
-
-    // Development builds remain AI-enabled, including access through a LAN IP.
-    // Production builds only keep AI when they are actually opened on localhost.
-    setAiChatEnabled(process.env.NODE_ENV !== "production" || localHostname);
-  }, []);
 
   useEffect(() => {
     if (hidden) return;
@@ -124,7 +108,7 @@ export default function GuestSupportChat() {
   }, [hidden]);
 
   const checkPresence = useCallback(async () => {
-    if (hidden || aiChatEnabled === null) return;
+    if (hidden) return;
     try {
       const response = await fetch("/api/chat/presence", { cache: "no-store" });
       const payload = await response.json() as { data?: { online_count?: number } };
@@ -133,36 +117,36 @@ export default function GuestSupportChat() {
 
       if (!presenceResolvedRef.current) {
         presenceResolvedRef.current = true;
-        setActiveTab(count > 0 || !aiChatEnabled ? "staff" : "ai");
+        
       }
     } catch {
       setOnlineStaffCount(0);
       if (!presenceResolvedRef.current) {
         presenceResolvedRef.current = true;
-        setActiveTab(aiChatEnabled ? "ai" : "staff");
+        
       }
     }
-  }, [hidden, aiChatEnabled]);
+  }, [hidden]);
 
   useEffect(() => {
-    if (hidden || aiChatEnabled === null) return;
+    if (hidden) return;
     void checkPresence();
     const timer = window.setInterval(() => void checkPresence(), PRESENCE_POLL_MS);
     return () => window.clearInterval(timer);
-  }, [checkPresence, hidden, aiChatEnabled]);
+  }, [checkPresence, hidden]);
 
   const loadMessages = useCallback(async () => {
     if (!guestId) return;
     try {
-      const response = await fetch(`/api/chat/guest?guest_id=${encodeURIComponent(guestId)}`, { cache: "no-store" });
+      const response = await fetch(`/api/chat/guest?guest_id=${encodeURIComponent(guestId)}&_=${Date.now()}`, { cache: "no-store", headers: { "Cache-Control": "no-cache" } });
       const payload = (await response.json()) as GuestPayload;
       if (!response.ok) throw new Error(payload.message || "Chat belum dapat dimuat.");
-      setMessages(payload.data?.messages ?? []);
+      const freshMessages = payload.data?.messages ?? [];
+      setMessages([...freshMessages]);
+
       setError("");
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Chat belum dapat dimuat.");
-    } finally {
-      setLoadingMessages(false);
     }
   }, [guestId]);
 
@@ -174,21 +158,41 @@ export default function GuestSupportChat() {
   }, [guestId, hidden, loadMessages]);
 
   useEffect(() => {
-    if (!isOpen || activeTab !== "staff") return;
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    const latest = messages[messages.length - 1]?.id ?? 0;
+    if (!isOpen) return;
+
+    const previousMessages = previousMessagesRef.current;
+    const latestMessage = messages[messages.length - 1];
+    const previousLastId = previousMessages[previousMessages.length - 1]?.id ?? 0;
+
+    if (messageInitializedRef.current && latestMessage && latestMessage.id > previousLastId && latestMessage.sender_type === "staff") {
+      window.setTimeout(() => {
+        scrollChatToBottom();
+      }, 100);
+    }
+
+    previousMessagesRef.current = messages;
+    messageInitializedRef.current = true;
+
+    const latest = latestMessage?.id ?? 0;
     if (latest > lastSeenId) {
       setLastSeenId(latest);
       window.localStorage.setItem(SEEN_KEY, String(latest));
     }
-  }, [messages, isOpen, activeTab, lastSeenId]);
+  }, [messages, isOpen, lastSeenId]);
 
   const unread = messages.filter((message) => message.sender_type === "staff" && message.id > lastSeenId).length;
   const staffOnline = (onlineStaffCount ?? 0) > 0;
 
+  function scrollChatToBottom() {
+    const container = chatContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
+  }
+
   function openPanel() {
     setIsOpen(true);
-    setActiveTab(staffOnline || !aiChatEnabled ? "staff" : "ai");
+    
     void checkPresence();
   }
 
@@ -203,9 +207,44 @@ export default function GuestSupportChat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ guest_id: guestId, message }),
       });
-      const payload = (await response.json()) as { message?: string };
+      const payload = (await response.json()) as {
+        message?: string;
+        data?: {
+          id: number;
+          conversation_id: number;
+          sender_type: "guest";
+          sender_user_id: null;
+          sender_name_snapshot: string | null;
+          message: string;
+          created_at?: string;
+        };
+      };
       if (!response.ok) throw new Error(payload.message || "Pesan belum dapat dikirim.");
+
+      // Update langsung di sisi guest agar pesan tampil tanpa menunggu balasan petugas.
+      if (payload.data) {
+        const optimisticMessage: ChatMessage = {
+          id: Number(payload.data.id),
+          conversation_id: Number(payload.data.conversation_id),
+          sender_type: "guest",
+          sender_user_id: null,
+          sender_name_snapshot: null,
+          message: payload.data.message,
+          created_at: payload.data.created_at || new Date().toISOString(),
+        };
+
+        setMessages((current) => {
+          if (current.some((item) => item.id === optimisticMessage.id)) {
+            return current;
+          }
+          return [...current, optimisticMessage];
+        });
+      }
+
       setInput("");
+      window.setTimeout(() => {
+        scrollChatToBottom();
+      }, 100);
       await loadMessages();
     } catch (sendError) {
       setError(sendError instanceof Error ? sendError.message : "Pesan belum dapat dikirim.");
@@ -272,10 +311,7 @@ export default function GuestSupportChat() {
       ]);
 
       if (payload.type === "search_redirect" && payload.redirect_url) {
-        window.setTimeout(() => {
-          window.dispatchEvent(new Event("si-parik:navigation-start"));
-          window.location.assign(payload.redirect_url as string);
-        }, 850);
+        window.setTimeout(() => window.location.assign(payload.redirect_url as string), 850);
       }
     } catch (aiError) {
       setAiMessages((current) => [
@@ -300,7 +336,7 @@ export default function GuestSupportChat() {
   const latestAssistant = [...aiMessages].reverse().find((message) => message.role === "assistant" && message.suggestions?.length);
   const aiSuggestions = latestAssistant?.suggestions ?? aiExamples;
 
-  if (hidden || aiChatEnabled === null) return null;
+  if (hidden) return null;
 
   return (
     <>
@@ -319,56 +355,35 @@ export default function GuestSupportChat() {
         <section className="ai-panel unified-chat-panel" role="dialog" aria-label="Pojok Bincang">
           <header className="ai-panel-head unified-chat-head">
             <div>
-              <span className={`ai-status ${staffOnline ? "is-staff-online" : aiChatEnabled ? "is-ai-online" : ""}`}>
+              <span className={`ai-status ${staffOnline ? "is-staff-online" : "is-ai-online"}`}>
                 <i />
                 {staffOnline
                   ? `${onlineStaffCount} PETUGAS ONLINE`
-                  : onlineStaffCount === null
-                    ? "MENGECEK PETUGAS"
-                    : aiChatEnabled ? "AI ONLINE · PETUGAS OFFLINE" : "PETUGAS OFFLINE"}
+                  : onlineStaffCount === null ? "MENGECEK PETUGAS" : "PETUGAS OFFLINE"}
               </span>
               <strong>POJOK BINCANG</strong>
-              <small>{aiChatEnabled ? "Asisten pengajuan, ekraf & pariwisata" : "Chat langsung dengan petugas"}</small>
+              <small>Asisten pengajuan, ekraf &amp; pariwisata</small>
             </div>
             <button type="button" onClick={() => setIsOpen(false)} aria-label="Tutup Pojok Bincang">×</button>
           </header>
 
-          {aiChatEnabled && (
-            <div className="unified-chat-tabs" role="tablist" aria-label="Pilihan layanan chat">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeTab === "staff"}
-                className={activeTab === "staff" ? "active" : ""}
-                onClick={() => setActiveTab("staff")}
-              >
-                <span>Chat dengan Petugas</span>
-                <small>{staffOnline ? `${onlineStaffCount} online` : onlineStaffCount === null ? "Mengecek..." : "Offline · tetap bisa kirim"}</small>
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeTab === "ai"}
-                className={activeTab === "ai" ? "active" : ""}
-                onClick={() => setActiveTab("ai")}
-              >
-                <span>Chat dengan AI</span>
-                <small>Siap digunakan</small>
-              </button>
-            </div>
-          )}
+          {/* <div className="unified-chat-tabs" role="tablist" aria-label="Layanan chat">
+            <button type="button" role="tab" aria-selected="true" className="active">
+              <span>Chat dengan Petugas</span>
+              <small>{staffOnline ? `${onlineStaffCount} online` : onlineStaffCount === null ? "Mengecek..." : "Offline · tetap bisa kirim"}</small>
+            </button>
+          </div> */}
 
-          {activeTab === "staff" || !aiChatEnabled ? (
+          {activeTab === "staff" ? (
             <div className="unified-staff-chat" role="tabpanel">
               <div className="support-chat-meta">ID Pengunjung: <strong>{guestId ? shortGuestId(guestId) : "..."}</strong></div>
 
-              <div className="support-chat-messages" aria-live="polite">
+              <div ref={chatContainerRef} className="support-chat-messages" aria-live="polite">
                 <div className={`support-chat-welcome ${staffOnline ? "" : "is-offline"}`}>
                   {staffOnline
                     ? "Halo. Petugas sedang online. Silakan tulis pesan Anda. Semua petugas dapat melihat percakapan ini dan petugas lain dapat melanjutkan balasan bila diperlukan."
                     : "Petugas sedang offline. Anda tetap dapat mengirim pesan. Pesan akan disimpan dan dapat dibaca serta dibalas oleh petugas saat mereka aktif kembali."}
                 </div>
-                {loadingMessages && messages.length === 0 ? <div className="support-chat-loading"><InlineLoader label="Memuat percakapan..." /></div> : null}
                 {messages.map((message) => (
                   <div className={`support-chat-message ${message.sender_type === "guest" ? "is-guest" : "is-staff"}`} key={message.id}>
                     {message.sender_type === "staff" && (
@@ -400,53 +415,12 @@ export default function GuestSupportChat() {
                   disabled={isSending}
                 />
                 <button type="button" onClick={() => void sendMessage()} disabled={isSending || !input.trim()} aria-label="Kirim pesan">
-                  {isSending ? <InlineLoader compact /> : "Kirim"}
+                  {isSending ? "..." : "Kirim"}
                 </button>
               </div>
               <div className="support-chat-foot">Percakapan akan disimpan dan dapat dimuat kembali di perangkat ini saat Anda berkunjung lagi.</div>
             </div>
-          ) : (
-            <div className="ai-panel-body unified-ai-body" role="tabpanel">
-              <div className="ai-conversation" aria-live="polite">
-                {aiMessages.map((message, index) => (
-                  <div className={`ai-bubble ${message.role === "user" ? "is-user" : ""}`} key={`${message.role}-${index}`}>
-                    {message.title && <strong className="ai-bubble-title">{message.title}</strong>}
-                    <div className="ai-bubble-copy">{message.text}</div>
-                    {message.links?.length ? (
-                      <div className="ai-bubble-links">
-                        {message.links.map((link) => (
-                          <a href={link.url} key={`${link.url}-${link.label}`}>{link.label}</a>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                ))}
-                {aiSending && <div className="ai-bubble is-loading"><InlineLoader label="Memproses pertanyaan Anda..." /></div>}
-              </div>
-              <div className="ai-example-label">Contoh / pertanyaan lanjutan</div>
-              <div className="ai-chips">
-                {aiSuggestions.map((example) => (
-                  <button type="button" key={example} onClick={() => void sendAiQuestion(example)} disabled={aiSending}>
-                    {example}
-                  </button>
-                ))}
-              </div>
-              <div className="ai-input-wrap">
-                <input
-                  type="text"
-                  value={aiQuestion}
-                  onChange={(event) => setAiQuestion(event.target.value)}
-                  onKeyDown={handleAiKeyDown}
-                  placeholder="Tanyakan pengajuan atau rekomendasi wisata..."
-                  aria-label="Pertanyaan untuk AI"
-                  disabled={aiSending}
-                />
-                <button type="button" aria-label="Kirim pertanyaan" onClick={() => void sendAiQuestion()} disabled={aiSending || !aiQuestion.trim()}>
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-                </button>
-              </div>
-            </div>
-          )}
+          ) : null}
         </section>
       )}
     </>

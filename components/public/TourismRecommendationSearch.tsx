@@ -40,7 +40,6 @@ type ResultItem = {
   rank: number;
   criteria: CriterionResult[];
   reasons: string[];
-  facilities: string[];
 };
 type SearchResponse = {
   data?: {
@@ -107,6 +106,22 @@ function priorityLabel(value: number) {
   if (value === 3) return "Normal";
   if (value === 4) return "Tinggi";
   return "Sangat tinggi";
+}
+
+function parseRupiahInput(value: string) {
+  const raw = value.trim().toLowerCase();
+  if (!raw) return null;
+  const words = raw.match(/(?:rp\s*)?(\d+(?:[.,]\d+)?)\s*(ribu|rb|k|juta|jt)\b/i);
+  if (words) {
+    const amount = Number(words[1].replace(",", "."));
+    if (!Number.isFinite(amount)) return null;
+    return amount * (/^(juta|jt)$/i.test(words[2]) ? 1_000_000 : 1_000);
+  }
+  const cleaned = raw.replace(/[^0-9,.-]/g, "");
+  if (!cleaned) return null;
+  const normalized = cleaned.replace(/\./g, "").replace(",", ".");
+  const amount = Number(normalized);
+  return Number.isFinite(amount) ? amount : null;
 }
 
 export default function TourismRecommendationSearch() {
@@ -268,7 +283,7 @@ export default function TourismRecommendationSearch() {
         latitude: latitude === "" ? null : Number(latitude),
         longitude: longitude === "" ? null : Number(longitude),
         maxDistanceKm: maxDistanceKm === "" ? null : Number(maxDistanceKm),
-        maxBudget: maxBudget === "" ? null : Number(maxBudget),
+        maxBudget: parseRupiahInput(maxBudget),
         priorities,
         requirements,
         limit: 12,
@@ -389,7 +404,7 @@ export default function TourismRecommendationSearch() {
             <div className="spk-field-grid two">
               <label className="spk-field">
                 <span>Budget maksimum <em>opsional</em></span>
-                <input type="number" min="0" max="100000000" step="1000" value={maxBudget} onChange={(event) => setMaxBudget(event.target.value)} placeholder={category === "hotel" ? "750000" : "100000"} />
+                <input type="text" inputMode="numeric" value={maxBudget} onChange={(event) => setMaxBudget(event.target.value)} placeholder={category === "hotel" ? "750.000" : "20.000"} />
                 <small>Alternatif tanpa data harga tidak dipakai jika budget diaktifkan.</small>
               </label>
               {category === "hotel" && (
@@ -500,12 +515,6 @@ export default function TourismRecommendationSearch() {
                     {item.distanceKm !== null && <span><b>{item.distanceKm.toFixed(item.distanceKm < 10 ? 1 : 0)} km</b> dari lokasi Anda</span>}
                     {item.priceFrom !== null && <span><b>{rupiah(item.priceFrom)}</b> harga mulai</span>}
                   </div>
-                  {item.facilities.length > 0 && (
-                    <div className="spk-facility-tags">
-                      {item.facilities.slice(0, 5).map((facility) => <span key={facility}>{facility}</span>)}
-                      {item.facilities.length > 5 && <span>+{item.facilities.length - 5} fasilitas</span>}
-                    </div>
-                  )}
                   <div className="spk-reason-tags">{item.reasons.map((reason) => <span key={reason}>{reason}</span>)}</div>
                   <div className="spk-result-actions">
                     <Link href={item.href}>Lihat detail <span>→</span></Link>

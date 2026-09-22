@@ -3,17 +3,11 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import type { ResourceField } from "@/lib/resources";
 import { PortalIcon } from "./PortalIcon";
-import { InlineLoader } from "../InlineLoader";
 import { compareTableValues, SortableTableHeader, TablePagination, type SortDirection } from "./DataTableControls";
+import { startPortalLoading, stopPortalLoading } from "./PortalPreloader";
 
 type Row = Record<string, unknown> & { id: number };
-type LookupOption = {
-  label: string;
-  value: string | number;
-  parentValue?: string | number;
-  group?: string;
-  code?: string;
-};
+type LookupOption = { label: string; value: string | number; parentValue?: string | number; groupName?: string };
 type Props = {
   resource: string;
   title: string;
@@ -35,11 +29,12 @@ function formatValue(key: string, value: unknown) {
 }
 
 function inputValue(field: ResourceField, value: unknown) {
-  if (field.type === "checkbox") return Boolean(Number(value));
   if (field.type === "multicheck") {
-    if (!Array.isArray(value)) return [];
-    return value.map((item) => Number(item)).filter((item) => Number.isSafeInteger(item) && item > 0);
+    if (Array.isArray(value)) return value.map((item) => String(item));
+    if (typeof value === "string" && value.trim()) return value.split(",").map((item) => item.trim()).filter(Boolean);
+    return [];
   }
+  if (field.type === "checkbox") return Boolean(Number(value));
   if (field.type === "datetime-local" && value) return String(value).replace(" ", "T").slice(0, 16);
   return value === null || value === undefined ? "" : String(value);
 }
@@ -127,71 +122,6 @@ function ImageField({ value, onChange, disabled }: { value: unknown; onChange: (
   );
 }
 
-function MultiCheckField({
-  value,
-  options,
-  onChange,
-}: {
-  value: unknown;
-  options: LookupOption[];
-  onChange: (value: number[]) => void;
-}) {
-  const selected = new Set(
-    (Array.isArray(value) ? value : [])
-      .map((item) => Number(item))
-      .filter((item) => Number.isSafeInteger(item) && item > 0),
-  );
-
-  const grouped = options.reduce<Record<string, LookupOption[]>>((groups, option) => {
-    const key = option.group?.trim() || "Lainnya";
-    (groups[key] ??= []).push(option);
-    return groups;
-  }, {});
-
-  function toggle(optionValue: string | number, checked: boolean) {
-    const id = Number(optionValue);
-    if (!Number.isSafeInteger(id) || id <= 0) return;
-    const next = new Set(selected);
-    if (checked) next.add(id);
-    else next.delete(id);
-    onChange([...next].sort((a, b) => a - b));
-  }
-
-  if (!options.length) {
-    return <div className="portal-multicheck-empty">Belum ada master fasilitas aktif untuk kategori ini.</div>;
-  }
-
-  return (
-    <div className="portal-multicheck">
-      {Object.entries(grouped).map(([group, groupOptions]) => (
-        <fieldset className="portal-multicheck-group" key={group}>
-          <legend>{group}</legend>
-          <div className="portal-multicheck-options">
-            {groupOptions.map((option) => {
-              const id = Number(option.value);
-              const checked = selected.has(id);
-              return (
-                <label className={`portal-multicheck-option${checked ? " is-selected" : ""}`} key={String(option.value)}>
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={(event) => toggle(option.value, event.target.checked)}
-                  />
-                  <span className="portal-multicheck-mark" aria-hidden="true">✓</span>
-                  <span>
-                    <strong>{option.label}</strong>
-                    {option.code && <small>{option.code}</small>}
-                  </span>
-                </label>
-              );
-            })}
-          </div>
-        </fieldset>
-      ))}
-    </div>
-  );
-}
-
 async function deleteManagedR2Image(url: unknown) {
   if (typeof url !== "string" || !url.trim()) return;
   try {
@@ -215,28 +145,29 @@ export function DataManager({ resource, title, description, label, fields, colum
   const [form, setForm] = useState<Record<string, unknown>>({});
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [lookups, setLookups] = useState<Record<string, LookupOption[]>>({});
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const params = new URLSearchParams({ resource });
+      const params = new URLSearchParams({ resource, page: String(page), pageSize: String(pageSize), search: query });
       const response = await fetch(`/api/crud?${params.toString()}`, { cache: "no-store" });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || "Gagal mengambil data.");
       setRows(result.data);
+      setTotalItems(Number(result.total || 0));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal mengambil data.");
     } finally {
       setLoading(false);
     }
-  }, [resource]);
+  }, [resource, page, pageSize, query]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -260,22 +191,16 @@ export function DataManager({ resource, title, description, label, fields, colum
     return options.filter((option) => String(option.parentValue ?? "") === String(parentValue));
   }, [lookups, form]);
 
-  const filtered = useMemo(() => {
-    const keyword = query.trim().toLowerCase();
-    if (!keyword) return rows;
-    return rows.filter((row) => columns.some((column) => String(row[column.key] ?? "").toLowerCase().includes(keyword)));
-  }, [rows, query, columns]);
-
   const sortedRows = useMemo(() => {
-    if (!sortKey) return filtered;
-    return [...filtered].sort((left, right) => {
+    if (!sortKey) return rows;
+    return [...rows].sort((left, right) => {
       const result = compareTableValues(left[sortKey], right[sortKey]);
       return sortDirection === "asc" ? result : -result;
     });
-  }, [filtered, sortDirection, sortKey]);
+  }, [rows, sortDirection, sortKey]);
 
-  const totalPages = Math.max(1, Math.ceil(sortedRows.length / pageSize));
-  const pagedRows = useMemo(() => sortedRows.slice((page - 1) * pageSize, page * pageSize), [page, pageSize, sortedRows]);
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const pagedRows = sortedRows;
 
   useEffect(() => { setPage(1); }, [query, resource]);
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
@@ -310,12 +235,19 @@ export function DataManager({ resource, title, description, label, fields, colum
   }
 
   function openEdit(row: Row) {
+    startPortalLoading(`Menyiapkan form edit ${label.toLowerCase()}…`);
     const data: Record<string, unknown> = {};
-    fields.forEach((field) => { data[field.key] = inputValue(field, row[field.key]); });
+    fields.forEach((field) => {
+      const val = inputValue(field, row[field.key]);
+      data[field.key] = field.hidden && (val === "" || val === null || val === undefined)
+        ? (field.defaultValue ?? 0)
+        : val;
+    });
     setEditing(row);
     setForm(data);
     setError("");
     setModalOpen(true);
+    setTimeout(() => stopPortalLoading(), 280);
   }
 
   async function save(event: FormEvent) {
@@ -326,6 +258,11 @@ export function DataManager({ resource, title, description, label, fields, colum
 
     try {
       const data: Record<string, unknown> = { ...form };
+      fields.forEach((field) => {
+        if (field.hidden && (data[field.key] === undefined || data[field.key] === "" || data[field.key] === null)) {
+          if (field.defaultValue !== undefined) data[field.key] = field.defaultValue;
+        }
+      });
       for (const field of fields) {
         const value = data[field.key];
         if (field.type !== "image" || !(value instanceof File)) continue;
@@ -378,7 +315,7 @@ export function DataManager({ resource, title, description, label, fields, colum
   async function remove(row: Row) {
     if (!window.confirm(`Hapus ${label.toLowerCase()} ini? Tindakan ini tidak dapat dibatalkan.`)) return;
     setError("");
-    setDeletingId(row.id);
+    startPortalLoading(`Sedang menghapus ${label.toLowerCase()}…`);
     try {
       const response = await fetch("/api/crud", {
         method: "DELETE",
@@ -392,29 +329,29 @@ export function DataManager({ resource, title, description, label, fields, colum
     } catch (err) {
       setError(err instanceof Error ? err.message : "Data gagal dihapus.");
     } finally {
-      setDeletingId(null);
+      stopPortalLoading();
     }
   }
 
   return (
     <section>
       <div className="portal-page-head"><div><p className="portal-breadcrumb">Dashboard / {label}</p><h1>{title}</h1><p>{description}</p></div><button className="portal-primary" type="button" onClick={openCreate}><PortalIcon name="plus" />Tambah {label}</button></div>
-      <div className="dm-toolbar"><label><PortalIcon name="search" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`Cari ${label.toLowerCase()}...`} /></label><span>{filtered.length} data</span></div>
+      <div className="dm-toolbar"><label><PortalIcon name="search" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`Cari ${label.toLowerCase()}...`} /></label><span>{totalItems} data</span></div>
       {error && !modalOpen && <div className="portal-alert error">{error}</div>}
       <div className="dm-table-wrap">
         <table className="dm-table"><thead><tr>{columns.map((col) => <SortableTableHeader key={col.key} label={col.label} sortKey={col.key} activeKey={sortKey} direction={sortDirection} onSort={handleSort} />)}<th>Aksi</th></tr></thead><tbody>
-          {loading ? <tr><td colSpan={columns.length + 1} className="dm-empty"><InlineLoader label="Memuat data..." /></td></tr> : sortedRows.length === 0 ? <tr><td colSpan={columns.length + 1} className="dm-empty">Belum ada data.</td></tr> : pagedRows.map((row) => <tr key={row.id}>{columns.map((col) => <td key={col.key} data-label={col.label}>{col.key === "foto_utama" ? <ImageThumbnail value={row[col.key]} alt={String(row.judul ?? row.nama_acara ?? row.nama_tempat ?? row.nama_hotel ?? row.nama_usaha ?? row.nama_umum ?? label)} /> : col.key === "status" || col.key === "status_acara" ? <span className={`portal-status ${String(row[col.key] ?? "").toLowerCase().replaceAll(" ", "-")}`}>{formatValue(col.key, row[col.key])}</span> : formatValue(col.key, row[col.key])}</td>)}<td className="dm-actions" data-label="Aksi"><button type="button" onClick={() => openEdit(row)} aria-label="Edit"><PortalIcon name="edit" /></button><button className="danger" type="button" onClick={() => void remove(row)} aria-label="Hapus" disabled={deletingId !== null}>{deletingId === row.id ? <InlineLoader compact /> : <PortalIcon name="trash" />}</button></td></tr>)}
+          {loading ? <tr><td colSpan={columns.length + 1} className="dm-empty">Memuat data...</td></tr> : totalItems === 0 ? <tr><td colSpan={columns.length + 1} className="dm-empty">Belum ada data.</td></tr> : pagedRows.map((row) => <tr key={row.id}>{columns.map((col) => <td key={col.key} data-label={col.label}>{col.key === "foto_utama" ? <ImageThumbnail value={row[col.key]} alt={String(row.judul ?? row.nama_acara ?? row.nama_tempat ?? row.nama_hotel ?? row.nama_usaha ?? row.nama_umum ?? label)} /> : col.key === "status" || col.key === "status_acara" ? <span className={`portal-status ${String(row[col.key] ?? "").toLowerCase().replaceAll(" ", "-")}`}>{formatValue(col.key, row[col.key])}</span> : formatValue(col.key, row[col.key])}</td>)}<td className="dm-actions" data-label="Aksi"><button type="button" onClick={() => openEdit(row)} aria-label="Edit"><PortalIcon name="edit" /></button><button className="danger" type="button" onClick={() => void remove(row)} aria-label="Hapus"><PortalIcon name="trash" /></button></td></tr>)}
         </tbody></table>
       </div>
-      {!loading && sortedRows.length > 0 && <TablePagination totalItems={sortedRows.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={handlePageSize} />}
+      {!loading && totalItems > 0 && <TablePagination totalItems={totalItems} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={handlePageSize} />}
 
       {modalOpen && <div className="portal-modal-layer" role="dialog" aria-modal="true"><button className="portal-modal-backdrop" type="button" onClick={() => setModalOpen(false)} aria-label="Tutup" /><form className="portal-modal" onSubmit={save}><div className="portal-modal-head"><div><p>{editing ? "Edit data" : "Data baru"}</p><h2>{editing ? `Ubah ${label}` : `Tambah ${label}`}</h2></div><button type="button" onClick={() => setModalOpen(false)}><PortalIcon name="x" /></button></div><div className="portal-form-grid">
-        {fields.map((field) => <div className={`portal-field ${field.type === "textarea" || field.type === "image" || field.type === "multicheck" ? "full" : ""}`} key={field.key}><span>{field.label}{field.required ? " *" : ""}</span>{field.type === "textarea" ? <textarea value={String(form[field.key] ?? "")} onChange={(e) => setForm((old) => ({ ...old, [field.key]: e.target.value }))} required={field.required} rows={4} placeholder={field.placeholder} /> : field.type === "select" ? <select value={String(form[field.key] ?? "")} onChange={(e) => setForm((old) => {
+        {fields.filter((field) => !field.hidden).map((field) => <div className={`portal-field ${field.type === "textarea" || field.type === "image" || field.type === "multicheck" ? "full" : ""}`} key={field.key}><span>{field.label}{field.required ? <b className="required-mark"> *</b> : ""}</span>{field.type === "textarea" ? <textarea value={String(form[field.key] ?? "")} onChange={(e) => setForm((old) => ({ ...old, [field.key]: e.target.value }))} required={field.required} rows={4} placeholder={field.placeholder} /> : field.type === "select" ? <select value={String(form[field.key] ?? "")} onChange={(e) => setForm((old) => {
           const next = { ...old, [field.key]: e.target.value };
           fields.filter((candidate) => candidate.dependsOn === field.key).forEach((candidate) => { next[candidate.key] = ""; });
           return next;
-        })} required={field.required}><option value="">{field.required ? `Pilih ${field.label.toLowerCase()}` : `Tidak dipilih`}</option>{optionsFor(field).map((option) => <option key={String(option.value)} value={option.value}>{option.label}</option>)}</select> : field.type === "checkbox" ? <input className="portal-checkbox" type="checkbox" checked={Boolean(form[field.key])} onChange={(e) => setForm((old) => ({ ...old, [field.key]: e.target.checked }))} /> : field.type === "multicheck" ? <MultiCheckField value={form[field.key]} options={optionsFor(field)} onChange={(value) => setForm((old) => ({ ...old, [field.key]: value }))} /> : field.type === "image" ? <ImageField value={form[field.key]} onChange={(value) => setForm((old) => ({ ...old, [field.key]: value }))} disabled={saving} /> : <input type={field.type ?? "text"} value={String(form[field.key] ?? "")} onChange={(e) => setForm((old) => ({ ...old, [field.key]: e.target.value }))} required={field.required} placeholder={field.placeholder} min={field.min} max={field.max} step={field.type === "number" ? (field.step ?? "any") : undefined} />}</div>)}
-      </div>{error && <div className="portal-alert error">{error}</div>}<div className="portal-modal-actions"><button type="button" className="portal-secondary" onClick={() => setModalOpen(false)}>Batal</button><button type="submit" className="portal-primary" disabled={saving}>{saving ? <InlineLoader label="Mengunggah & Menyimpan..." compact /> : "Simpan Data"}</button></div></form></div>}
+        })} required={field.required}><option value="">{field.required ? `Pilih ${field.label.toLowerCase()}` : `Tidak dipilih`}</option>{optionsFor(field).map((option) => <option key={String(option.value)} value={option.value}>{option.label}</option>)}</select> : field.type === "checkbox" ? <input className="portal-checkbox" type="checkbox" checked={Boolean(form[field.key])} onChange={(e) => setForm((old) => ({ ...old, [field.key]: e.target.checked }))} /> : field.type === "multicheck" ? <div className="portal-multicheck">{Object.entries(optionsFor(field).reduce<Record<string, LookupOption[]>>((groups, option) => { const group = option.groupName || "Lainnya"; (groups[group] ??= []).push(option); return groups; }, {})).map(([group, groupOptions]) => <div className="portal-multicheck-group" key={group}><strong>{group}</strong><div className="portal-multicheck-options">{groupOptions.map((option) => { const selected = Array.isArray(form[field.key]) ? (form[field.key] as unknown[]).map(String) : []; const checked = selected.includes(String(option.value)); return <label key={String(option.value)}><input type="checkbox" checked={checked} onChange={(e) => setForm((old) => { const current = Array.isArray(old[field.key]) ? (old[field.key] as unknown[]).map(String) : []; const next = e.target.checked ? Array.from(new Set([...current, String(option.value)])) : current.filter((id) => id !== String(option.value)); return { ...old, [field.key]: next }; })} /><span>{option.label}</span></label>; })}</div></div>)}</div> : field.type === "image" ? <ImageField value={form[field.key]} onChange={(value) => setForm((old) => ({ ...old, [field.key]: value }))} disabled={saving} /> : <input type={field.type ?? "text"} value={String(form[field.key] ?? "")} onChange={(e) => setForm((old) => ({ ...old, [field.key]: e.target.value }))} required={field.required} placeholder={field.placeholder} min={field.min} max={field.max} step={field.type === "number" ? (field.step ?? "any") : undefined} />}</div>)}
+      </div>{error && <div className="portal-alert error">{error}</div>}<div className="portal-modal-actions"><button type="button" className="portal-secondary" onClick={() => setModalOpen(false)}>Batal</button><button type="submit" className="portal-primary" disabled={saving}>{saving ? "Mengunggah & Menyimpan..." : "Simpan Data"}</button></div></form></div>}
     </section>
   );
 }

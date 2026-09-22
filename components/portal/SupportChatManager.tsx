@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { InlineLoader } from "../InlineLoader";
 
 type Conversation = {
   id: number;
@@ -25,30 +24,13 @@ type ChatMessage = {
   created_at: string;
 };
 
-function safeText(value: unknown) {
-  return String(value ?? "").trim();
+function guestLabel(value: string) {
+  return `Pengunjung ${value.replace(/^guest_/, "").slice(-6).toUpperCase()}`;
 }
 
-function guestLabel(value: unknown) {
-  const identifier = safeText(value);
-  if (!identifier) return "Pengunjung";
-  return `Pengunjung ${identifier.replace(/^guest_/, "").slice(-6).toUpperCase()}`;
-}
-
-function guestInitial(value: unknown) {
-  return safeText(value).replace(/^guest_/, "").slice(-1).toUpperCase() || "G";
-}
-
-function guestShortId(value: unknown, length = 12) {
-  const identifier = safeText(value);
-  return identifier ? identifier.replace(/^guest_/, "").slice(-length).toUpperCase() : "-";
-}
-
-function formatTime(value: unknown, detailed = false) {
-  const text = safeText(value);
-  if (!text) return "-";
-  const date = new Date(text.includes("T") ? text : text.replace(" ", "T"));
-  if (Number.isNaN(date.getTime())) return "-";
+function formatTime(value: string, detailed = false) {
+  const date = new Date(value.includes("T") ? value : value.replace(" ", "T"));
+  if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat("id-ID", detailed
     ? { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }
     : { hour: "2-digit", minute: "2-digit" },
@@ -70,20 +52,7 @@ export default function SupportChatManager() {
       const response = await fetch("/api/chat/staff", { cache: "no-store" });
       const payload = await response.json() as { data?: Conversation[]; message?: string };
       if (!response.ok) throw new Error(payload.message || "Daftar chat belum dapat dimuat.");
-      const rows = (payload.data ?? [])
-        .filter((item) => Number(item?.id) > 0 && Boolean(safeText(item?.guest_identifier)))
-        .map((item) => ({
-          ...item,
-          id: Number(item.id),
-          guest_identifier: safeText(item.guest_identifier),
-          status: item.status === "closed" ? "closed" as const : "open" as const,
-          created_at: safeText(item.created_at),
-          last_message_at: safeText(item.last_message_at) || safeText(item.created_at),
-          last_message: item.last_message == null ? null : safeText(item.last_message),
-          last_sender_type: item.last_sender_type === "staff" ? "staff" as const : item.last_sender_type === "guest" ? "guest" as const : null,
-          last_sender_name: item.last_sender_name == null ? null : safeText(item.last_sender_name),
-          total_messages: Number(item.total_messages ?? 0),
-        }));
+      const rows = payload.data ?? [];
       setConversations(rows);
       setSelectedId((current) => current ?? rows[0]?.id ?? null);
       setError("");
@@ -99,18 +68,7 @@ export default function SupportChatManager() {
       const response = await fetch(`/api/chat/staff?conversation_id=${conversationId}`, { cache: "no-store" });
       const payload = await response.json() as { data?: { messages: ChatMessage[] }; message?: string };
       if (!response.ok) throw new Error(payload.message || "Percakapan belum dapat dimuat.");
-      setMessages((payload.data?.messages ?? [])
-        .filter((message) => Number(message?.id) > 0)
-        .map((message) => ({
-          ...message,
-          id: Number(message.id),
-          conversation_id: Number(message.conversation_id),
-          sender_type: message.sender_type === "staff" ? "staff" as const : "guest" as const,
-          sender_user_id: message.sender_user_id == null ? null : Number(message.sender_user_id),
-          sender_name_snapshot: message.sender_name_snapshot == null ? null : safeText(message.sender_name_snapshot),
-          message: safeText(message.message),
-          created_at: safeText(message.created_at),
-        })));
+      setMessages(payload.data?.messages ?? []);
       setError("");
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Percakapan belum dapat dimuat.");
@@ -182,7 +140,7 @@ export default function SupportChatManager() {
           </div>
           <div className="staff-chat-list-scroll">
             {loadingList ? (
-              <div className="staff-chat-empty"><InlineLoader label="Memuat percakapan..." /></div>
+              <div className="staff-chat-empty">Memuat percakapan...</div>
             ) : conversations.length === 0 ? (
               <div className="staff-chat-empty">Belum ada chat dari guest.</div>
             ) : conversations.map((conversation) => (
@@ -192,7 +150,7 @@ export default function SupportChatManager() {
                 className={`staff-chat-list-item ${conversation.id === selectedId ? "active" : ""}`}
                 onClick={() => setSelectedId(conversation.id)}
               >
-                <span className="staff-chat-guest-avatar">{guestInitial(conversation.guest_identifier)}</span>
+                <span className="staff-chat-guest-avatar">{conversation.guest_identifier.slice(-1).toUpperCase()}</span>
                 <span className="staff-chat-list-copy">
                   <span className="staff-chat-list-title"><strong>{guestLabel(conversation.guest_identifier)}</strong><time>{formatTime(conversation.last_message_at)}</time></span>
                   <span className="staff-chat-preview">
@@ -210,8 +168,8 @@ export default function SupportChatManager() {
           {active ? (
             <>
               <header className="staff-chat-room-head">
-                <div className="staff-chat-guest-avatar large">{guestInitial(active.guest_identifier)}</div>
-                <div><strong>{guestLabel(active.guest_identifier)}</strong><span>ID: {guestShortId(active.guest_identifier, 12)}</span></div>
+                <div className="staff-chat-guest-avatar large">{active.guest_identifier.slice(-1).toUpperCase()}</div>
+                <div><strong>{guestLabel(active.guest_identifier)}</strong><span>ID: {active.guest_identifier.replace(/^guest_/, "").slice(-12).toUpperCase()}</span></div>
               </header>
 
               <div className="staff-chat-messages">
@@ -242,7 +200,7 @@ export default function SupportChatManager() {
                   rows={2}
                   disabled={sending}
                 />
-                <button type="button" onClick={() => void sendReply()} disabled={sending || !input.trim()}>{sending ? <InlineLoader label="Mengirim..." compact /> : "Kirim Balasan"}</button>
+                <button type="button" onClick={() => void sendReply()} disabled={sending || !input.trim()}>{sending ? "Mengirim..." : "Kirim Balasan"}</button>
               </div>
             </>
           ) : (

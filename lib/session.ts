@@ -2,11 +2,11 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 export const SESSION_COOKIE = "appekraf_session";
 
-// Cookie dibuat persisten sejak login. Proxy tidak menulis ulang cookie pada setiap request
-// agar sesi lama tidak dapat muncul kembali akibat response yang selesai setelah logout.
+// Cookie dibuat persisten dan menggunakan sliding session.
+// Selama petugas masih memakai portal, proxy akan memperpanjang masa sesi.
 export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
-export type AppRole = "admin" | "pengguna" | "pengaju";
+export type AppRole = "admin" | "petugas" | "pengaju" | "pengguna";
 
 export type SessionPayload = {
   uid: number;
@@ -48,7 +48,7 @@ export function verifySessionToken(token?: string | null): SessionPayload | null
 
   try {
     const payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8")) as SessionPayload;
-    if (!payload.uid || !["admin", "pengguna", "pengaju"].includes(payload.role)) return null;
+    if (!payload.uid || !["admin", "petugas", "pengaju"].includes(payload.role)) return null;
     if (payload.exp <= Math.floor(Date.now() / 1000)) return null;
     return payload;
   } catch {

@@ -5,7 +5,16 @@ import { verifyPassword } from "@/lib/password";
 import { createSessionToken, SESSION_COOKIE, sessionCookieOptions, type AppRole } from "@/lib/session";
 import { createFirebaseCustomToken } from "@/lib/firebase-custom-token";
 
-type LoginRow = Record<string, unknown> & { id:number; role:string; name:string; email:string; phone:string|null; avatar_url:string|null; password:string; status:"active"|"inactive" };
+type LoginRow = Record<string, unknown> & {
+  id: number;
+  role: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  avatar_url: string | null;
+  password: string;
+  status: "active" | "inactive";
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,26 +22,36 @@ export async function POST(request: NextRequest) {
     const email = String(body.email ?? "").trim().toLowerCase();
     const password = String(body.password ?? "");
     const requestedRole = body.role as AppRole;
-    if (!email || !password || !["admin","pengguna"].includes(requestedRole)) {
-      return NextResponse.json({message:"Email, kata sandi, dan jenis akun wajib diisi."},{status:400});
+    if (!email || !password || !["admin", "petugas", "pengguna"].includes(requestedRole)) {
+      return NextResponse.json({ message: "Email, kata sandi, dan jenis akun wajib diisi." }, { status: 400 });
     }
     const row = await findOne<LoginRow>("pengguna", (item) => String(item.email ?? "").trim().toLowerCase() === email);
-    const role = row ? normalizeDbRole(row.role) : null;
-    if (!row || row.status !== "active" || role !== requestedRole || !verifyPassword(password,row.password)) {
-      return NextResponse.json({message:"Email, kata sandi, atau jenis akun tidak sesuai."},{status:401});
+    const role = row ? normalizeDbRole(String(row.role ?? "")) : null;
+    const targetRole = requestedRole === "pengguna" ? "petugas" : requestedRole;
+    if (!row || row.status !== "active" || role !== targetRole || !verifyPassword(password, String(row.password ?? ""))) {
+      return NextResponse.json({ message: "Email, kata sandi, atau jenis akun tidak sesuai." }, { status: 401 });
     }
     await updateById("pengguna", row.id, { last_login_at: dbNow() });
-    const token = createSessionToken({uid:Number(row.id),role});
+    const token = createSessionToken({ uid: Number(row.id), role });
     const firebaseCustomToken = createFirebaseCustomToken({ userId: Number(row.id), role });
     const response = NextResponse.json({
-      message:"Login berhasil.", token, firebaseCustomToken,
-      user:{id:Number(row.id),role,name:row.name,email:row.email,phone:row.phone ?? null,avatarUrl:row.avatar_url ?? null},
+      message: "Login berhasil.",
+      token,
+      firebaseCustomToken,
+      user: {
+        id: Number(row.id),
+        role,
+        name: row.name,
+        email: row.email,
+        phone: row.phone ?? null,
+        avatarUrl: row.avatar_url ?? null,
+      },
     });
     response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
     response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions());
     return response;
   } catch (error) {
-    console.error("Mobile login error:",error);
-    return NextResponse.json({message:"Tidak dapat terhubung ke Firebase Realtime Database."},{status:500});
+    console.error("Mobile login error:", error);
+    return NextResponse.json({ message: "Tidak dapat terhubung ke Firebase Realtime Database." }, { status: 500 });
   }
 }

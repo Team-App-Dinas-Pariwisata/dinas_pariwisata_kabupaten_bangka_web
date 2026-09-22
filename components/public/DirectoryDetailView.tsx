@@ -81,8 +81,7 @@ export default function DirectoryDetailView({
         <article className="public-detail directory-detail-page">
           <div className="public-container public-detail-breadcrumb">
             <Link href="/">Beranda</Link><span>/</span>
-            <Link href="/#pelaku-ekraf">Direktori</Link><span>/</span>
-            <span>{meta.label}</span><span>/</span>
+            <Link href={`/direktori/${item.type}`}>{meta.label}</Link><span>/</span>
             <span>{item.title}</span>
           </div>
 
@@ -189,7 +188,7 @@ export default function DirectoryDetailView({
                 </div>
               ) : null}
 
-              <Link href="/#pelaku-ekraf" className="public-outline-button">← Kembali ke direktori</Link>
+              <Link href={`/direktori/${item.type}`} className="public-outline-button">← Kembali ke direktori</Link>
             </aside>
           </div>
         </article>
@@ -199,7 +198,7 @@ export default function DirectoryDetailView({
             <div className="public-container">
               <div className="public-list-heading compact">
                 <div><span className="public-section-label">Profil lainnya</span><h2>{meta.label} lainnya</h2></div>
-                <Link href="/#pelaku-ekraf" className="public-read-link">Lihat direktori →</Link>
+                <Link href={`/direktori/${item.type}`} className="public-read-link">Lihat direktori →</Link>
               </div>
               <div className="public-related-grid">
                 {related.map((relatedItem) => (

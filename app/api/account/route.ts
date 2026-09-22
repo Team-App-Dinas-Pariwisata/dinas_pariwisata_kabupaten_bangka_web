@@ -4,13 +4,13 @@ import { getById, updateById } from "@/lib/realtime-db";
 import { hashPassword, verifyPassword } from "@/lib/password";
 
 export async function GET(request: NextRequest) {
-  const user = await requireRequestRole(request, "pengguna");
+  const user = await requireRequestRole(request, "petugas");
   if (!user) return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
   return NextResponse.json({ data: { name: user.name, email: user.email, phone: user.phone ?? "" } });
 }
 
 export async function PATCH(request: NextRequest) {
-  const user = await requireRequestRole(request, "pengguna");
+  const user = await requireRequestRole(request, "petugas");
   if (!user) return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
   const body = await request.json();
   const name = String(body.name ?? "").trim();

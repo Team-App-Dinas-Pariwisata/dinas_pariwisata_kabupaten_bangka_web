@@ -9,7 +9,7 @@ type LoginRow = Record<string, unknown> & {
   role: string;
   name: string;
   email: string;
-  password: string;
+  password?: string | null;
   status: "active" | "inactive";
 };
 
@@ -20,14 +20,14 @@ export async function POST(request: NextRequest) {
     const password = String(body.password ?? "");
     const requestedRole = body.role as AppRole;
 
-    if (!email || !password || !["admin", "pengguna"].includes(requestedRole)) {
+    if (!email || !password || !["admin", "petugas"].includes(requestedRole)) {
       return NextResponse.json({ message: "Email, kata sandi, dan jenis akun wajib diisi." }, { status: 400 });
     }
 
     const row = await findOne<LoginRow>("pengguna", (item) => String(item.email ?? "").trim().toLowerCase() === email);
-    const normalizedRole = row ? normalizeDbRole(row.role) : null;
+    const normalizedRole = row ? normalizeDbRole(String(row.role ?? "")) : null;
 
-    if (!row || row.status !== "active" || normalizedRole !== requestedRole || !verifyPassword(password, row.password)) {
+    if (!row || row.status !== "active" || normalizedRole !== requestedRole || !verifyPassword(password, String(row.password ?? ""))) {
       return NextResponse.json({ message: "Email, kata sandi, atau jenis akun tidak sesuai." }, { status: 401 });
     }
 
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     const token = createSessionToken({ uid: Number(row.id), role: normalizedRole });
     const response = NextResponse.json({
       message: "Login berhasil.",
-      redirectTo: normalizedRole === "admin" ? "/admin/pengguna" : "/dashboard",
+      redirectTo: normalizedRole === "admin" ? "/admin/petugas" : "/dashboard",
     });
     response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
     response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions());

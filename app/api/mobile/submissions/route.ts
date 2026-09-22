@@ -1,33 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getMobileRequestUser } from "@/lib/mobile-request-user";
-import { deleteSubmissionWithFiles } from "@/lib/staff-record-cleanup";
-import type { SubmissionType } from "@/lib/submission-config";
+import { getRequestUser } from "@/lib/auth";
+import { deleteSubmissionWithManagedFiles, isSubmissionType } from "@/lib/staff-record-cleanup";
 
-function validType(value: string): value is SubmissionType {
-  return value === "ekraf" || value === "sdm" || value === "komunitas";
-}
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function DELETE(request: NextRequest) {
-  const user = await getMobileRequestUser(request);
-  if (!user || !["admin", "pengguna"].includes(user.role)) {
+  const user = await getRequestUser(request);
+  if (!user || !["petugas", "admin"].includes(user.role)) {
     return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
   }
 
   try {
-    const body = await request.json() as { type?: string; id?: number | string };
-    const type = String(body.type ?? "");
-    const id = Number(body.id);
-    if (!validType(type) || !Number.isSafeInteger(id) || id <= 0) {
-      return NextResponse.json({ message: "Jenis atau ID pengajuan tidak valid." }, { status: 400 });
+    const body = await request.json();
+    const type = body?.type;
+    const id = Number(body?.id);
+    if (!isSubmissionType(type) || !Number.isSafeInteger(id) || id <= 0) {
+      return NextResponse.json({ message: "Pengajuan yang akan dihapus tidak valid." }, { status: 400 });
     }
-    const result = await deleteSubmissionWithFiles(type, id);
-    return NextResponse.json({
-      message: `Pengajuan berhasil dihapus. ${result.deletedFiles} file Cloudflare R2 ikut dihapus.`,
-      data: result,
-    });
+
+    const result = await deleteSubmissionWithManagedFiles(type, id);
+    if (!result) {
+      return NextResponse.json({ message: "Pengajuan tidak ditemukan." }, { status: 404 });
+    }
+
+    const message = result.failedFiles
+      ? "Pengajuan berhasil dihapus dari MySQL. Sebagian file R2 belum dapat dibersihkan dan sudah dicatat pada log server."
+      : "Pengajuan dan file terkait berhasil dihapus permanen.";
+
+    return NextResponse.json({ message, data: result });
   } catch (error) {
     console.error("Mobile submission delete error:", error);
-    const message = error instanceof Error ? error.message : "Pengajuan gagal dihapus.";
-    return NextResponse.json({ message }, { status: message.includes("tidak ditemukan") ? 404 : 500 });
+    return NextResponse.json(
+      { message: "Pengajuan belum dapat dihapus dari database." },
+      { status: 500 },
+    );
   }
 }

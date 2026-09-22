@@ -1,6 +1,6 @@
 import type { ReactNode, SVGProps } from "react";
 
-export type PortalIconName = "home" | "users" | "clipboard" | "database" | "tag" | "box" | "calendar" | "report" | "settings" | "logout" | "bell" | "plus" | "search" | "edit" | "trash" | "menu" | "x" | "clock" | "check" | "eye" | "news" | "chevron" | "star" | "chat" | "whatsapp" | "refresh";
+export type PortalIconName = "home" | "users" | "clipboard" | "database" | "tag" | "box" | "calendar" | "report" | "settings" | "logout" | "bell" | "plus" | "search" | "edit" | "trash" | "menu" | "x" | "clock" | "check" | "eye" | "news" | "chevron" | "star" | "chat" | "whatsapp" | "refresh" | "info";
 
 export function PortalIcon({ name, ...props }: SVGProps<SVGSVGElement> & { name: PortalIconName }) {
   const paths: Record<PortalIconName, ReactNode> = {
@@ -12,7 +12,7 @@ export function PortalIcon({ name, ...props }: SVGProps<SVGSVGElement> & { name:
     box: <><path d="m21 8-9 5-9-5 9-5z"/><path d="m3 8 9 5 9-5v9l-9 5-9-5z"/><path d="M12 13v9"/></>,
     calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></>,
     report: <><path d="M5 3h10l4 4v14H5z"/><path d="M14 3v5h5M8 16v-3M12 16v-6M16 16v-4"/></>,
-    settings: <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1v.1H9.6V21a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1-.4h-.1V9.6H3A1.7 1.7 0 0 0 4.6 8.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1v-.1h4V3a1.7 1.7 0 0 0 1.1 1.6 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.16.37.37.7.6 1 .27.3.63.4 1 .4h.1v4H21a1.7 1.7 0 0 0-1.6.6Z"/></>,
+    settings: <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1v.1H9.6V21a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1-.4h-.1V9.6H3A1.7 1.7 0 0 0 4.6 8.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1v-.1h4V3a1.7 1.7 0 0 0 1.1 1.6 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06-.06A1.7 1.7 0 0 0 19.4 9c.16.37.37.7.6 1 .27.3.63.4 1 .4h.1v4H21a1.7 1.7 0 0 0-1.6.6Z"/></>,
     logout: <><path d="M10 17l5-5-5-5M15 12H3"/><path d="M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/></>,
     bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></>,
     plus: <path d="M12 5v14M5 12h14"/>,
@@ -30,7 +30,8 @@ export function PortalIcon({ name, ...props }: SVGProps<SVGSVGElement> & { name:
     chat: <><path d="M4 5h16v11H8l-4 4V5Z"/><path d="M8 9h8M8 12h5"/></>,
     whatsapp: <><path d="M20.5 11.8a8.4 8.4 0 0 1-12.4 7.4L3 20.5l1.4-4.9a8.4 8.4 0 1 1 16.1-3.8Z"/><path d="M8.2 7.8c.2-.4.4-.4.7-.4h.4c.2 0 .4.1.5.5l.7 1.7c.1.3.1.5-.1.7l-.5.7c-.2.2-.1.4 0 .6.6 1.1 1.5 2 2.6 2.6.2.1.4.2.6 0l.8-1c.2-.2.4-.3.7-.2l1.8.8c.3.1.5.3.5.5 0 .3-.2 1.5-1 2.1-.7.6-1.6.7-2.1.6-.5-.1-2.9-1.1-4.9-2.9-1.6-1.5-2.7-3.3-3-4.2-.3-.9 0-1.7.3-2.1Z"/></>,
     refresh: <><path d="M20 6v5h-5"/><path d="M4 18v-5h5"/><path d="M6.1 9a7 7 0 0 1 11.5-2.6L20 9M4 15l2.4 2.6A7 7 0 0 0 17.9 15"/></>,
+    info: <><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M12 12v4"/></>,
   };
 
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>{paths[name]}</svg>;
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" data-icon={name} {...props}>{paths[name]}</svg>;
 }

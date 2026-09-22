@@ -29,11 +29,13 @@ function dateParts(value: string) {
   };
 }
 
-export default async function AcaraPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+export default async function AcaraPage({ searchParams }: { searchParams: Promise<{ page?: string; q?: string }> }) {
   const params = await searchParams;
   const requestedPage = Number(params.page ?? "1");
-  const data = await getPublicEventList(requestedPage, 9);
+  const query = typeof params.q === "string" ? params.q.trim() : "";
+  const data = await getPublicEventList(requestedPage, 9, query);
   const fallbackImages = ["/hero-bangka.jpg", "/hero-home-v15.jpg", "/kriya-bangka.jpg", "/kuliner-bangka.png"];
+  const paginationBasePath = query ? `/acara?q=${encodeURIComponent(query)}` : "/acara";
 
   return (
     <div className="public-page-shell">
@@ -49,9 +51,32 @@ export default async function AcaraPage({ searchParams }: { searchParams: Promis
 
         <section className="public-content-section">
           <div className="public-container">
+            <div className="directory-toolbar directory-list-toolbar-wrap" style={{ marginBottom: "28px" }}>
+              <form className="directory-search directory-list-search-form" method="GET" action="/acara" role="search" style={{ maxWidth: "480px" }}>
+                <label>
+                  <span className="directory-search-icon" aria-hidden="true">⌕</span>
+                  <input
+                    type="search"
+                    name="q"
+                    defaultValue={query}
+                    placeholder="Cari agenda acara, lokasi, atau kategori..."
+                    aria-label="Cari acara"
+                  />
+                </label>
+                <button type="submit">Cari</button>
+              </form>
+            </div>
+
             <div className="public-list-heading">
-              <div><span className="public-section-label">Acara</span><h2>Semua agenda</h2></div>
-              <p>{data.total} acara tersedia</p>
+              <div>
+                <span className="public-section-label">Acara</span>
+                <h2>{query ? `Hasil pencarian: "${query}"` : "Semua agenda"}</h2>
+              </div>
+              <p>
+                {data.total > 0
+                  ? `Halaman ${data.page} dari ${data.totalPages} (Total ${data.total} acara tersedia).`
+                  : "Tidak ada acara yang ditemukan."}
+              </p>
             </div>
 
             {data.items.length > 0 ? (
@@ -76,10 +101,28 @@ export default async function AcaraPage({ searchParams }: { searchParams: Promis
                 })}
               </div>
             ) : (
-              <div className="public-empty-state">Belum ada acara yang dipublikasikan.</div>
+              <div className="public-empty-state">
+                {query ? (
+                  <>
+                    <p>Tidak ditemukan acara dengan kata kunci &ldquo;{query}&rdquo;.</p>
+                    <div style={{ marginTop: "14px" }}>
+                      <Link href="/acara" className="public-read-link">
+                        ← Lihat semua agenda
+                      </Link>
+                    </div>
+                  </>
+                ) : (
+                  "Belum ada acara yang dipublikasikan."
+                )}
+              </div>
             )}
 
-            <PublicPagination page={data.page} totalPages={data.totalPages} basePath="/acara" />
+            <PublicPagination
+              page={data.page}
+              totalPages={data.totalPages}
+              basePath={paginationBasePath}
+              alwaysShow={true}
+            />
           </div>
         </section>
       </main>

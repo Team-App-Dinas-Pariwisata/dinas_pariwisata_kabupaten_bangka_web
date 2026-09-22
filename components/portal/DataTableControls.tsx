@@ -17,6 +17,7 @@ type TablePaginationProps = {
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   itemLabel?: string;
+  pageSizeOptions?: number[];
 };
 
 const collator = new Intl.Collator("id-ID", { numeric: true, sensitivity: "base" });
@@ -81,7 +82,15 @@ function visiblePages(current: number, total: number) {
   return pages;
 }
 
-export function TablePagination({ totalItems, page, pageSize, onPageChange, onPageSizeChange, itemLabel = "data" }: TablePaginationProps) {
+export function TablePagination({
+  totalItems,
+  page,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
+  itemLabel = "data",
+  pageSizeOptions = [10, 25, 50, 100],
+}: TablePaginationProps) {
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const safePage = Math.min(Math.max(page, 1), totalPages);
   const start = totalItems === 0 ? 0 : (safePage - 1) * pageSize + 1;
@@ -95,10 +104,9 @@ export function TablePagination({ totalItems, page, pageSize, onPageChange, onPa
         <label>
           <span>Baris</span>
           <select value={pageSize} onChange={(event) => onPageSizeChange(Number(event.target.value))} aria-label="Jumlah baris per halaman">
-            <option value={10}>10</option>
-            <option value={25}>25</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
+            {pageSizeOptions.map((opt) => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
           </select>
         </label>
       </div>

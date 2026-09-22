@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRequestRole } from "@/lib/auth";
 import { notifySubmissionDecision } from "@/lib/submission-notifications";
+import { notifyApplicantDecision, notifyVerificationAction } from "@/lib/notifications";
 import type { SubmissionType } from "@/lib/submission-config";
-import { byNumericId, createNumeric, dbNow, getAll, getById, isTruthyDb, updateById, type DbRecord } from "@/lib/realtime-db";
-import { deleteSubmissionWithFiles } from "@/lib/staff-record-cleanup";
+import {
+  byNumericId,
+  createNumeric,
+  dbNow,
+  getAll,
+  getById,
+  isTruthyDb,
+  updateById,
+  type DbRecord,
+} from "@/lib/realtime-db";
+import { deleteSubmissionsWithManagedFiles, isSubmissionType } from "@/lib/staff-record-cleanup";
+import { isPetugasMassDeleteEnabled } from "@/lib/system-settings";
 
 function validType(value: string | null): value is SubmissionType {
   return value === "ekraf" || value === "sdm" || value === "komunitas";
@@ -16,15 +27,24 @@ const tableByType: Record<SubmissionType, string> = {
 };
 
 function sortNewest<T extends DbRecord>(rows: T[]) {
-  return rows.sort((a, b) => String(b.created_at ?? "").localeCompare(String(a.created_at ?? "")) || Number(b.id ?? 0) - Number(a.id ?? 0));
+  return rows.sort(
+    (a, b) =>
+      String(b.created_at ?? "").localeCompare(String(a.created_at ?? "")) ||
+      Number(b.id ?? 0) - Number(a.id ?? 0),
+  );
 }
 
 async function listRows(type: SubmissionType) {
   const rows = await getAll(tableByType[type]);
-  if (type === "sdm") return sortNewest(rows).map((row) => ({ ...row, status_label: row.status_pengajuan ?? "Menunggu" }));
+  if (type === "sdm") {
+    return sortNewest(rows).map((row) => ({ ...row, status_label: row.status_pengajuan ?? "Menunggu" }));
+  }
 
   const [subsectors, districts, villages, communities] = await Promise.all([
-    getAll("master_subsektor_ekraf"), getAll("master_kecamatan"), getAll("master_kelurahan"), getAll("master_komunitas"),
+    getAll("master_subsektor_ekraf"),
+    getAll("master_kecamatan"),
+    getAll("master_kelurahan"),
+    getAll("master_komunitas"),
   ]);
   const s = byNumericId(subsectors);
   const k = byNumericId(districts);
@@ -54,11 +74,15 @@ async function listRows(type: SubmissionType) {
 }
 
 export async function GET(request: NextRequest) {
-  if (!(await requireRequestRole(request, "pengguna"))) return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+  if (!(await requireRequestRole(request, "petugas"))) {
+    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+  }
   const type = request.nextUrl.searchParams.get("type");
   if (!validType(type)) return NextResponse.json({ message: "Jenis pengajuan tidak valid." }, { status: 400 });
   try {
-    return NextResponse.json({ data: await listRows(type) });
+    const data = await listRows(type);
+    const massDeleteEnabled = await isPetugasMassDeleteEnabled();
+    return NextResponse.json({ data, massDeleteEnabled });
   } catch (error) {
     console.error("Submission list error:", error);
     return NextResponse.json({ message: "Data pengajuan gagal dimuat dari Firebase Realtime Database." }, { status: 500 });
@@ -66,7 +90,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const user = await requireRequestRole(request, "pengguna");
+  const user = await requireRequestRole(request, "petugas");
   if (!user) return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
 
   const body = await request.json();
@@ -91,8 +115,12 @@ export async function PATCH(request: NextRequest) {
     }
   }
 
-  if (!validType(type) || !id || !["approve", "reject"].includes(action)) return NextResponse.json({ message: "Permintaan verifikasi tidak valid." }, { status: 400 });
-  if (action === "reject" && !note) return NextResponse.json({ message: "Alasan penolakan wajib diisi." }, { status: 400 });
+  if (!validType(type) || !id || !["approve", "reject"].includes(action)) {
+    return NextResponse.json({ message: "Permintaan verifikasi tidak valid." }, { status: 400 });
+  }
+  if (action === "reject" && !note) {
+    return NextResponse.json({ message: "Alasan penolakan wajib diisi." }, { status: 400 });
+  }
 
   try {
     const table = tableByType[type];
@@ -151,6 +179,28 @@ export async function PATCH(request: NextRequest) {
     }
 
     await notifySubmissionDecision({ type, id, status, note });
+
+    const applicantUserId = Number(current.user_id);
+    if (Number.isSafeInteger(applicantUserId) && applicantUserId > 0) {
+      await notifyApplicantDecision({
+        applicantUserId,
+        type,
+        submissionId: id,
+        status: status === "Disetujui" ? "Disetujui" : "Ditolak",
+        note,
+        noRegistrasi: current.no_registrasi ? String(current.no_registrasi) : null,
+        staffName: user.name,
+      });
+    }
+
+    await notifyVerificationAction({
+      type,
+      submissionId: id,
+      staffName: user.name,
+      action: action === "approve" ? "approve" : "reject",
+      noRegistrasi: current.no_registrasi ? String(current.no_registrasi) : null,
+    });
+
     return NextResponse.json({ message: action === "approve" ? "Pengajuan berhasil disetujui." : "Pengajuan berhasil ditolak." });
   } catch (error) {
     console.error("Submission verify error:", error);
@@ -158,28 +208,68 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
-
 export async function DELETE(request: NextRequest) {
-  const user = await requireRequestRole(request, "pengguna");
+  const user = await requireRequestRole(request, "petugas");
   if (!user) return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
 
+  const isEnabled = await isPetugasMassDeleteEnabled();
+  if (!isEnabled) {
+    return NextResponse.json(
+      { message: "Fitur hapus pengajuan sedang dinonaktifkan oleh Administrator." },
+      { status: 403 },
+    );
+  }
+
   try {
-    const body = await request.json() as { type?: string; id?: number | string };
-    const type = String(body.type ?? "");
-    const id = Number(body.id);
-    if (!validType(type) || !Number.isSafeInteger(id) || id <= 0) {
-      return NextResponse.json({ message: "Jenis atau ID pengajuan tidak valid." }, { status: 400 });
+    const body = await request.json();
+    const type = body.type;
+
+    if (!isSubmissionType(type)) {
+      return NextResponse.json({ message: "Jenis pengajuan tidak valid." }, { status: 400 });
     }
 
-    const result = await deleteSubmissionWithFiles(type, id);
+    let idsToDelete: number[] = [];
+    if (Array.isArray(body.ids)) {
+      idsToDelete = body.ids
+        .map((id: unknown) => Number(id))
+        .filter((id: number) => Number.isSafeInteger(id) && id > 0);
+    } else if (body.id) {
+      const singleId = Number(body.id);
+      if (Number.isSafeInteger(singleId) && singleId > 0) {
+        idsToDelete = [singleId];
+      }
+    }
+
+    if (idsToDelete.length === 0) {
+      return NextResponse.json(
+        { message: "Pilih setidaknya satu pengajuan untuk dihapus." },
+        { status: 400 },
+      );
+    }
+
+    const result = await deleteSubmissionsWithManagedFiles(type, idsToDelete);
+
+    if (result.deletedCount === 0) {
+      return NextResponse.json(
+        { message: "Pengajuan yang dipilih tidak ditemukan." },
+        { status: 404 },
+      );
+    }
+
+    const itemLabel = result.deletedCount === 1 ? "1 pengajuan" : `${result.deletedCount} pengajuan`;
+    const message = result.failedFiles
+      ? `${itemLabel} berhasil dihapus dari Firebase Realtime Database. Sebagian berkas Cloudflare R2 gagal dibersihkan.`
+      : `${itemLabel} dan seluruh berkas terkait berhasil dihapus permanen.`;
+
     return NextResponse.json({
-      message: `Pengajuan berhasil dihapus. ${result.deletedFiles} file Cloudflare R2 ikut dihapus.`,
+      message,
       data: result,
     });
   } catch (error) {
     console.error("Submission delete error:", error);
-    const message = error instanceof Error ? error.message : "Pengajuan gagal dihapus.";
-    const status = message.includes("tidak ditemukan") ? 404 : 500;
-    return NextResponse.json({ message }, { status });
+    return NextResponse.json(
+      { message: "Pengajuan belum dapat dihapus dari Firebase Realtime Database." },
+      { status: 500 },
+    );
   }
 }

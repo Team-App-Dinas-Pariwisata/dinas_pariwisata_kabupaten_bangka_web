@@ -1,9 +1,9 @@
 import Link from "next/link";
 
 const pelakuItems = [
-  { label: "Pelaku Ekraf", href: "/akun/pengajuan/pelaku-ekraf" },
-  { label: "Pelaku SDM Pariwisata", href: "/akun/pengajuan/sdm-pariwisata" },
-  { label: "Komunitas/Lembaga/Asosiasi", href: "/akun/pengajuan/komunitas" },
+  { label: "Pelaku Ekraf", href: "/direktori/ekraf" },
+  { label: "Pelaku SDM Pariwisata", href: "/direktori/sdm" },
+  { label: "Komunitas/Lembaga/Asosiasi", href: "/direktori/komunitas" },
 ];
 
 const wisataItems = [
@@ -11,7 +11,6 @@ const wisataItems = [
   { label: "Kuliner", href: "/wisata/kuliner" },
   { label: "Hotel", href: "/wisata/hotel" },
   { label: "Satwa Endemik", href: "/wisata/satwa-endemik" },
-  { label: "Pencarian", href: "/pencarian" },
 ];
 
 type NavIconName = "home" | "news" | "calendar" | "grid" | "users" | "map" | "info";

@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRequestRole } from "@/lib/auth";
-import {
-  deleteFacilityRelations,
-  isFacilityOwnerTable,
-  syncFacilityRelations,
-  validateFacilityIds,
-} from "@/lib/facilities";
-import { createNumeric, deleteById, dbNow, updateById } from "@/lib/realtime-db";
-import { loadResourceRows } from "@/lib/resource-data";
 import { resourceConfigs, type ResourceConfig } from "@/lib/resources";
+import { createNumeric, dbNow, deleteById, updateById } from "@/lib/realtime-db";
+import { loadResourceRows } from "@/lib/resource-data";
+import { deleteFacilityRelations, isFacilityOwnerTable, syncFacilityRelations, validateFacilityIds } from "@/lib/facilities";
 import { browserSafeR2ImageUrl } from "@/lib/r2";
 
 function configFor(resource: unknown): ResourceConfig | null {
@@ -56,8 +51,7 @@ function normalizeData(config: ResourceConfig, raw: Record<string, unknown>): Re
         if (!Number.isFinite(numberValue)) throw new Error(`Nilai ${field.label} harus berupa angka yang valid.`);
         value = numberValue;
       }
-    }
-    else if (field?.type === "datetime-local") value = toDatabaseDate(value);
+    } else if (field?.type === "datetime-local") value = toDatabaseDate(value);
     else if (typeof value === "string") value = value.trim() || null;
     else if (value === undefined) value = null;
     else if (value !== null && typeof value !== "number" && typeof value !== "boolean") {
@@ -84,7 +78,7 @@ async function selectedFacilityIds(config: ResourceConfig, raw: Record<string, u
 }
 
 async function userOnly(request: NextRequest) {
-  return requireRequestRole(request, "pengguna");
+  return requireRequestRole(request, "petugas");
 }
 
 export async function GET(request: NextRequest) {
@@ -114,12 +108,19 @@ export async function POST(request: NextRequest) {
     if (missing) return NextResponse.json({ message: `Field ${missing} wajib diisi.` }, { status: 400 });
 
     const slugSource =
-      config.table === "berita" ? data.judul :
-      config.table === "acara" ? data.nama_acara :
-      config.table === "tempat_wisata" ? data.nama_tempat :
-      config.table === "hotel" ? data.nama_hotel :
-      config.table === "kuliner" ? data.nama_usaha :
-      config.table === "satwa_endemik" ? data.nama_umum : null;
+      config.table === "berita"
+        ? data.judul
+        : config.table === "acara"
+          ? data.nama_acara
+          : config.table === "tempat_wisata"
+            ? data.nama_tempat
+            : config.table === "hotel"
+              ? data.nama_hotel
+              : config.table === "kuliner"
+                ? data.nama_usaha
+                : config.table === "satwa_endemik"
+                  ? data.nama_umum
+                  : null;
     if (slugSource) data.slug = `${slugify(String(slugSource))}-${Date.now().toString().slice(-7)}`;
     if ("dipublikasikan" in data && Number(data.dipublikasikan) === 1 && !data.tanggal_publikasi) data.tanggal_publikasi = dbNow();
     data.created_by = user.id;

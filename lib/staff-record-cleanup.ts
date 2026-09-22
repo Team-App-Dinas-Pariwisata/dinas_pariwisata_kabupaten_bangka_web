@@ -15,39 +15,115 @@ export type CleanupResult = {
   skippedFiles: number;
 };
 
-function unique<T>(values: T[]) {
-  return [...new Set(values)];
+export type SubmissionCleanupResult = {
+  id: number;
+  type: SubmissionType;
+  deletedFiles: number;
+  failedFiles: number;
+  deletedNotifications?: number;
+};
+
+export type BatchSubmissionCleanupResult = {
+  type: SubmissionType;
+  requestedIds: number[];
+  deletedIds: number[];
+  deletedCount: number;
+  deletedFiles: number;
+  failedFiles: number;
+  deletedNotifications: number;
+};
+
+export function isSubmissionType(value: unknown): value is SubmissionType {
+  return value === "ekraf" || value === "sdm" || value === "komunitas";
+}
+
+/**
+ * Hapus beberapa pengajuan secara massal sekaligus dari Firebase Realtime Database,
+ * termasuk membersihkan berkas terkait di Cloudflare R2.
+ */
+export async function deleteSubmissionsWithManagedFiles(
+  type: SubmissionType,
+  ids: number[],
+): Promise<BatchSubmissionCleanupResult> {
+  const uniqueIds = [...new Set(ids.filter((id) => Number.isSafeInteger(id) && id > 0))];
+  if (uniqueIds.length === 0) {
+    return {
+      type,
+      requestedIds: ids,
+      deletedIds: [],
+      deletedCount: 0,
+      deletedFiles: 0,
+      failedFiles: 0,
+      deletedNotifications: 0,
+    };
+  }
+
+  const config = submissionConfigs[type];
+  const fileFields = allSubmissionFields(type)
+    .filter((field) => field.type === "file")
+    .map((field) => field.key);
+
+  const deletedIds: number[] = [];
+  const r2KeysToDelete: string[] = [];
+
+  for (const id of uniqueIds) {
+    const row = await getById<DbRecord>(config.table, id);
+    if (!row) continue;
+
+    for (const field of fileFields) {
+      const rawVal = row[field];
+      if (typeof rawVal === "string" && rawVal.trim()) {
+        const key = keyFromR2SubmissionStorageReference(rawVal);
+        if (key && isManagedR2SubmissionKey(key)) {
+          r2KeysToDelete.push(key);
+        }
+      }
+    }
+
+    await deleteById(config.table, id);
+    await deleteByKey(`public_directory/${type}`, id);
+    deletedIds.push(id);
+  }
+
+  const uniqueR2Keys = [...new Set(r2KeysToDelete)];
+  const cleanup = await Promise.allSettled(uniqueR2Keys.map((key) => deleteSubmissionFileFromR2(key)));
+  const failedFiles = cleanup.filter((result) => result.status === "rejected").length;
+
+  return {
+    type,
+    requestedIds: uniqueIds,
+    deletedIds,
+    deletedCount: deletedIds.length,
+    deletedFiles: cleanup.length - failedFiles,
+    failedFiles,
+    deletedNotifications: 0,
+  };
+}
+
+/**
+ * Hapus satu pengajuan beserta berkas R2 terkait.
+ */
+export async function deleteSubmissionWithManagedFiles(
+  type: SubmissionType,
+  id: number,
+): Promise<SubmissionCleanupResult | null> {
+  const batchResult = await deleteSubmissionsWithManagedFiles(type, [id]);
+  if (batchResult.deletedCount === 0) return null;
+
+  return {
+    id,
+    type,
+    deletedFiles: batchResult.deletedFiles,
+    failedFiles: batchResult.failedFiles,
+    deletedNotifications: batchResult.deletedNotifications,
+  };
 }
 
 export async function deleteSubmissionWithFiles(type: SubmissionType, id: number | string): Promise<CleanupResult> {
-  const config = submissionConfigs[type];
-  const row = await getById<DbRecord>(config.table, id);
-  if (!row) throw new Error("Pengajuan tidak ditemukan.");
-
-  const fileFields = allSubmissionFields(type).filter((field) => field.type === "file");
-  const references = fileFields
-    .map((field) => row[field.key])
-    .filter((value) => typeof value === "string" && value.trim()) as string[];
-
-  const keys = unique(
-    references
-      .map((value) => keyFromR2SubmissionStorageReference(value))
-      .filter((value): value is string => Boolean(value && isManagedR2SubmissionKey(value))),
-  );
-
-  const skippedFiles = Math.max(0, references.length - keys.length);
-  for (const key of keys) {
-    await deleteSubmissionFileFromR2(key);
-  }
-
-  const deleted = await deleteById(config.table, id);
-  if (!deleted) throw new Error("Pengajuan tidak ditemukan saat proses penghapusan.");
-
-  // Flutter membaca direktori publik dari mirror ini. Hapus entri mirror
-  // bersamaan agar pengajuan yang sudah dihapus tidak tetap tampil di mobile.
-  await deleteByKey(`public_directory/${type}`, id);
-
-  return { deletedRecordId: id, deletedFiles: keys.length, skippedFiles };
+  const numId = Number(id);
+  const result = await deleteSubmissionWithManagedFiles(type, numId);
+  if (!result) throw new Error("Pengajuan tidak ditemukan.");
+  return { deletedRecordId: id, deletedFiles: result.deletedFiles, skippedFiles: result.failedFiles };
 }
 
 export async function deleteDetectionReportWithImage(id: number | string): Promise<CleanupResult> {

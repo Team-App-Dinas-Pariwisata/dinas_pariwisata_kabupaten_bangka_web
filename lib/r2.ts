@@ -70,6 +70,21 @@ function configuredPrefix() {
   return value || DEFAULT_PREFIX;
 }
 
+
+function normalizedImageContentType(file: File) {
+  const raw = file.type.toLowerCase().split(";", 1)[0].trim();
+  if (raw === "image/jpg") return "image/jpeg";
+  if (raw in IMAGE_EXTENSIONS) return raw;
+
+  const extension = file.name.toLowerCase().split(".").pop();
+  if (extension === "jpg" || extension === "jpeg") return "image/jpeg";
+  if (extension === "png") return "image/png";
+  if (extension === "webp") return "image/webp";
+  if (extension === "gif") return "image/gif";
+  if (extension === "avif") return "image/avif";
+  return "";
+}
+
 function configuredMaxBytes() {
   const raw = Number(process.env.R2_MAX_IMAGE_MB);
   if (!Number.isFinite(raw) || raw <= 0) return DEFAULT_MAX_IMAGE_BYTES;
@@ -262,35 +277,15 @@ export function keyFromR2SubmissionStorageReference(value: string | undefined | 
 
   try {
     const parsed = new URL(trimmed, "http://local.invalid");
-    if (parsed.pathname === SUBMISSION_PROXY_PATH) {
+    if (trimmed.startsWith("/") && parsed.pathname === SUBMISSION_PROXY_PATH) {
       const key = parsed.searchParams.get("key");
       return key && isManagedR2SubmissionKey(key) ? key : null;
     }
-
-    const hostname = parsed.hostname.toLowerCase();
-    if (hostname === "r2.dev" || hostname.endsWith(".r2.dev")) {
-      const encodedKey = parsed.pathname.replace(/^\/+/, "");
-      const key = encodedKey.split("/").map((part) => decodeURIComponent(part)).join("/");
-      return isManagedR2SubmissionKey(key) ? key : null;
-    }
   } catch {
-    // Nilai bisa berupa raw object key, lanjutkan ke pengecekan di bawah.
+    return null;
   }
 
-  if (isManagedR2SubmissionKey(trimmed)) return trimmed;
-
-  const base = publicBaseUrl();
-  if (base && trimmed.startsWith(`${base}/`)) {
-    try {
-      const encodedKey = trimmed.slice(base.length + 1);
-      const key = encodedKey.split("/").map((part) => decodeURIComponent(part)).join("/");
-      return isManagedR2SubmissionKey(key) ? key : null;
-    } catch {
-      return null;
-    }
-  }
-
-  return null;
+  return isManagedR2SubmissionKey(trimmed) ? trimmed : null;
 }
 
 export function keyFromR2StorageReference(value: string | undefined | null) {
@@ -302,7 +297,7 @@ export function keyFromR2StorageReference(value: string | undefined | null) {
     const parsed = new URL(trimmed, "http://local.invalid");
 
     // Proxy internal aplikasi.
-    if (parsed.pathname === PROXY_PATH) {
+    if (trimmed.startsWith("/") && parsed.pathname === PROXY_PATH) {
       const key = parsed.searchParams.get("key");
       return key && isManagedR2ImageKey(key) ? key : null;
     }
@@ -452,8 +447,8 @@ export async function uploadImageToR2(file: File, resource: string): Promise<R2U
   }
   if (!file.size) throw new Error("File gambar kosong.");
 
-  const contentType = file.type.toLowerCase();
-  if (!(contentType in IMAGE_EXTENSIONS)) {
+  const contentType = normalizedImageContentType(file);
+  if (!contentType || !(contentType in IMAGE_EXTENSIONS)) {
     throw new Error("Format gambar harus JPG/JPEG, PNG, WebP, GIF, atau AVIF.");
   }
 
