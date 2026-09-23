@@ -49,7 +49,26 @@ function NavIcon({ name }: { name: NavIconName }) {
 function DesktopDropdown({ label, icon, items }: { label: string; icon: NavIconName; items: { label: string; href: string }[] }) {
   return (
     <details className="public-nav-dropdown">
-      <summary><NavIcon name={icon}/><span>{label}</span><span className="public-nav-chevron" aria-hidden="true" /></summary>
+      <summary>
+        <span className="public-dropdown-trigger-inner">
+          <NavIcon name={icon} />
+          <span className="public-dropdown-label-text">{label}</span>
+        </span>
+        <svg
+          className="public-dropdown-arrow"
+          width="13"
+          height="13"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </summary>
       <div className="public-nav-dropdown-menu">
         {items.map((item) => <Link href={item.href} key={item.href}>{item.label}</Link>)}
       </div>
@@ -60,7 +79,26 @@ function DesktopDropdown({ label, icon, items }: { label: string; icon: NavIconN
 function MobileDropdown({ label, icon, items }: { label: string; icon: NavIconName; items: { label: string; href: string }[] }) {
   return (
     <details className="public-mobile-dropdown">
-      <summary><span className="public-mobile-label"><NavIcon name={icon}/>{label}</span><span className="public-mobile-chevron" aria-hidden="true" /></summary>
+      <summary>
+        <span className="public-mobile-label">
+          <NavIcon name={icon} />
+          <span className="public-mobile-label-text">{label}</span>
+        </span>
+        <svg
+          className="public-dropdown-arrow public-mobile-arrow"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </summary>
       <div>
         {items.map((item) => <Link href={item.href} key={item.href}>{item.label}</Link>)}
       </div>
