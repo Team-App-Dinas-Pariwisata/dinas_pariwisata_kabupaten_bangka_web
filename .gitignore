@@ -42,3 +42,5 @@ inspiration
 # whatsapp-web.js local session/cache
 /whatsapp-service/.wwebjs_auth/
 /whatsapp-service/.wwebjs_cache/
+
+public.zip
