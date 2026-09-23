@@ -8408,14 +8408,6 @@ body.is-paging-loading .subsector-directory-grid {
   cursor: pointer;
 }
 
-.public-mobile-dropdown>summary span {
-  transition: transform .18s ease;
-}
-
-.public-mobile-dropdown[open]>summary span {
-  transform: rotate(180deg);
-}
-
 .public-mobile-dropdown>div {
   display: grid;
   gap: 2px;
@@ -9788,6 +9780,7 @@ body.is-paging-loading .subsector-directory-grid {
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  transform: none !important;
 }
 
 @media (max-width: 760px) {
