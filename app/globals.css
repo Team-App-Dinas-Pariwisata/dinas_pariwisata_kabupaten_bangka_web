@@ -1961,6 +1961,7 @@ a {
 }
 
 .ai-panel-head button {
+  font-size: 25px;
   display: grid;
   place-items: center;
   width: 35px;
@@ -19551,4 +19552,263 @@ body {
   color: #1e293b;
   letter-spacing: -0.01em;
   white-space: nowrap;
+}
+
+/* =========================================================
+   WHATSAPP CHAT LINK (POJOK BINCANG & ADMIN SETTINGS)
+   ========================================================= */
+
+/* Header actions & WhatsApp button in chat head */
+.unified-chat-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.unified-chat-wa-head-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 33px;
+  padding: 0 11px 0 9px;
+  border-radius: 10px;
+  background: rgba(37, 211, 102, 0.16);
+  border: 1px solid rgba(37, 211, 102, 0.45);
+  color: #25d366;
+  text-decoration: none;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(37, 211, 102, 0.15);
+}
+
+.unified-chat-wa-head-btn:hover {
+  background: #25d366;
+  color: #063d20;
+  border-color: #25d366;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(37, 211, 102, 0.38);
+}
+
+.unified-chat-wa-head-btn svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 440px) {
+  .unified-chat-wa-head-label {
+    display: none;
+  }
+
+  .unified-chat-wa-head-btn {
+    padding: 0 8px;
+    width: 33px;
+    justify-content: center;
+  }
+}
+
+/* WhatsApp top quick action bar in staff chat */
+.support-chat-wa-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #e6f9ed 100%);
+  border-bottom: 1px solid #bbf7d0;
+  box-shadow: 0 2px 6px rgba(22, 101, 52, 0.04);
+}
+
+.support-chat-wa-top-left {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.support-chat-wa-top-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #25d366;
+  color: #ffffff;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(37, 211, 102, 0.28);
+}
+
+.support-chat-wa-top-badge svg {
+  width: 15px;
+  height: 15px;
+}
+
+.support-chat-wa-top-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.support-chat-wa-top-text strong {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #14532d;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.support-chat-wa-top-text small {
+  font-size: 10px;
+  color: #166534;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.support-chat-wa-top-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
+  border-radius: 8px;
+  background: #16a34a;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.22);
+}
+
+.support-chat-wa-top-btn:hover {
+  background: #15803d;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(22, 163, 74, 0.32);
+}
+
+.support-chat-wa-top-btn svg {
+  transition: transform 0.2s ease;
+}
+
+.support-chat-wa-top-btn:hover svg {
+  transform: translate(1px, -1px);
+}
+
+/* Admin Feature Settings - WhatsApp Card Theme */
+.feature-card-icon.wa-feature-icon {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.wa-settings-form {
+  display: grid;
+  gap: 16px;
+}
+
+.wa-preview-card {
+  margin-top: 14px;
+  padding: 16px 18px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.wa-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed #cbd5e1;
+}
+
+.wa-preview-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.wa-preview-badge svg {
+  width: 15px;
+  height: 15px;
+  color: #64748b;
+}
+
+.wa-preview-test-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 7px;
+  background: #25d366;
+  color: #0b3d1f;
+  text-decoration: none;
+  font-size: 11.5px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(37, 211, 102, 0.25);
+}
+
+.wa-preview-test-link:hover {
+  background: #1eb956;
+  color: #042411;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(37, 211, 102, 0.35);
+}
+
+.wa-preview-test-link svg {
+  width: 14px;
+  height: 14px;
+}
+
+.wa-preview-body {
+  display: grid;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.wa-preview-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wa-preview-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.wa-preview-code {
+  display: block;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #0369a1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.wa-preview-text {
+  font-size: 12.5px;
+  color: #334155;
+  font-weight: 500;
 }

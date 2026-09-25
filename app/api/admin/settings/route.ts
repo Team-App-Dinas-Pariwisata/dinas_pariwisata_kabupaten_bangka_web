@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRequestRole } from "@/lib/auth";
 import {
+  buildWhatsAppChatUrl,
+  getChatWhatsAppConfig,
   isPetugasMassDeleteEnabled,
+  setChatWhatsAppConfig,
   setPetugasMassDeleteEnabled,
 } from "@/lib/system-settings";
 
@@ -11,10 +14,22 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const petugasMassDeleteEnabled = await isPetugasMassDeleteEnabled();
+    const [petugasMassDeleteEnabled, chatWhatsApp] = await Promise.all([
+      isPetugasMassDeleteEnabled(),
+      getChatWhatsAppConfig(),
+    ]);
+
+    const previewUrl = chatWhatsApp.number
+      ? buildWhatsAppChatUrl(chatWhatsApp.number, chatWhatsApp.message)
+      : null;
+
     return NextResponse.json({
       data: {
         petugas_mass_delete_enabled: petugasMassDeleteEnabled,
+        chat_whatsapp_number: chatWhatsApp.number,
+        chat_whatsapp_message: chatWhatsApp.message,
+        chat_whatsapp_enabled: chatWhatsApp.enabled,
+        chat_whatsapp_preview_url: previewUrl,
       },
     });
   } catch (error) {
@@ -30,22 +45,50 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const body = await request.json();
-    if (typeof body.petugas_mass_delete_enabled !== "boolean") {
+    let updatedAnything = false;
+
+    if (typeof body.petugas_mass_delete_enabled === "boolean") {
+      await setPetugasMassDeleteEnabled(body.petugas_mass_delete_enabled);
+      updatedAnything = true;
+    }
+
+    if (
+      body.chat_whatsapp_number !== undefined ||
+      body.chat_whatsapp_message !== undefined ||
+      body.chat_whatsapp_enabled !== undefined
+    ) {
+      await setChatWhatsAppConfig({
+        number: typeof body.chat_whatsapp_number === "string" ? body.chat_whatsapp_number : undefined,
+        message: typeof body.chat_whatsapp_message === "string" ? body.chat_whatsapp_message : undefined,
+        enabled: typeof body.chat_whatsapp_enabled === "boolean" ? body.chat_whatsapp_enabled : undefined,
+      });
+      updatedAnything = true;
+    }
+
+    if (!updatedAnything) {
       return NextResponse.json(
-        { message: "Nilai pengaturan petugas_mass_delete_enabled harus boolean." },
+        { message: "Tidak ada parameter pengaturan yang dikirim untuk diperbarui." },
         { status: 400 },
       );
     }
 
-    await setPetugasMassDeleteEnabled(body.petugas_mass_delete_enabled);
-    const updatedStatus = await isPetugasMassDeleteEnabled();
+    const [updatedStatus, chatWhatsApp] = await Promise.all([
+      isPetugasMassDeleteEnabled(),
+      getChatWhatsAppConfig(),
+    ]);
+
+    const previewUrl = chatWhatsApp.number
+      ? buildWhatsAppChatUrl(chatWhatsApp.number, chatWhatsApp.message)
+      : null;
 
     return NextResponse.json({
-      message: updatedStatus
-        ? "Fitur hapus massal untuk akun petugas berhasil diaktifkan."
-        : "Fitur hapus massal untuk akun petugas berhasil dinonaktifkan.",
+      message: "Pengaturan berhasil diperbarui.",
       data: {
         petugas_mass_delete_enabled: updatedStatus,
+        chat_whatsapp_number: chatWhatsApp.number,
+        chat_whatsapp_message: chatWhatsApp.message,
+        chat_whatsapp_enabled: chatWhatsApp.enabled,
+        chat_whatsapp_preview_url: previewUrl,
       },
     });
   } catch (error) {
@@ -53,3 +96,4 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ message: "Gagal menyimpan pengaturan sistem." }, { status: 500 });
   }
 }
+

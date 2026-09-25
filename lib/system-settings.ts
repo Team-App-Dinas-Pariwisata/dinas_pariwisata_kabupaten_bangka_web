@@ -1,5 +1,6 @@
 import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { db } from "@/lib/db";
+import { normalizeIndonesianPhone } from "@/lib/fonnte";
 
 type SettingRow = RowDataPacket & {
   setting_key: string;
@@ -26,7 +27,11 @@ export async function ensureSettingsTable(): Promise<void> {
 
     await db().execute(`
       INSERT INTO pengaturan_sistem (setting_key, setting_value, keterangan)
-      VALUES ('petugas_mass_delete_enabled', '1', 'Mengaktifkan fitur hapus massal pengajuan untuk akun petugas')
+      VALUES 
+        ('petugas_mass_delete_enabled', '1', 'Mengaktifkan fitur hapus massal pengajuan untuk akun petugas'),
+        ('chat_whatsapp_number', '081200002026', 'Nomor WhatsApp petugas untuk tautan chat pengunjung'),
+        ('chat_whatsapp_message', 'Halo Petugas SI PARIK Dinas Pariwisata Kabupaten Bangka, saya ingin bertanya seputar layanan SI PARIK.', 'Teks pesan pembuka WhatsApp pengunjung'),
+        ('chat_whatsapp_enabled', '1', 'Status aktif tombol WhatsApp di kotak chat pengunjung')
       ON DUPLICATE KEY UPDATE id = id
     `);
 
@@ -89,3 +94,67 @@ export async function getAllSystemSettings(): Promise<Record<string, { value: st
   }
   return result;
 }
+
+export type ChatWhatsAppConfig = {
+  number: string;
+  message: string;
+  enabled: boolean;
+};
+
+export async function getChatWhatsAppConfig(): Promise<ChatWhatsAppConfig> {
+  await ensureSettingsTable();
+  const [number, message, enabled] = await Promise.all([
+    getSystemSetting("chat_whatsapp_number", "081200002026"),
+    getSystemSetting(
+      "chat_whatsapp_message",
+      "Halo Petugas SI PARIK Dinas Pariwisata Kabupaten Bangka, saya ingin bertanya seputar layanan SI PARIK.",
+    ),
+    getSystemSetting("chat_whatsapp_enabled", "1"),
+  ]);
+
+  return {
+    number: number.trim(),
+    message: message.trim(),
+    enabled: enabled === "1" || enabled.toLowerCase() === "true",
+  };
+}
+
+export async function setChatWhatsAppConfig(data: {
+  number?: string;
+  message?: string;
+  enabled?: boolean;
+}): Promise<void> {
+  await ensureSettingsTable();
+  if (data.number !== undefined) {
+    await setSystemSetting(
+      "chat_whatsapp_number",
+      data.number.trim(),
+      "Nomor WhatsApp petugas untuk tautan chat pengunjung",
+    );
+  }
+  if (data.message !== undefined) {
+    await setSystemSetting(
+      "chat_whatsapp_message",
+      data.message.trim(),
+      "Teks pesan pembuka WhatsApp pengunjung",
+    );
+  }
+  if (data.enabled !== undefined) {
+    await setSystemSetting(
+      "chat_whatsapp_enabled",
+      data.enabled ? "1" : "0",
+      "Status aktif tombol WhatsApp di kotak chat pengunjung",
+    );
+  }
+}
+
+export function buildWhatsAppChatUrl(phone: string, text?: string): string | null {
+  const normalized = normalizeIndonesianPhone(phone);
+  if (!normalized) return null;
+  const baseUrl = `https://wa.me/${normalized}`;
+  if (text && text.trim()) {
+    return `${baseUrl}?text=${encodeURIComponent(text.trim())}`;
+  }
+  return baseUrl;
+}
+

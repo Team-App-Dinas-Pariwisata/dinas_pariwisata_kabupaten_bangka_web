@@ -2,12 +2,26 @@ import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { NextRequest, NextResponse } from "next/server";
 import { getRequestUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { buildWhatsAppChatUrl, getChatWhatsAppConfig } from "@/lib/system-settings";
 
 const ONLINE_WINDOW_SECONDS = 75;
 
 type CountRow = RowDataPacket & { online_count: number };
 
 export async function GET() {
+  let whatsapp = { enabled: false, number: "", url: "" };
+  try {
+    const waConfig = await getChatWhatsAppConfig();
+    const waUrl = waConfig.enabled ? buildWhatsAppChatUrl(waConfig.number, waConfig.message) : null;
+    whatsapp = {
+      enabled: waConfig.enabled && Boolean(waUrl),
+      number: waConfig.number,
+      url: waUrl ?? "",
+    };
+  } catch (waErr) {
+    console.error("[chat/presence GET waConfig]", waErr);
+  }
+
   try {
     const [rows] = await db().execute<CountRow[]>(
       `SELECT COUNT(*) AS online_count
@@ -19,14 +33,26 @@ export async function GET() {
     );
 
     return NextResponse.json(
-      { data: { online_count: Number(rows[0]?.online_count ?? 0), online_window_seconds: ONLINE_WINDOW_SECONDS } },
+      {
+        data: {
+          online_count: Number(rows[0]?.online_count ?? 0),
+          online_window_seconds: ONLINE_WINDOW_SECONDS,
+          whatsapp,
+        },
+      },
       { headers: { "Cache-Control": "no-store, max-age=0" } },
     );
   } catch (error) {
     console.error("[chat/presence GET]", error);
-    // Agar guest tetap dapat memakai AI walau migration presence belum dijalankan.
+    // Agar guest tetap dapat memakai chat walau migration presence belum dijalankan.
     return NextResponse.json(
-      { data: { online_count: 0, online_window_seconds: ONLINE_WINDOW_SECONDS } },
+      {
+        data: {
+          online_count: 0,
+          online_window_seconds: ONLINE_WINDOW_SECONDS,
+          whatsapp,
+        },
+      },
       { headers: { "Cache-Control": "no-store, max-age=0" } },
     );
   }
