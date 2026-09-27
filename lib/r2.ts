@@ -5,6 +5,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
+import sharp from "sharp";
 
 const DEFAULT_PREFIX = "appekraf";
 const DEFAULT_MAX_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -41,6 +42,8 @@ export type R2UploadResult = {
   key: string;
   url: string;
   storageUrl: string;
+  mobileKey?: string | null;
+  mobileUrl?: string | null;
   contentType: string;
   size: number;
   etag: string | null;
@@ -211,15 +214,36 @@ function isR2DevUrl(value: string) {
   }
 }
 
-export function storageUrlForR2Key(key: string) {
+export function getMobileKeyForOriginal(key: string): string | null {
+  if (!key) return null;
+  if (key.includes("-mobile.webp")) return key;
+  const lastDot = key.lastIndexOf(".");
+  if (lastDot === -1) return `${key}-mobile.webp`;
+  return `${key.slice(0, lastDot)}-mobile.webp`;
+}
+
+export function getOriginalKeyFromMobile(key: string): string {
+  if (!key) return key;
+  return key.replace(/-mobile\.[a-z0-9]+$/i, "");
+}
+
+export function storageUrlForR2Key(key: string, variant?: "original" | "mobile") {
   const base = publicBaseUrl();
+  const variantParam = variant ? `&v=${variant}` : "";
   // r2.dev adalah development endpoint. Untuk menghindari masalah TLS/browser
   // dan agar credential/storage tetap terkontrol aplikasi, sajikan lewat proxy Next.js.
-  if (!base || isR2DevUrl(base)) return proxyUrlForKey(key);
+  if (!base || isR2DevUrl(base)) return `${proxyUrlForKey(key)}${variantParam}`;
+  if (variant === "mobile") {
+    // Lewatkan proxy agar jika gambar belum memiliki versi mobile, server otomatis fallback ke versi asli
+    return `${proxyUrlForKey(key)}&v=mobile`;
+  }
   return `${base}/${encodeObjectKey(key)}`;
 }
 
-export function browserSafeR2ImageUrl(value: string | undefined | null) {
+export function browserSafeR2ImageUrl(
+  value: string | undefined | null,
+  options?: { variant?: "original" | "mobile" },
+) {
   if (!value) return value ?? null;
   const trimmed = value.trim();
   if (!trimmed) return null;
@@ -227,13 +251,29 @@ export function browserSafeR2ImageUrl(value: string | undefined | null) {
   const key = keyFromR2StorageReference(trimmed);
   if (!key) return trimmed;
 
+  const variantParam = options?.variant ? `&v=${options.variant}` : "";
+
   // URL r2.dev lama yang sudah tersimpan di database selalu diproxy agar browser
   // tidak perlu melakukan koneksi TLS langsung ke hostname development tersebut.
-  if (isR2DevUrl(trimmed) || trimmed.startsWith(PROXY_PATH)) return proxyUrlForKey(key);
+  if (isR2DevUrl(trimmed) || trimmed.startsWith(PROXY_PATH)) {
+    return `${proxyUrlForKey(key)}${variantParam}`;
+  }
 
   const base = publicBaseUrl();
-  if (!base || isR2DevUrl(base)) return proxyUrlForKey(key);
+  if (!base || isR2DevUrl(base)) return `${proxyUrlForKey(key)}${variantParam}`;
+
+  if (options?.variant === "mobile") {
+    return `${proxyUrlForKey(key)}&v=mobile`;
+  }
+
   return trimmed;
+}
+
+export function getResponsiveR2Image(value: string | undefined | null) {
+  return {
+    desktop: browserSafeR2ImageUrl(value, { variant: "original" }),
+    mobile: browserSafeR2ImageUrl(value, { variant: "mobile" }),
+  };
 }
 
 export function isManagedR2ImageKey(key: string) {
@@ -440,6 +480,28 @@ function cloudflareS3Error(error: unknown, action: string) {
   );
 }
 
+/**
+ * Menghasilkan varian gambar terkompresi khusus untuk tampilan mobile/smartphone:
+ * - Ukuran maksimal lebar 800px (sangat cukup dan tajam untuk layar smartphone).
+ * - Format WebP kualitas 75 untuk ukuran berkas ringan dan loading kilat.
+ * - Otomatis rotasi mengikuti metadata orientasi EXIF kamera HP.
+ */
+export async function generateMobileImageVariant(
+  buffer: Buffer,
+): Promise<{ buffer: Buffer; contentType: string } | null> {
+  try {
+    const compressed = await sharp(buffer)
+      .rotate()
+      .resize({ width: 800, withoutEnlargement: true })
+      .webp({ quality: 75, effort: 4 })
+      .toBuffer();
+    return { buffer: compressed, contentType: "image/webp" };
+  } catch (err) {
+    console.warn("[R2] Gagal membuat varian kompresi mobile:", err);
+    return null;
+  }
+}
+
 export async function uploadImageToR2(file: File, resource: string): Promise<R2UploadResult> {
   const allowedResources: R2Resource[] = ["berita", "acara", "tempat-wisata", "hotel", "kuliner", "satwa-endemik", "deteksi"];
   if (!allowedResources.includes(resource as R2Resource)) {
@@ -462,6 +524,7 @@ export async function uploadImageToR2(file: File, resource: string): Promise<R2U
   const { client, config } = r2Client();
 
   try {
+    // 1. Upload versi ASLI tanpa kompresi (untuk laptop/desktop)
     const result = await client.send(
       new PutObjectCommand({
         Bucket: config.bucketName,
@@ -473,10 +536,39 @@ export async function uploadImageToR2(file: File, resource: string): Promise<R2U
     );
 
     const storageUrl = storageUrlForR2Key(key);
+
+    // 2. Generate dan upload versi MOBILE yang sudah dikompresi
+    let mobileKey: string | null = null;
+    let mobileUrl: string | null = null;
+    const mobileVariant = await generateMobileImageVariant(body);
+    if (mobileVariant) {
+      const candidateKey = getMobileKeyForOriginal(key);
+      if (candidateKey) {
+        try {
+          await client.send(
+            new PutObjectCommand({
+              Bucket: config.bucketName,
+              Key: candidateKey,
+              Body: mobileVariant.buffer,
+              ContentType: mobileVariant.contentType,
+              ContentLength: mobileVariant.buffer.byteLength,
+            }),
+          );
+          mobileKey = candidateKey;
+          mobileUrl = storageUrlForR2Key(candidateKey, "mobile");
+          console.log(`[R2] Berhasil membuat versi mobile terkompresi: ${candidateKey} (${mobileVariant.buffer.byteLength} bytes)`);
+        } catch (mobileErr) {
+          console.warn("[R2] Peringatan: Gagal mengunggah varian mobile ke Cloudflare R2:", mobileErr);
+        }
+      }
+    }
+
     return {
       key,
       url: storageUrl,
       storageUrl,
+      mobileKey,
+      mobileUrl: mobileUrl || storageUrl,
       contentType,
       size: file.size,
       etag: result.ETag?.replace(/^\"|\"$/g, "") || null,
@@ -519,6 +611,8 @@ export async function deleteImageFromR2(key: string) {
   if (!isManagedR2ImageKey(key)) return false;
 
   const { client, config } = r2Client();
+  const mobileKey = getMobileKeyForOriginal(key);
+
   try {
     await client.send(
       new DeleteObjectCommand({
@@ -526,6 +620,21 @@ export async function deleteImageFromR2(key: string) {
         Key: key,
       }),
     );
+
+    // Hapus juga varian mobile jika ada
+    if (mobileKey && mobileKey !== key) {
+      try {
+        await client.send(
+          new DeleteObjectCommand({
+            Bucket: config.bucketName,
+            Key: mobileKey,
+          }),
+        );
+      } catch {
+        // Abaikan jika varian mobile tidak ada
+      }
+    }
+
     return true;
   } catch (error) {
     if (isNotFoundError(error)) return true;
