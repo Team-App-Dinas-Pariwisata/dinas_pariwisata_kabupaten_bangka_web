@@ -5,7 +5,6 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
-import sharp from "sharp";
 
 const DEFAULT_PREFIX = "appekraf";
 const DEFAULT_MAX_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -490,6 +489,8 @@ export async function generateMobileImageVariant(
   buffer: Buffer,
 ): Promise<{ buffer: Buffer; contentType: string } | null> {
   try {
+    const sharpModule = await import("sharp");
+    const sharp = (sharpModule.default || sharpModule) as unknown as (input: Buffer) => any;
     const compressed = await sharp(buffer)
       .rotate()
       .resize({ width: 800, withoutEnlargement: true })
@@ -497,7 +498,7 @@ export async function generateMobileImageVariant(
       .toBuffer();
     return { buffer: compressed, contentType: "image/webp" };
   } catch (err) {
-    console.warn("[R2] Gagal membuat varian kompresi mobile:", err);
+    console.warn("[R2] Varian kompresi mobile dilewati (sharp tidak aktif atau belum terpasang di sistem server ini):", err);
     return null;
   }
 }

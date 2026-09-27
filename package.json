@@ -7,6 +7,7 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
+    "test:db": "node test-db-connection.js",
     "whatsapp:install": "npm --prefix whatsapp-service install",
     "whatsapp:start": "npm --prefix whatsapp-service start"
   },
