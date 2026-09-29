@@ -176,12 +176,20 @@ export default function VerifiedDirectory() {
                 </div>
 
                 <div className="directory-card-copy">
-                  <span className="directory-verified">✓ Disetujui dan terverifikasi</span>
+                  <span className="directory-verified">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                    Disetujui &amp; Terverifikasi
+                  </span>
                   <h3>{item.title}</h3>
                   {item.subtitle ? <p className="directory-subtitle">{item.subtitle}</p> : null}
                   <div className="directory-card-meta">
                     {item.category ? <span>{item.category}</span> : null}
-                    {item.location ? <span>⌖ {item.location}</span> : null}
+                    {item.location ? (
+                      <span>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ color: "#0284c7" }}><path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="3"/></svg>
+                        {item.location}
+                      </span>
+                    ) : null}
                   </div>
                   <p className="directory-description">{item.description || "Profil telah diverifikasi dan tercatat dalam direktori SI PARIK BANGKA."}</p>
                   <span className="directory-card-link-label">Lihat profil <span aria-hidden="true">→</span></span>

@@ -16758,148 +16758,1131 @@ body {
 }
 
 /* ========================================================================== 
-   V40 — Navy theme for public directory detail cards and badges
-   Menyamakan kartu detail dengan nuansa navy pada beranda.
+   V40 — High-Contrast Modern Theme for Public Directory Detail
+   Tampilan kartu bersih, kontras tinggi, dan teks tajam tanpa efek blur/pudar
    ========================================================================== */
 .directory-detail-page {
-  background: linear-gradient(180deg, #ffffff 0%, #f6f9fc 58%, #eef3f7 100%);
+  padding-bottom: 96px;
+  background: #f8fafc;
 }
 
-.public-detail-category,
+.directory-detail-header h1 {
+  color: #0f172a !important;
+  font-size: clamp(28px, 4vw, 42px) !important;
+  font-weight: 850 !important;
+  letter-spacing: -0.03em !important;
+  line-height: 1.15 !important;
+  margin: 12px 0 0 !important;
+}
+
+.directory-detail-header .public-detail-subtitle {
+  color: #334155 !important;
+  font-size: 16px !important;
+  line-height: 1.65 !important;
+  font-weight: 500 !important;
+  margin-top: 10px !important;
+}
+
+.directory-detail-eyebrow-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.public-detail-category {
+  display: inline-flex;
+  align-items: center;
+  color: #0369a1 !important;
+  border: 1.5px solid #bae6fd !important;
+  background: #e0f2fe !important;
+  font-size: 11.5px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  padding: 5px 12px !important;
+  border-radius: 999px !important;
+}
+
 .directory-detail-verified,
 .directory-verified {
-  color: #183748;
-  border: 1px solid rgba(24, 55, 72, .10);
-  background: #eef3f7;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #15803d !important;
+  border: 1.5px solid #86efac !important;
+  background: #dcfce7 !important;
+  font-size: 11.5px !important;
+  font-weight: 750 !important;
+  padding: 5px 12px !important;
+  border-radius: 999px !important;
 }
 
 .directory-detail-featured {
-  color: #183748;
-  border-color: rgba(24, 55, 72, .12);
-  background: #dde8f0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #b45309 !important;
+  border: 1.5px solid #fde68a !important;
+  background: #fef3c7 !important;
+  font-size: 11.5px !important;
+  font-weight: 750 !important;
+  padding: 5px 12px !important;
+  border-radius: 999px !important;
 }
 
-.directory-detail-intro-card {
-  border-color: rgba(24, 55, 72, .12);
-  background: linear-gradient(135deg, #eef3f7 0%, #e5edf4 100%);
-  box-shadow: 0 14px 30px rgba(24, 55, 72, .08);
+.directory-detail-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
 }
 
-.directory-detail-intro-card>span {
-  color: #31566f;
+.directory-detail-meta-row span,
+.tourism-detail-meta-row.directory-detail-meta-row span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1.5px solid #cbd5e1 !important;
+  font-size: 13px !important;
+  font-weight: 650 !important;
+  padding: 7px 16px !important;
+  border-radius: 999px !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05) !important;
 }
 
-.directory-detail-intro-card h2,
-.directory-detail-intro-facts strong,
-.directory-detail-links>p strong,
-.directory-card-link-label,
-.directory-related-placeholder,
-.directory-related-placeholder>span {
-  color: #183748;
+.directory-detail-meta-row span svg {
+  color: #0284c7;
+  flex-shrink: 0;
 }
 
-.directory-detail-intro-card>p,
-.directory-map-address,
-.directory-detail-links>p small,
-.directory-detail-intro-facts small,
-.directory-subtitle,
-.directory-description {
-  color: #667d8e;
+/* Hero visual & Intro Card */
+.directory-detail-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.85fr);
+  gap: 24px;
+  align-items: stretch;
+  margin-top: 24px;
 }
 
-.directory-detail-intro-facts>div,
-.directory-detail-links {
-  border-top-color: rgba(24, 55, 72, .10);
+.directory-detail-visual .public-detail-image {
+  min-height: 480px;
+  height: 100%;
+  border-radius: 22px;
+  background-color: #f1f5f9;
+  background-size: cover;
+  background-position: center;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 16px 36px -8px rgba(15, 23, 42, 0.12);
 }
 
 .directory-detail-placeholder {
-  border-color: rgba(24, 55, 72, .12);
-  background: radial-gradient(circle at 50% 36%, rgba(255, 255, 255, .95), rgba(228, 237, 244, .88) 42%, #dbe6ee 100%);
-  box-shadow: 0 20px 48px rgba(24, 55, 72, .08);
+  min-height: 480px;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 18px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 50%, #e2e8f0 100%);
+  box-shadow: 0 16px 36px -8px rgba(15, 23, 42, 0.08);
 }
 
 .directory-detail-placeholder>span {
-  border-color: rgba(24, 55, 72, .12);
-  color: #183748;
-  background: rgba(255, 255, 255, .86);
+  display: grid;
+  width: 110px;
+  height: 110px;
+  place-items: center;
+  border: 2px solid #bae6fd;
+  border-radius: 28px;
+  color: #0284c7;
+  background: #ffffff;
+  font-size: 40px;
+  font-weight: 850;
+  letter-spacing: -0.04em;
+  box-shadow: 0 10px 24px rgba(2, 132, 199, 0.16);
 }
 
 .directory-detail-placeholder>small {
-  color: #6a8091;
+  color: #1e293b;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
-.tourism-detail-meta-row span,
-.directory-card-meta span {
-  border-color: rgba(24, 55, 72, .10);
-  color: #4e6779;
-  background: #f5f8fb;
+/* Intro Card — Ultra High Contrast */
+.directory-detail-intro-card {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  padding: 30px 32px !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-top: 5px solid #0284c7 !important;
+  border-radius: 22px !important;
+  background: #ffffff !important;
+  box-shadow: 0 16px 36px -8px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(15, 23, 42, 0.04) !important;
 }
 
-.tourism-detail-aside,
-.tourism-facts section,
-.tourism-map-card {
-  border: 1px solid rgba(24, 55, 72, .12);
-  background: linear-gradient(135deg, #eef3f7 0%, #e2ebf2 52%, #d7e4ed 100%);
-  box-shadow: 0 14px 30px rgba(24, 55, 72, .08);
+.directory-intro-badge,
+.directory-detail-intro-card>span {
+  display: inline-block;
+  width: fit-content;
+  background: #eff6ff !important;
+  color: #0284c7 !important;
+  border: 1px solid #bfdbfe !important;
+  font-size: 11.5px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  padding: 4px 12px !important;
+  border-radius: 6px !important;
 }
 
-.tourism-aside-facts>div {
-  border-top: 1px solid rgba(24, 55, 72, .10);
+.directory-detail-intro-card h2 {
+  margin: 14px 0 0 !important;
+  color: #0f172a !important;
+  font-size: 26px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.025em !important;
+  line-height: 1.25 !important;
 }
 
-.tourism-detail-aside>span,
-.tourism-facts section>span,
-.tourism-map-heading h3,
-.tourism-aside-facts strong,
-.tourism-map-button,
-.public-detail-header h1,
-.directory-card-copy h3 {
-  color: #183748;
+.directory-detail-intro-card>p {
+  margin: 14px 0 0 !important;
+  color: #334155 !important;
+  font-size: 14.5px !important;
+  line-height: 1.75 !important;
+  font-weight: 450 !important;
 }
 
-.tourism-map-heading span,
-.tourism-aside-facts small,
-.tourism-facts section>p,
-.tourism-map-note,
-.public-detail-subtitle,
-.directory-map-address,
-.directory-state {
-  color: #657c8d;
+.directory-detail-intro-facts {
+  display: grid;
+  gap: 0;
+  margin-top: auto;
+  padding-top: 22px;
 }
 
-.tourism-detail-aside .public-outline-button,
-.tourism-map-card .public-outline-button,
-.directory-detail-links .public-outline-button,
-.directory-detail-links .public-primary-button,
-.public-outline-button {
-  border-color: rgba(24, 55, 72, .12);
-  color: #183748;
-  background: rgba(255, 255, 255, .94);
-  box-shadow: 0 7px 16px rgba(24, 55, 72, .08);
+.directory-detail-intro-facts>div {
+  display: grid;
+  gap: 4px;
+  padding: 12px 0;
+  border-top: 1px solid #e2e8f0 !important;
 }
 
-.tourism-detail-aside .public-outline-button:hover,
-.tourism-map-card .public-outline-button:hover,
-.directory-detail-links .public-outline-button:hover,
-.directory-detail-links .public-primary-button:hover,
-.public-outline-button:hover {
-  border-color: rgba(24, 55, 72, .22);
-  background: #ffffff;
+.directory-detail-intro-facts small {
+  color: #475569 !important;
+  font-size: 11px !important;
+  font-weight: 750 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+}
+
+.directory-detail-intro-facts strong {
+  color: #0f172a !important;
+  font-size: 14.5px !important;
+  font-weight: 750 !important;
+  line-height: 1.4 !important;
+}
+
+/* Article layout & main sections */
+.directory-article-layout {
+  padding-top: 48px;
+}
+
+.directory-detail-page .public-article-lead {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-left: 5px solid #0284c7 !important;
+  border-radius: 16px !important;
+  padding: 20px 24px !important;
+  color: #0f172a !important;
+  font-size: 16px !important;
+  line-height: 1.8 !important;
+  font-weight: 500 !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04) !important;
+  margin-bottom: 24px !important;
+}
+
+/* Cards for detail sections (Produk, Visi, Misi, Prestasi, dll) */
+.tourism-facts.directory-detail-sections {
+  display: grid;
+  gap: 16px;
+  margin-top: 0;
+}
+
+.tourism-facts.directory-detail-sections section,
+.directory-detail-sections section {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 18px !important;
+  padding: 24px 28px !important;
+  box-shadow: 0 6px 20px -2px rgba(15, 23, 42, 0.06) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
+}
+
+.tourism-facts.directory-detail-sections section:hover,
+.directory-detail-sections section:hover {
+  border-color: #93c5fd !important;
+  box-shadow: 0 12px 28px -4px rgba(2, 132, 199, 0.12) !important;
+  transform: translateY(-2px);
+}
+
+.tourism-facts.directory-detail-sections section>span,
+.directory-detail-sections section>span {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  color: #0284c7 !important;
+  background: #f0f7ff !important;
+  border: 1px solid #bae6fd !important;
+  padding: 5px 12px !important;
+  border-radius: 8px !important;
+  font-size: 11.5px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  margin-bottom: 12px !important;
+}
+
+.tourism-facts.directory-detail-sections section>p,
+.directory-detail-sections section>p {
+  color: #0f172a !important;
+  font-size: 15.5px !important;
+  line-height: 1.8 !important;
+  font-weight: 450 !important;
+  margin: 0 !important;
+  white-space: pre-wrap !important;
 }
 
 .directory-detail-empty-copy {
-  border-color: rgba(24, 55, 72, .12);
-  color: #647b8b;
-  background: #f5f8fb;
+  padding: 28px 24px;
+  border: 2px dashed #cbd5e1 !important;
+  border-radius: 18px !important;
+  color: #334155 !important;
+  background: #ffffff !important;
+  font-size: 14.5px !important;
+  font-weight: 500 !important;
+  line-height: 1.75 !important;
+  text-align: center;
 }
 
+/* Aside / Sidebar — Informasi Singkat */
+.public-detail-aside.tourism-detail-aside.directory-detail-aside,
+.directory-detail-aside {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-top: 5px solid #0f172a !important;
+  border-radius: 22px !important;
+  padding: 26px 28px !important;
+  box-shadow: 0 16px 36px -8px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(15, 23, 42, 0.04) !important;
+}
+
+.directory-aside-title,
+.directory-detail-aside>span {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  color: #0f172a !important;
+  font-size: 17px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.01em !important;
+  padding-bottom: 14px !important;
+  border-bottom: 2px solid #f1f5f9 !important;
+  margin-bottom: 6px !important;
+}
+
+.directory-aside-title svg {
+  color: #0284c7;
+}
+
+.directory-detail-aside .tourism-aside-facts>div {
+  border-top: 1px solid #e2e8f0 !important;
+  padding: 11px 0 !important;
+  display: grid !important;
+  gap: 3px !important;
+}
+
+.directory-detail-aside .tourism-aside-facts small {
+  color: #475569 !important;
+  font-size: 11px !important;
+  font-weight: 750 !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+}
+
+.directory-detail-aside .tourism-aside-facts strong {
+  color: #0f172a !important;
+  font-size: 14.5px !important;
+  font-weight: 750 !important;
+  line-height: 1.4 !important;
+}
+
+.directory-detail-links {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 2px solid #f1f5f9 !important;
+}
+
+.directory-detail-links .public-primary-button {
+  background: #0284c7 !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-size: 14px !important;
+  font-weight: 750 !important;
+  padding: 12px 20px !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35) !important;
+  text-align: center;
+  transition: all 0.2s ease !important;
+}
+
+.directory-detail-links .public-primary-button:hover {
+  background: #0369a1 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(2, 132, 199, 0.45) !important;
+}
+
+.directory-detail-links .public-outline-button,
+.directory-detail-aside .public-outline-button {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  border: 1.5px solid #cbd5e1 !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  padding: 11px 18px !important;
+  border-radius: 12px !important;
+  text-align: center;
+  transition: all 0.2s ease !important;
+}
+
+.directory-detail-links .public-outline-button:hover,
+.directory-detail-aside .public-outline-button:hover {
+  background: #ffffff !important;
+  border-color: #0284c7 !important;
+  color: #0284c7 !important;
+}
+
+.directory-detail-links>p {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 10px 0;
+}
+
+.directory-detail-links>p small {
+  color: #475569 !important;
+  font-size: 11px !important;
+  font-weight: 750 !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+}
+
+.directory-detail-links>p strong {
+  color: #0f172a !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+}
+
+/* Map Card */
+.tourism-map-card.directory-map-card,
+.directory-map-card {
+  margin-top: 36px;
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 22px !important;
+  padding: 26px 28px !important;
+  box-shadow: 0 10px 28px -4px rgba(15, 23, 42, 0.06) !important;
+}
+
+.directory-map-card .tourism-map-heading span {
+  color: #0284c7 !important;
+  font-size: 11.5px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+}
+
+.directory-map-card .tourism-map-heading h3 {
+  color: #0f172a !important;
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  margin: 4px 0 0 !important;
+}
+
+.directory-map-card .tourism-map-embed {
+  margin: 18px 0;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
+.directory-map-address {
+  color: #1e293b !important;
+  font-size: 14.5px !important;
+  font-weight: 550 !important;
+  line-height: 1.6 !important;
+  background: #f8fafc !important;
+  padding: 14px 18px !important;
+  border-radius: 12px !important;
+  border: 1px solid #e2e8f0 !important;
+  margin: 14px 0 0 !important;
+}
+
+/* Related section */
 .directory-related-section {
-  border-top-color: rgba(24, 55, 72, .08);
+  border-top: 1px solid #e2e8f0 !important;
+  margin-top: 60px;
+  padding-top: 48px;
+}
+
+.directory-related-section .public-list-heading h2 {
+  color: #0f172a !important;
+  font-size: 26px !important;
+  font-weight: 800 !important;
+}
+
+.directory-related-section .public-section-label {
+  color: #0284c7 !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+}
+
+.public-related-card.directory-related-card {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 18px !important;
+  overflow: hidden !important;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05) !important;
+  transition: all 0.2s ease !important;
+}
+
+.public-related-card.directory-related-card:hover {
+  border-color: #93c5fd !important;
+  transform: translateY(-3px) !important;
+  box-shadow: 0 12px 28px rgba(2, 132, 199, 0.12) !important;
+}
+
+.public-related-card.directory-related-card span {
+  color: #0284c7 !important;
+  font-size: 11.5px !important;
+  font-weight: 750 !important;
+  text-transform: uppercase !important;
+}
+
+.public-related-card.directory-related-card strong {
+  color: #0f172a !important;
+  font-size: 15px !important;
+  font-weight: 750 !important;
+  margin-top: 4px !important;
 }
 
 .directory-related-placeholder {
-  background: linear-gradient(135deg, #dbe6ee, #edf3f7 52%, #d7e3ec);
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%) !important;
+  color: #0f172a !important;
+  font-weight: 800 !important;
 }
+
+/* Also ensure portal verification modal text has crystal-clear contrast */
+.verification-grid>div {
+  border: 1.5px solid #cbd5e1 !important;
+  background: #ffffff !important;
+  border-radius: 12px !important;
+  padding: 14px 16px !important;
+}
+
+.verification-grid span {
+  color: #475569 !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+}
+
+.verification-grid strong {
+  color: #0f172a !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+}
+
+@media (max-width: 900px) {
+  .directory-detail-hero-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .directory-detail-visual .public-detail-image,
+  .directory-detail-placeholder {
+    min-height: 340px;
+  }
+}
+
+/* ========================================================================== 
+   V40.1 — Universal High-Contrast Theme for All Public/Guest Pages
+   Halaman Wisata, Direktori, Subsektor, Berita, dan Acara
+   ========================================================================== */
+
+/* 1. Halaman Detail Wisata (TourismDetailView) */
+.tourism-detail {
+  padding-bottom: 96px;
+  background: #f8fafc;
+}
+
+.tourism-detail-header h1 {
+  color: #0f172a !important;
+  font-size: clamp(28px, 4vw, 42px) !important;
+  font-weight: 850 !important;
+  letter-spacing: -0.03em !important;
+  line-height: 1.15 !important;
+  margin: 12px 0 0 !important;
+}
+
+.tourism-detail-header .public-detail-subtitle {
+  color: #334155 !important;
+  font-size: 16px !important;
+  line-height: 1.65 !important;
+  font-weight: 500 !important;
+  margin-top: 10px !important;
+}
+
+.tourism-detail-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.tourism-detail-meta-row span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1.5px solid #cbd5e1 !important;
+  font-size: 13px !important;
+  font-weight: 650 !important;
+  padding: 7px 16px !important;
+  border-radius: 999px !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05) !important;
+}
+
+.tourism-detail-meta-row span svg {
+  color: #0284c7;
+  flex-shrink: 0;
+}
+
+.tourism-detail-visual .public-detail-image {
+  border-radius: 22px;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 16px 36px -8px rgba(15, 23, 42, 0.12);
+}
+
+.tourism-article-layout .public-article-lead {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-left: 5px solid #0284c7 !important;
+  border-radius: 16px !important;
+  padding: 20px 24px !important;
+  color: #0f172a !important;
+  font-size: 16px !important;
+  line-height: 1.8 !important;
+  font-weight: 500 !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04) !important;
+  margin-bottom: 24px !important;
+}
+
+.public-rich-text {
+  color: #1e293b !important;
+  font-size: 15.5px !important;
+  line-height: 1.8 !important;
+}
+
+.public-rich-text p {
+  color: #1e293b !important;
+  font-size: 15.5px !important;
+  line-height: 1.8 !important;
+  margin-bottom: 16px !important;
+}
+
+.public-rich-text h2,
+.public-rich-text h3,
+.public-rich-text h4 {
+  color: #0f172a !important;
+  font-weight: 800 !important;
+  margin-top: 28px !important;
+  margin-bottom: 12px !important;
+}
+
+.public-rich-text ul,
+.public-rich-text ol {
+  color: #1e293b !important;
+  padding-left: 24px !important;
+  margin-bottom: 16px !important;
+}
+
+.public-rich-text li {
+  color: #1e293b !important;
+  margin-bottom: 6px !important;
+}
+
+/* Tourism Facts Section Cards */
+.tourism-facts section {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 18px !important;
+  padding: 24px 28px !important;
+  box-shadow: 0 6px 20px -2px rgba(15, 23, 42, 0.06) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
+  margin-bottom: 16px !important;
+}
+
+.tourism-facts section:hover {
+  border-color: #93c5fd !important;
+  box-shadow: 0 12px 28px -4px rgba(2, 132, 199, 0.12) !important;
+  transform: translateY(-2px);
+}
+
+.tourism-facts section>span {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  color: #0284c7 !important;
+  background: #f0f7ff !important;
+  border: 1px solid #bae6fd !important;
+  padding: 5px 12px !important;
+  border-radius: 8px !important;
+  font-size: 11.5px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  margin-bottom: 12px !important;
+}
+
+.tourism-facts section>p {
+  color: #0f172a !important;
+  font-size: 15.5px !important;
+  line-height: 1.8 !important;
+  font-weight: 450 !important;
+  margin: 0 !important;
+  white-space: pre-wrap !important;
+}
+
+/* Tourism Map Card */
+.tourism-map-card {
+  margin-top: 36px;
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 22px !important;
+  padding: 26px 28px !important;
+  box-shadow: 0 10px 28px -4px rgba(15, 23, 42, 0.06) !important;
+}
+
+.tourism-map-heading span {
+  color: #0284c7 !important;
+  font-size: 11.5px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+}
+
+.tourism-map-heading h3 {
+  color: #0f172a !important;
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  margin: 4px 0 0 !important;
+}
+
+.tourism-map-embed {
+  margin: 18px 0;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
+.tourism-map-note {
+  color: #1e293b !important;
+  font-size: 13.5px !important;
+  line-height: 1.6 !important;
+  background: #f8fafc !important;
+  padding: 12px 16px !important;
+  border-radius: 12px !important;
+  border: 1px solid #e2e8f0 !important;
+  margin: 14px 0 0 !important;
+}
+
+/* Tourism Detail Aside */
+.public-detail-aside.tourism-detail-aside {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-top: 5px solid #0f172a !important;
+  border-radius: 22px !important;
+  padding: 26px 28px !important;
+  box-shadow: 0 16px 36px -8px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(15, 23, 42, 0.04) !important;
+}
+
+.tourism-detail-aside .tourism-aside-facts>div {
+  border-top: 1px solid #e2e8f0 !important;
+  padding: 11px 0 !important;
+  display: grid !important;
+  gap: 3px !important;
+}
+
+.tourism-detail-aside .tourism-aside-facts small {
+  color: #475569 !important;
+  font-size: 11px !important;
+  font-weight: 750 !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+}
+
+.tourism-detail-aside .tourism-aside-facts strong {
+  color: #0f172a !important;
+  font-size: 14.5px !important;
+  font-weight: 750 !important;
+  line-height: 1.4 !important;
+}
+
+.tourism-detail-aside .public-outline-button {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  border: 1.5px solid #cbd5e1 !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  padding: 11px 18px !important;
+  border-radius: 12px !important;
+  text-align: center;
+  transition: all 0.2s ease !important;
+  display: block;
+  margin-top: 18px;
+}
+
+.tourism-detail-aside .public-outline-button:hover {
+  background: #ffffff !important;
+  border-color: #0284c7 !important;
+  color: #0284c7 !important;
+}
+
+/* 2. Kartu Daftar Direktori & Subsektor (.directory-card, .subsector-directory-card) */
+.directory-card,
+.subsector-directory-card {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 20px !important;
+  overflow: hidden !important;
+  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.06) !important;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease !important;
+}
+
+.directory-card:hover,
+.subsector-directory-card:hover {
+  transform: translateY(-4px) !important;
+  border-color: #93c5fd !important;
+  box-shadow: 0 16px 36px -4px rgba(2, 132, 199, 0.14) !important;
+}
+
+.directory-card.is-featured,
+.subsector-directory-card.is-featured {
+  border-color: #f59e0b !important;
+  box-shadow: 0 10px 28px -4px rgba(245, 158, 11, 0.15) !important;
+}
+
+.directory-card-copy h3,
+.subsector-directory-card h3 {
+  margin: 10px 0 0 !important;
+  color: #0f172a !important;
+  font-size: 21px !important;
+  font-weight: 800 !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.025em !important;
+}
+
+.directory-card-copy h3 a,
+.subsector-directory-card h3 a {
+  color: #0f172a !important;
+}
+
+.directory-subtitle {
+  margin: 5px 0 0 !important;
+  color: #334155 !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+}
+
+.directory-description {
+  color: #1e293b !important;
+  font-size: 13.5px !important;
+  line-height: 1.65 !important;
+  font-weight: 450 !important;
+  margin: 12px 0 0 !important;
+}
+
+.directory-card-meta span {
+  display: inline-flex !important;
+  align-items: center !important;
+  min-height: 28px !important;
+  padding: 0 10px !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  color: #0f172a !important;
+  background: #ffffff !important;
+  font-size: 11.5px !important;
+  font-weight: 650 !important;
+}
+
+.directory-verified {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  min-height: 26px !important;
+  padding: 0 10px !important;
+  border-radius: 999px !important;
+  color: #15803d !important;
+  background: #dcfce7 !important;
+  border: 1px solid #86efac !important;
+  font-size: 11px !important;
+  font-weight: 750 !important;
+}
+
+.directory-card-link-label {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin-top: 14px !important;
+  color: #0284c7 !important;
+  font-size: 13px !important;
+  font-weight: 750 !important;
+  transition: gap 0.2s ease !important;
+}
+
+.directory-card:hover .directory-card-link-label {
+  gap: 10px !important;
+}
+
+/* 3. Kartu Daftar Wisata (.tourism-card) */
+.tourism-card {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 20px !important;
+  overflow: hidden !important;
+  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.06) !important;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease !important;
+}
+
+.tourism-card:hover {
+  transform: translateY(-4px) !important;
+  border-color: #93c5fd !important;
+  box-shadow: 0 16px 36px -4px rgba(2, 132, 199, 0.14) !important;
+}
+
+.tourism-card-meta {
+  color: #0284c7 !important;
+  font-size: 12px !important;
+  font-weight: 750 !important;
+  letter-spacing: 0.02em !important;
+}
+
+.tourism-card h3 {
+  margin: 8px 0 0 !important;
+  color: #0f172a !important;
+  font-size: 20px !important;
+  font-weight: 800 !important;
+  line-height: 1.3 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.tourism-card h3 a {
+  color: #0f172a !important;
+}
+
+.tourism-card-location {
+  color: #334155 !important;
+  font-size: 13.5px !important;
+  font-weight: 550 !important;
+  margin: 8px 0 0 !important;
+}
+
+.tourism-card-summary {
+  color: #1e293b !important;
+  font-size: 13.5px !important;
+  line-height: 1.65 !important;
+  font-weight: 450 !important;
+  margin: 10px 0 0 !important;
+}
+
+.tourism-card .public-read-link {
+  color: #0284c7 !important;
+  font-size: 13px !important;
+  font-weight: 750 !important;
+  margin-top: 14px !important;
+}
+
+/* 4. Kartu Berita & Acara (.public-news-card, .public-event-card) */
+.public-news-card,
+.public-event-card {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 20px !important;
+  overflow: hidden !important;
+  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.06) !important;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease !important;
+}
+
+.public-news-card:hover,
+.public-event-card:hover {
+  transform: translateY(-4px) !important;
+  border-color: #93c5fd !important;
+  box-shadow: 0 16px 36px -4px rgba(2, 132, 199, 0.14) !important;
+}
+
+.public-news-card-body time,
+.public-event-type {
+  color: #0284c7 !important;
+  font-size: 12px !important;
+  font-weight: 750 !important;
+}
+
+.public-news-card-body h3,
+.public-event-card-body h3 {
+  margin: 8px 0 0 !important;
+  color: #0f172a !important;
+  font-size: 19px !important;
+  font-weight: 800 !important;
+  line-height: 1.3 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.public-news-card-body h3 a,
+.public-event-card-body h3 a {
+  color: #0f172a !important;
+}
+
+.public-news-card-body p,
+.public-event-card-body>p {
+  color: #1e293b !important;
+  font-size: 13.5px !important;
+  line-height: 1.65 !important;
+  font-weight: 450 !important;
+  margin: 10px 0 0 !important;
+}
+
+.public-event-location {
+  color: #334155 !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  margin-top: 10px !important;
+}
+
+.public-news-card .public-read-link,
+.public-event-card .public-read-link {
+  color: #0284c7 !important;
+  font-size: 13px !important;
+  font-weight: 750 !important;
+  margin-top: 14px !important;
+}
+
+/* 5. Detail Berita & Acara Aside */
+.public-detail-aside {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-top: 5px solid #0f172a !important;
+  border-radius: 22px !important;
+  padding: 26px 28px !important;
+  box-shadow: 0 16px 36px -8px rgba(15, 23, 42, 0.08) !important;
+}
+
+.public-detail-aside>span {
+  display: block !important;
+  color: #0f172a !important;
+  font-size: 17px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.01em !important;
+  margin-bottom: 8px !important;
+}
+
+.public-detail-aside>p {
+  color: #334155 !important;
+  font-size: 14.5px !important;
+  line-height: 1.7 !important;
+  font-weight: 450 !important;
+}
+
+/* 6. Universal Related Cards */
+.public-related-card {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 16px !important;
+  padding: 12px !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05) !important;
+  transition: all 0.2s ease !important;
+}
+
+.public-related-card:hover {
+  border-color: #93c5fd !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 10px 24px rgba(2, 132, 199, 0.12) !important;
+}
+
+.public-related-card span {
+  color: #0284c7 !important;
+  font-size: 11.5px !important;
+  font-weight: 750 !important;
+  text-transform: uppercase !important;
+}
+
+.public-related-card strong {
+  color: #0f172a !important;
+  font-size: 14.5px !important;
+  font-weight: 750 !important;
+  line-height: 1.4 !important;
+}
+
+/* 7. Toolbar & Search Inputs on Public Pages */
+.directory-toolbar,
+.directory-list-toolbar-wrap {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 18px !important;
+  padding: 12px 18px !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04) !important;
+}
+
+.directory-filters a {
+  color: #334155 !important;
+  font-weight: 650 !important;
+  font-size: 13.5px !important;
+  padding: 8px 16px !important;
+  border-radius: 10px !important;
+  transition: all 0.18s ease !important;
+}
+
+.directory-filters a.active {
+  background: #0f172a !important;
+  color: #ffffff !important;
+  font-weight: 750 !important;
+}
+
+.directory-filters a:not(.active):hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.directory-search input {
+  color: #0f172a !important;
+  font-weight: 500 !important;
+}
+
+.directory-search button {
+  background: #0284c7 !important;
+  color: #ffffff !important;
+  font-weight: 750 !important;
+}
+
 
 /* ========================================================================== 
    V41 — Floating chat for petugas/admin

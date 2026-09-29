@@ -63,7 +63,12 @@ export default function TourismListView({
                     <div className="tourism-card-body">
                       <span className="tourism-card-meta">{cardMeta(kind, item)}</span>
                       <h3><Link href={`${basePath}/${item.slug}`}>{item.title}</Link></h3>
-                      {item.address && <p className="tourism-card-location">⌖ {item.address}</p>}
+                      {item.address && (
+                        <p className="tourism-card-location">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ display: "inline-block", verticalAlign: "-2px", marginRight: "4px", color: "#0284c7" }}><path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="3"/></svg>
+                          {item.address}
+                        </p>
+                      )}
                       <p className="tourism-card-summary">{item.summary || "Informasi wisata Kabupaten Bangka."}</p>
                       <Link href={`${basePath}/${item.slug}`} className="public-read-link">Lihat detail <span>→</span></Link>
                     </div>

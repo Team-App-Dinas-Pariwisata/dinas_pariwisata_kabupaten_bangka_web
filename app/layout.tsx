@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Montserrat } from "next/font/google";
 import "./globals.css";
 import Preloader from "@/components/Preloader";
@@ -117,6 +118,8 @@ const jsonLdData = {
   ],
 };
 
+const GA_TRACKING_ID = process.env.NEXT_PUBLIC_GA_ID || "G-S8M4FPXS69";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -131,6 +134,23 @@ export default function RootLayout({
         />
       </head>
       <body>
+        {GA_TRACKING_ID && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_TRACKING_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="google-analytics" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+
+                gtag('config', '${GA_TRACKING_ID}');
+              `}
+            </Script>
+          </>
+        )}
         <Preloader />
         {children}
         <GuestSupportChat />
