@@ -14670,12 +14670,12 @@ body {
   }
 
   .directory-track {
-    grid-auto-columns: minmax(280px, 88%);
-    gap: 14px;
+    grid-auto-columns: calc((100% - 10px) / 2);
+    gap: 10px;
   }
 
   .directory-card-media {
-    height: 190px;
+    height: 112px;
   }
 }
 
@@ -16749,11 +16749,12 @@ body {
   }
 
   .subsector-directory-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
   }
 
   .subsector-directory-card .directory-card-media {
-    height: 210px;
+    height: 112px;
   }
 }
 
@@ -20795,3 +20796,185 @@ body {
   color: #334155;
   font-weight: 500;
 }
+
+/* ========================================================================== 
+   V45 — Mobile 2-Column Compact Layout for Verified Directory & Ekraf Lists
+   Slider pelaku disetujui dan list pelaku ekraf pada tampilan mobile dibuat
+   kompak dengan 2 card per tampilan horizontal seperti list subsektor ekraf
+   ========================================================================== */
+@media (max-width: 680px) {
+  .directory-track {
+    grid-auto-columns: calc((100% - 10px) / 2) !important;
+    gap: 10px !important;
+    padding: 4px 2px 18px !important;
+    scroll-snap-type: x mandatory !important;
+  }
+
+  .subsector-directory-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+
+  .directory-card,
+  .subsector-directory-card {
+    border-radius: 16px !important;
+    border-width: 1px !important;
+    box-shadow: 0 4px 14px -2px rgba(15, 23, 42, 0.06) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-width: 0 !important;
+  }
+
+  .directory-card-media,
+  .subsector-directory-card .directory-card-media {
+    height: 112px !important;
+    border-radius: 15px 15px 0 0 !important;
+  }
+
+  .directory-initials {
+    width: 44px !important;
+    height: 44px !important;
+    font-size: 16px !important;
+    border-radius: 12px !important;
+  }
+
+  .directory-card-badges {
+    left: 6px !important;
+    right: 6px !important;
+    bottom: 6px !important;
+    gap: 4px !important;
+  }
+
+  .directory-card-badges span,
+  .directory-card-badges strong {
+    min-height: 20px !important;
+    padding: 0 6px !important;
+    font-size: 9px !important;
+    border-radius: 999px !important;
+    line-height: 1 !important;
+    max-width: 100% !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .directory-card-copy {
+    padding: 9px 9px 11px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 !important;
+  }
+
+  .directory-verified {
+    min-height: 20px !important;
+    padding: 0 6px !important;
+    font-size: 9px !important;
+    gap: 3px !important;
+    max-width: 100% !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 1 !important;
+  }
+
+  .directory-verified svg {
+    width: 9px !important;
+    height: 9px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .directory-card-copy h3,
+  .subsector-directory-card h3 {
+    font-size: 13.5px !important;
+    font-weight: 750 !important;
+    line-height: 1.3 !important;
+    margin: 5px 0 0 !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    word-break: break-word !important;
+  }
+
+  .directory-subtitle {
+    font-size: 10.5px !important;
+    margin: 2px 0 0 !important;
+    line-height: 1.25 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .directory-card-meta {
+    margin-top: 6px !important;
+    gap: 3px !important;
+  }
+
+  .directory-card-meta span {
+    min-height: 20px !important;
+    padding: 0 5px !important;
+    font-size: 9px !important;
+    border-radius: 5px !important;
+    line-height: 1 !important;
+    max-width: 100% !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .directory-card-meta span svg {
+    width: 9px !important;
+    height: 9px !important;
+    margin-right: 2px !important;
+  }
+
+  .directory-description {
+    font-size: 10px !important;
+    line-height: 1.35 !important;
+    margin: 4px 0 0 !important;
+    min-height: 0 !important;
+    color: #475569 !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+  }
+
+  .directory-card-link-label {
+    margin-top: auto !important;
+    padding-top: 5px !important;
+    font-size: 10.5px !important;
+    gap: 3px !important;
+    font-weight: 700 !important;
+  }
+
+  .directory-skeleton {
+    min-height: 220px !important;
+    border-radius: 16px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .directory-track {
+    grid-auto-columns: calc((100% - 8px) / 2) !important;
+    gap: 8px !important;
+  }
+
+  .subsector-directory-grid {
+    gap: 8px !important;
+  }
+
+  .directory-card-copy {
+    padding: 7px 7px 9px !important;
+  }
+
+  .directory-card-media,
+  .subsector-directory-card .directory-card-media {
+    height: 100px !important;
+  }
+
+  .directory-card-copy h3,
+  .subsector-directory-card h3 {
+    font-size: 12.5px !important;
+  }
+}

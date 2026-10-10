@@ -84,7 +84,8 @@ export default function VerifiedDirectory() {
   function move(direction: -1 | 1) {
     const track = trackRef.current;
     if (!track) return;
-    track.scrollBy({ left: direction * Math.max(300, track.clientWidth * 0.82), behavior: "smooth" });
+    const scrollStep = track.clientWidth <= 680 ? track.clientWidth : Math.max(300, track.clientWidth * 0.82);
+    track.scrollBy({ left: direction * scrollStep, behavior: "smooth" });
   }
 
   return (
